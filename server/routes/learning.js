@@ -40,22 +40,62 @@ function withSolutions(question) {
   return obj;
 }
 
+function idKey(value) {
+  if (value == null || value === "") return "root";
+  if (typeof value === "object") {
+    if (typeof value.toHexString === "function") return value.toHexString();
+    if (value._id != null) return idKey(value._id);
+    if (value.$oid) return String(value.$oid);
+  }
+  return String(value);
+}
+
+function titleKey(value) {
+  return String(value || "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function uniqueByTitle(items) {
+  const seen = new Set();
+  const out = [];
+  for (const item of items) {
+    const key = titleKey(item.title);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(item);
+  }
+  return out;
+}
+
+async function deleteTopicTree(rootId) {
+  const ids = [];
+  async function collect(id) {
+    ids.push(id);
+    const children = await Topic.find({ parent: id }).select("_id");
+    for (const child of children) await collect(child._id);
+  }
+  await collect(rootId);
+  await Question.deleteMany({ topic: { $in: ids } });
+  await Topic.deleteMany({ _id: { $in: ids } });
+  return ids;
+}
+
 function nestTopics(topics) {
   const objs = topics.map((t) => (t.toObject ? t.toObject() : { ...t }));
   const byParent = new Map();
   for (const item of objs) {
-    const key = item.parent ? String(item.parent) : "root";
+    const key = item.parent ? idKey(item.parent) : "root";
     if (!byParent.has(key)) byParent.set(key, []);
     byParent.get(key).push(item);
   }
 
-  function kids(id) {
-    return (byParent.get(String(id)) || [])
-      .sort((a, b) => (a.slNo ?? a.order ?? 0) - (b.slNo ?? b.order ?? 0))
-      .map((child) => ({
-        ...child,
-        nested: kids(child._id),
-      }));
+  function listChildren(id) {
+    const key = id == null || id === "root" ? "root" : idKey(id);
+    return (byParent.get(key) || []).sort(
+      (a, b) => (a.slNo ?? a.order ?? 0) - (b.slNo ?? b.order ?? 0)
+    );
   }
 
   const mains = (byParent.get("root") || []).sort((a, b) => {
@@ -67,7 +107,12 @@ function nestTopics(topics) {
 
   return mains.map((main) => ({
     ...main,
-    subtopics: kids(main._id),
+    subtopics: listChildren(main._id)
+      .filter((child) => !child.fromNote)
+      .map((child) => ({
+        ...child,
+        nested: uniqueByTitle(listChildren(child._id)),
+      })),
   }));
 }
 
@@ -76,7 +121,7 @@ function statsFromTopics(topics, questionCount = 0) {
   for (const section of SECTIONS) {
     const inSection = topics.filter((t) => (t.section || "theory") === section);
     const mains = inSection.filter((t) => !t.parent);
-    const children = inSection.filter((t) => t.parent);
+    const children = inSection.filter((t) => t.parent && !t.fromNote);
     bySection[section] = {
       mainTopics: mains.length,
       items: section === "practical" ? 0 : children.length,
@@ -274,6 +319,24 @@ router.post("/topics", async (req, res) => {
     if (!parent) payload.highlighted = Boolean(highlighted);
     if (req.body.fromNote) payload.fromNote = true;
 
+    if (req.body.fromNote && parent) {
+      const key = titleKey(title);
+      const siblings = await Topic.find({ parent: parent._id });
+      const matches = siblings.filter((item) => titleKey(item.title) === key);
+      if (matches.length) {
+        const removedIds = [];
+        for (const item of matches) {
+          const ids = await deleteTopicTree(item._id);
+          removedIds.push(...ids.map((id) => String(id)));
+        }
+        return res.json({
+          removed: true,
+          title: matches[0].title,
+          ids: removedIds,
+        });
+      }
+    }
+
     const topic = await Topic.create(payload);
     res.status(201).json(topic);
   } catch (error) {
@@ -292,10 +355,12 @@ router.get("/topics/:id", async (req, res) => {
 
     if (topic.parent) {
       const parentTopic = await Topic.findById(topic.parent);
-      const nested = await Topic.find({ parent: topic._id }).sort({
-        order: 1,
-        createdAt: 1,
-      });
+      const nested = uniqueByTitle(
+        (await Topic.find({ parent: topic._id }).sort({
+          order: 1,
+          createdAt: 1,
+        })).map((item) => item.toObject())
+      );
       return res.json({
         ...topic.toObject(),
         subject,
@@ -304,15 +369,28 @@ router.get("/topics/:id", async (req, res) => {
       });
     }
 
-    const all = await Topic.find({ subject: topic.subject }).sort({
-      order: 1,
-      createdAt: 1,
-    });
-    const tree = nestTopics(
-      all.filter((t) => (t.section || "theory") === (topic.section || "theory"))
-    );
-    const node = tree.find((item) => String(item._id) === String(topic._id));
-    let nested = node?.subtopics || [];
+    const subtopics = await Topic.find({
+      parent: topic._id,
+      fromNote: { $ne: true },
+    }).sort({ slNo: 1, order: 1, createdAt: 1 });
+    const subIds = subtopics.map((item) => item._id);
+    const fromNotes = subIds.length
+      ? await Topic.find({ parent: { $in: subIds } }).sort({
+          order: 1,
+          createdAt: 1,
+        })
+      : [];
+    const notesByParent = new Map();
+    for (const note of fromNotes) {
+      const key = idKey(note.parent);
+      if (!notesByParent.has(key)) notesByParent.set(key, []);
+      notesByParent.get(key).push(note.toObject());
+    }
+
+    let nested = subtopics.map((item) => ({
+      ...item.toObject(),
+      nested: uniqueByTitle(notesByParent.get(idKey(item._id)) || []),
+    }));
     if (topic.section === "practical" && nested.length) {
       const counts = await Question.aggregate([
         { $match: { topic: { $in: nested.map((s) => s._id) } } },
@@ -388,15 +466,7 @@ router.delete("/topics/:id", async (req, res) => {
       return res.status(404).json({ message: "Topic not found" });
     }
 
-    const ids = [];
-    async function collect(id) {
-      ids.push(id);
-      const children = await Topic.find({ parent: id }).select("_id");
-      for (const child of children) await collect(child._id);
-    }
-    await collect(topic._id);
-    await Question.deleteMany({ topic: { $in: ids } });
-    await Topic.deleteMany({ _id: { $in: ids } });
+    await deleteTopicTree(topic._id);
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ message: error.message });

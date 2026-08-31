@@ -8,6 +8,33 @@ function pad(n) {
   return String(n).padStart(2, "0");
 }
 
+function from24Hour(hhmm) {
+  const [hStr = "0", mStr = "0"] = String(hhmm || "").split(":");
+  let hour24 = Number(hStr);
+  if (!Number.isFinite(hour24)) hour24 = 0;
+  const minute = Number(mStr);
+  const period = hour24 >= 12 ? "PM" : "AM";
+  let hour12 = hour24 % 12;
+  if (hour12 === 0) hour12 = 12;
+  return {
+    hour: String(hour12),
+    minute: pad(Number.isFinite(minute) ? minute : 0),
+    period,
+  };
+}
+
+function to24Hour(hour, minute, period) {
+  let hour24 = Number(hour);
+  if (!Number.isFinite(hour24)) hour24 = 12;
+  if (period === "AM") {
+    if (hour24 === 12) hour24 = 0;
+  } else if (hour24 !== 12) {
+    hour24 += 12;
+  }
+  const mins = Number(minute);
+  return `${pad(hour24)}:${pad(Number.isFinite(mins) ? mins : 0)}`;
+}
+
 function nowParts() {
   const d = new Date();
   return {
@@ -25,6 +52,11 @@ export default function SugarRecordModal({ onClose, onSubmit }) {
   const [mealTiming, setMealTiming] = useState("before");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const clock = from24Hour(time);
+
+  function setClock({ hour = clock.hour, minute = clock.minute, period = clock.period }) {
+    setTime(to24Hour(hour, minute, period));
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -83,13 +115,50 @@ export default function SugarRecordModal({ onClose, onSubmit }) {
             </label>
             <label className="block">
               <span className="mb-1.5 block text-xs text-muted">Time</span>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className={fieldClass}
-                required
-              />
+              <div className="flex items-stretch gap-1.5">
+                <select
+                  value={clock.hour}
+                  onChange={(e) => setClock({ hour: e.target.value })}
+                  className={`${fieldClass} min-w-0 px-2`}
+                  aria-label="Hour"
+                >
+                  {Array.from({ length: 12 }, (_, i) => String(i + 1)).map(
+                    (h) => (
+                      <option key={h} value={h}>
+                        {h}
+                      </option>
+                    )
+                  )}
+                </select>
+                <select
+                  value={clock.minute}
+                  onChange={(e) => setClock({ minute: e.target.value })}
+                  className={`${fieldClass} min-w-0 px-2`}
+                  aria-label="Minute"
+                >
+                  {Array.from({ length: 60 }, (_, i) => pad(i)).map((m) => (
+                    <option key={m} value={m}>
+                      {m}
+                    </option>
+                  ))}
+                </select>
+                <div className="grid w-[72px] shrink-0 grid-rows-2 overflow-hidden rounded-xl border border-line">
+                  {["AM", "PM"].map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      onClick={() => setClock({ period: item })}
+                      className={`text-[11px] font-semibold ${
+                        clock.period === item
+                          ? "bg-coral/15 text-ink"
+                          : "bg-[#171c2a] text-muted hover:bg-white/5"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </label>
           </div>
 

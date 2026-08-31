@@ -121,6 +121,8 @@ export default function NotebookPage() {
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [nested, setNested] = useState([]);
+  const [showFromNote, setShowFromNote] = useState(false);
+  const [selText, setSelText] = useState("");
   const [paperTheme, setPaperTheme] = useState(readNbTheme);
   const paperRef = useRef(null);
 
@@ -148,6 +150,15 @@ export default function NotebookPage() {
       })
       .catch((err) => setError(err.message));
   }, [subId]);
+
+  useEffect(() => {
+    function syncSelection() {
+      const text = window.getSelection()?.toString().replace(/\s+/g, " ").trim() || "";
+      setSelText(text.slice(0, 80));
+    }
+    document.addEventListener("selectionchange", syncSelection);
+    return () => document.removeEventListener("selectionchange", syncSelection);
+  }, []);
 
   function updateBlock(id, patch) {
     setNotebook((prev) => ({
@@ -192,23 +203,50 @@ export default function NotebookPage() {
     flushNoteHtml();
   }
 
+  function noteTitleKey(value) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
   async function addSelectionAsSubtopic() {
     const text = window.getSelection()?.toString().replace(/\s+/g, " ").trim();
     if (!text) {
       setStatus("Select a word in the notebook first");
       return;
     }
+    const title = text.slice(0, 80);
     try {
-      const created = await createTopic({
+      const result = await createTopic({
         subjectSlug: slug,
         parentId: subId,
-        title: text.slice(0, 80),
+        title,
         section: section || "theory",
         fromNote: true,
       });
-      setNested((prev) => [...prev, created]);
+      if (result.removed) {
+        const gone = new Set((result.ids || []).map(String));
+        setNested((prev) =>
+          prev.filter(
+            (item) =>
+              !gone.has(String(item._id)) &&
+              noteTitleKey(item.title) !== noteTitleKey(title)
+          )
+        );
+        setStatus(`Removed from subtopics: ${title.slice(0, 40)}`);
+      } else {
+        setNested((prev) => {
+          const key = noteTitleKey(result.title);
+          if (prev.some((item) => noteTitleKey(item.title) === key)) {
+            return prev;
+          }
+          return [...prev, result];
+        });
+        setShowFromNote(true);
+        setStatus(`Added under this subtopic: ${title.slice(0, 40)}`);
+      }
       await refreshSubjects();
-      setStatus(`Added under this subtopic: ${text.slice(0, 40)}`);
       setTimeout(() => setStatus(""), 2000);
     } catch (err) {
       setStatus(err.message);
@@ -269,6 +307,9 @@ export default function NotebookPage() {
 
   const accent = accentMap[sub.subject?.accent] || accentMap.gold;
   const parentTitle = sub.parentTopic?.title || "Topic";
+  const alreadyFromNote = nested.some(
+    (item) => noteTitleKey(item.title) === noteTitleKey(selText)
+  );
 
   return (
     <div className="page-pad min-h-screen">
@@ -317,17 +358,33 @@ export default function NotebookPage() {
         </div>
       </div>
 
-      {nested.length ? (
-        <div className="mt-3 flex flex-wrap items-center gap-2">
-          <span className="text-[11px] text-muted">From this note:</span>
-          {nested.map((item) => (
-            <span
-              key={item._id}
-              className="rounded-full border border-gold/35 bg-gold/10 px-2.5 py-0.5 text-[11px] text-gold"
-            >
-              {item.title}
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <span className="text-[11px] text-muted">From this note:</span>
+        <span className="text-[11px] text-gold">{nested.length}</span>
+        <button
+          type="button"
+          onClick={() => setShowFromNote((open) => !open)}
+          className="rounded-lg border border-line px-2 py-1 text-[11px] text-cyan"
+        >
+          {showFromNote ? "Hide" : "View more"}
+        </button>
+      </div>
+      {showFromNote ? (
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          {nested.length ? (
+            nested.map((item) => (
+              <span
+                key={item._id}
+                className="rounded-full border border-gold/35 bg-gold/10 px-2.5 py-0.5 text-[11px] text-gold"
+              >
+                {item.title}
+              </span>
+            ))
+          ) : (
+            <span className="text-[12px] text-muted">
+              Select text and click Add to subtopic. Click again to remove it.
             </span>
-          ))}
+          )}
         </div>
       ) : null}
 
@@ -417,12 +474,16 @@ export default function NotebookPage() {
         ))}
         <button
           type="button"
-          title="Select text in the notebook, then add it as a nested subtopic"
+          title="Select text in the notebook, then add it as a nested subtopic. Click again to remove it."
           onMouseDown={(e) => e.preventDefault()}
           onClick={addSelectionAsSubtopic}
-          className="rounded-lg border border-gold/40 bg-gold/12 px-2.5 py-1 text-[11px] font-medium text-gold"
+          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+            alreadyFromNote
+              ? "border-gold/50 bg-gold/20 text-gold"
+              : "border-gold/40 bg-gold/12 text-gold"
+          }`}
         >
-          Add to subtopic
+          {alreadyFromNote ? "Added as subtopic" : "Add to subtopic"}
         </button>
         <button
           type="button"

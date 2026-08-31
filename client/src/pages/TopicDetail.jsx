@@ -124,7 +124,7 @@ export default function TopicDetail() {
         <p className="mt-2 text-sm text-muted">
           {section === "practical"
             ? "Click a subtopic to open its questions. Add a subtopic first if this topic is empty."
-            : "Click a subsection to open its notebook. Anything you mark Add to review in the notebook shows up under Review topics."}
+            ? "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -239,7 +239,7 @@ export default function TopicDetail() {
                     Review
                   </span>
                 ) : null}
-                {sub.nested?.length ? (
+                {section !== "practical" ? (
                   <button
                     type="button"
                     onClick={() =>
@@ -251,6 +251,7 @@ export default function TopicDetail() {
                     className="rounded-lg border border-line px-2 py-1 text-[11px] text-cyan"
                   >
                     {openNested[sub._id] ? "Hide" : "View more"}
+                    {sub.nested?.length ? ` (${sub.nested.length})` : ""}
                   </button>
                 ) : null}
                 <button
@@ -274,19 +275,25 @@ export default function TopicDetail() {
                   delete
                 </button>
                 </div>
-                {openNested[sub._id] && sub.nested?.length ? (
+                {openNested[sub._id] && section !== "practical" ? (
                   <ul className="mt-3 ml-8 space-y-1.5 border-l border-line pl-3">
-                    {sub.nested.map((note) => (
-                      <li key={note._id}>
-                        <Link
-                          to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
-                          className="flex items-center gap-2 rounded-lg bg-[#171c2a] px-3 py-1.5 text-sm text-gold hover:bg-white/5"
-                        >
-                          {note.title}
-                          <span className="text-[10px] text-muted">from note</span>
-                        </Link>
+                    {sub.nested?.length ? (
+                      sub.nested.map((note) => (
+                        <li key={note._id}>
+                          <span className="flex items-center gap-2 rounded-lg bg-[#171c2a] px-3 py-1.5 text-sm text-gold">
+                            {note.title}
+                            <span className="text-[10px] text-muted">
+                              from note
+                            </span>
+                          </span>
+                        </li>
+                      ))
+                    ) : (
+                      <li className="rounded-lg px-3 py-1.5 text-sm text-muted">
+                        No phrases from this notebook yet. Open it, select text,
+                        and click Add to subtopic.
                       </li>
-                    ))}
+                    )}
                   </ul>
                 ) : null}
               </li>
