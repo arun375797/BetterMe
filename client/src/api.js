@@ -1,15 +1,32 @@
-const API_ORIGIN = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+const RAILWAY_API = "https://betterme-production.up.railway.app";
+
+function apiOrigin() {
+  const fromEnv = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  if (fromEnv) return fromEnv;
+  if (import.meta.env.PROD) return RAILWAY_API;
+  return "";
+}
+
+const API_ORIGIN = apiOrigin();
 
 async function request(base, path, options = {}) {
   const res = await fetch(`${API_ORIGIN}${base}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
+  const text = await res.text();
+  let body = {};
+  try {
+    body = text ? JSON.parse(text) : {};
+  } catch {
+    throw new Error(
+      "API did not return JSON. Redeploy the frontend so it calls Railway."
+    );
+  }
   if (!res.ok) {
-    const body = await res.json().catch(() => ({}));
     throw new Error(body.message || "Request failed");
   }
-  return res.json();
+  return body;
 }
 
 const API = "/api/learning";
