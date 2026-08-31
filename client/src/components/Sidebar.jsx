@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from "react-router-dom";
 import { useState } from "react";
+import Logo from "./Logo.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
 
 const healthItems = [
@@ -69,7 +70,9 @@ export default function Sidebar({
         }`}
       >
         <div className="mb-8 flex items-center justify-between px-2">
-          <h1 className="text-lg font-semibold tracking-tight">BetterMe</h1>
+          <NavLink to="/learning" className="min-w-0" onClick={onClose}>
+            <Logo />
+          </NavLink>
           <button
             type="button"
             onClick={onClose}

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from "react";
-import { Outlet, useLocation } from "react-router-dom";
+import { Link, Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
+import Logo from "./Logo.jsx";
 import { getBooks, getSubjects, peekBooks, peekSubjects } from "../api.js";
 import { prefetchPath } from "../prefetch.js";
 
@@ -97,9 +98,9 @@ export default function Layout() {
               />
             </svg>
           </button>
-          <span className="truncate text-base font-semibold tracking-tight">
-            BetterMe
-          </span>
+          <Link to="/learning" className="min-w-0 flex-1">
+            <Logo iconClass="h-7 w-7" />
+          </Link>
         </header>
         <main className="min-w-0 flex-1">
           {error ? (
