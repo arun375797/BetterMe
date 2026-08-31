@@ -2,6 +2,9 @@ import { Suspense, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Logo from "./Logo.jsx";
+import Sit25Mark from "./Sit25Mark.jsx";
+import MusicControl from "./MusicControl.jsx";
+import { MusicNowPlaying } from "./MusicProgress.jsx";
 import {
   getBooks,
   getSubjects,
@@ -93,11 +96,12 @@ export default function Layout() {
   }, [navOpen]);
 
   return (
-    <div className="flex min-h-dvh min-w-0">
+    <div className="flex min-h-dvh min-w-0 overflow-x-clip">
       <Sidebar
         subjects={subjects}
         books={books}
         todoCategories={todoCategories}
+        refreshTodoCategories={refreshTodoCategories}
         open={navOpen}
         onClose={() => setNavOpen(false)}
       />
@@ -119,10 +123,24 @@ export default function Layout() {
               />
             </svg>
           </button>
-          <Link to="/learning" className="min-w-0 flex-1">
+          <Link to="/today" className="min-w-0 flex-1">
             <Logo iconClass="h-7 w-7" />
           </Link>
+          <Link
+            to="/sit25"
+            state={{ from: location.pathname }}
+            title="Sit break"
+            aria-label="Open 25-minute sit break"
+            className="shrink-0 rounded-full"
+          >
+            <Sit25Mark className="h-8 w-8" title="" />
+          </Link>
+          <MusicControl />
         </header>
+        <MusicNowPlaying
+          compact
+          className="sticky top-14 z-20 border-b border-line/80 bg-[#171c2a]/94 px-3 py-2 backdrop-blur-md lg:hidden"
+        />
         <main className="min-w-0 flex-1">
           {error ? (
             <div className="page-pad">

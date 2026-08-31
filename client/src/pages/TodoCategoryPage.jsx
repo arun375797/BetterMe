@@ -1,13 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
-import TimePicker12 from "../components/TimePicker12.jsx";
+import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import CategoryFormModal from "../components/CategoryFormModal.jsx";
+import TimePicker12, {
+  buildDueIso,
+  duePartsFromIso,
+} from "../components/TimePicker12.jsx";
 import {
   createTodo,
   deleteTodo,
+  deleteTodoCategory,
   getTodoCategories,
   getTodos,
   updateTodo,
-  updateTodoCategory,
 } from "../api.js";
 
 const PRIORITY_META = {
@@ -48,9 +52,18 @@ function groupTodos(todos) {
 
 function fmtTime(dateStr) {
   return new Date(dateStr).toLocaleTimeString([], {
-    hour: "2-digit",
+    hour: "numeric",
     minute: "2-digit",
+    hour12: true,
   });
+}
+
+function fmtDueTime(dateStr) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  if (d.getHours() === 0 && d.getMinutes() === 0) return null;
+  return fmtTime(dateStr);
 }
 
 function fmtDate(dateStr) {
@@ -64,17 +77,9 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
   const [text, setText] = useState(todo.text);
   const [priority, setPriority] = useState(todo.priority || "medium");
   const [categoryId, setCategoryId] = useState(todo.categoryId || "");
-  const [dueDate, setDueDate] = useState(
-    todo.dueDate ? new Date(todo.dueDate).toLocaleDateString("en-CA") : ""
-  );
-  const [dueTime, setDueTime] = useState(
-    todo.dueDate
-      ? new Date(todo.dueDate).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : ""
-  );
+  const dueInit = duePartsFromIso(todo.dueDate);
+  const [dueDate, setDueDate] = useState(dueInit.date);
+  const [dueTime, setDueTime] = useState(dueInit.time);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -82,11 +87,6 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  function buildDueDate() {
-    if (!dueDate) return null;
-    return dueTime ? `${dueDate}T${dueTime}` : dueDate;
-  }
 
   async function submit(e) {
     e.preventDefault();
@@ -99,7 +99,7 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
         text: trimmed,
         priority,
         categoryId: categoryId || null,
-        dueDate: buildDueDate(),
+        dueDate: buildDueIso(dueDate, dueTime),
       });
       onClose();
     } catch (err) {
@@ -250,7 +250,8 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
           </span>
           {todo.dueDate ? (
             <span className="text-[11px] text-gold">
-              Due {fmtDate(todo.dueDate)} · {fmtTime(todo.dueDate)}
+              Due {fmtDate(todo.dueDate)}
+              {fmtDueTime(todo.dueDate) ? ` · ${fmtDueTime(todo.dueDate)}` : ""}
             </span>
           ) : null}
         </div>
@@ -287,11 +288,6 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
     inputRef.current?.focus();
   }, []);
 
-  function buildDueDate() {
-    if (!dueDate) return null;
-    return dueTime ? `${dueDate}T${dueTime}` : dueDate;
-  }
-
   async function submit(e) {
     e.preventDefault();
     const trimmed = text.trim();
@@ -302,7 +298,7 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
     setSaving(true);
     setError("");
     try {
-      await onAdd({ text: trimmed, priority, categoryId, dueDate: buildDueDate() });
+      await onAdd({ text: trimmed, priority, categoryId, dueDate: buildDueIso(dueDate, dueTime) });
       setText("");
       setDueDate("");
       setDueTime("");
@@ -381,19 +377,19 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
 
 export default function TodoCategoryPage() {
   const { categoryId } = useParams();
+  const navigate = useNavigate();
   const ctx = useOutletContext() || {};
   const { refreshTodoCategories } = ctx;
 
   const [category, setCategory] = useState(null);
+  const [categories, setCategories] = useState([]);
   const [todos, setTodos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showAddForm, setShowAddForm] = useState(false);
   const [filterStatus, setFilterStatus] = useState("all");
   const [editingTodo, setEditingTodo] = useState(null);
-  const [editingName, setEditingName] = useState(false);
-  const [nameInput, setNameInput] = useState("");
-  const nameRef = useRef(null);
+  const [showEditCategory, setShowEditCategory] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -405,6 +401,7 @@ export default function TodoCategoryPage() {
       const cats = catsRes.categories || [];
       const cat = cats.find((c) => c._id === categoryId) || null;
       setCategory(cat);
+      setCategories(cats);
       setTodos(todosRes.todos || []);
       setError("");
     } catch (err) {
@@ -449,23 +446,23 @@ export default function TodoCategoryPage() {
     setShowAddForm(false);
   }
 
-  async function commitNameEdit() {
-    const trimmed = nameInput.trim();
-    setEditingName(false);
-    if (!trimmed || trimmed === category?.name) return;
+  async function handleDeleteCategory() {
+    if (!category) return;
+    if (!confirm("Delete this category? Todos will become uncategorized.")) return;
     try {
-      const updated = await updateTodoCategory(categoryId, { name: trimmed });
-      setCategory(updated);
+      await deleteTodoCategory(category._id);
       refreshTodoCategories?.();
+      navigate("/todos");
     } catch (err) {
       setError(err.message);
     }
   }
 
-  function startNameEdit() {
-    setNameInput(category?.name || "");
-    setEditingName(true);
-    setTimeout(() => nameRef.current?.focus(), 0);
+  function handleCategorySaved(updated) {
+    setCategory(updated);
+    setCategories((cs) => cs.map((c) => (c._id === updated._id ? updated : c)));
+    setShowEditCategory(false);
+    refreshTodoCategories?.();
   }
 
   const catColor = category?.color || "#6ec8ff";
@@ -517,41 +514,58 @@ export default function TodoCategoryPage() {
             {category?.emoji || "📁"}
           </div>
           <div>
-            {editingName ? (
-              <input
-                ref={nameRef}
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                onBlur={commitNameEdit}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") commitNameEdit();
-                  if (e.key === "Escape") setEditingName(false);
-                }}
-                className="rounded-lg bg-white/8 px-2 py-0.5 text-2xl font-semibold text-ink outline-none"
-                style={{ boxShadow: `0 0 0 1px ${catColor}60` }}
-              />
-            ) : (
-              <h1
-                className="cursor-pointer text-2xl font-semibold sm:text-3xl"
-                style={{ color: catColor }}
-                onDoubleClick={startNameEdit}
-                title="Double-click to rename"
-              >
-                {category?.name || "…"}
-              </h1>
-            )}
+            <h1
+              className="text-2xl font-semibold sm:text-3xl"
+              style={{ color: catColor }}
+            >
+              {category?.name || "…"}
+            </h1>
             <p className="mt-0.5 text-xs text-muted">
               {todos.length} todos · {pending} pending · {pct}% done
             </p>
           </div>
         </div>
 
-        <button
-          type="button"
-          onClick={() => setShowAddForm((v) => !v)}
-          className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-[#0b0f18]"
-          style={{ background: catColor }}
-        >
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowEditCategory(true)}
+            className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm text-muted hover:bg-white/5 hover:text-ink"
+            style={{ borderColor: `${catColor}40` }}
+          >
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+              <path
+                d="M11 2l3 3-8 8H3v-3l8-8z"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Edit
+          </button>
+          <button
+            type="button"
+            onClick={handleDeleteCategory}
+            className="flex items-center gap-1.5 rounded-xl border border-coral/30 px-3 py-2 text-sm text-coral hover:bg-coral/10"
+          >
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+              <path
+                d="M3 4h10M6 4V3h4v1M5 4l.5 8h5l.5-8"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
+            Delete
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowAddForm((v) => !v)}
+            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-[#0b0f18]"
+            style={{ background: catColor }}
+          >
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
             <path
               d="M8 3v10M3 8h10"
@@ -560,8 +574,9 @@ export default function TodoCategoryPage() {
               strokeLinecap="round"
             />
           </svg>
-          Add Todo
-        </button>
+            Add Todo
+          </button>
+        </div>
       </div>
 
       {/* Progress bar */}
@@ -696,10 +711,19 @@ export default function TodoCategoryPage() {
         )}
       </div>
 
+      {showEditCategory && category ? (
+        <CategoryFormModal
+          category={category}
+          onClose={() => setShowEditCategory(false)}
+          onSaved={handleCategorySaved}
+          onDelete={handleDeleteCategory}
+        />
+      ) : null}
+
       {editingTodo ? (
         <EditTodoModal
           todo={editingTodo}
-          categories={[]}
+          categories={categories}
           catColor={catColor}
           onSave={handleEdit}
           onClose={() => setEditingTodo(null)}

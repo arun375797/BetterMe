@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
-import TimePicker12 from "../components/TimePicker12.jsx";
+import CategoryFormModal from "../components/CategoryFormModal.jsx";
+import TimePicker12, {
+  buildDueIso,
+  duePartsFromIso,
+} from "../components/TimePicker12.jsx";
 import {
   createTodo,
-  createTodoCategory,
   deleteTodo,
   deleteTodoCategory,
   getTodoCategories,
@@ -18,17 +21,6 @@ const PRIORITY_META = {
   medium: { label: "Medium", color: "#e8c36a", dot: "bg-[#e8c36a]" },
   low: { label: "Low", color: "#3ce6d4", dot: "bg-[#3ce6d4]" },
 };
-
-const PALETTE = [
-  "#6ec8ff",
-  "#3ce6d4",
-  "#b9a6ff",
-  "#e8c36a",
-  "#e88b7a",
-  "#a8e890",
-  "#f0a0d0",
-  "#ffb347",
-];
 
 function dateGroup(dateStr) {
   const now = new Date();
@@ -58,7 +50,19 @@ function groupTodos(todos) {
 
 function fmtTime(dateStr) {
   const d = new Date(dateStr);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  return d.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+}
+
+function fmtDueTime(dateStr) {
+  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return null;
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return null;
+  if (d.getHours() === 0 && d.getMinutes() === 0) return null;
+  return fmtTime(dateStr);
 }
 
 function fmtDate(dateStr) {
@@ -99,17 +103,9 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
   const [text, setText] = useState(todo.text);
   const [priority, setPriority] = useState(todo.priority || "medium");
   const [categoryId, setCategoryId] = useState(todo.categoryId || "");
-  const [dueDate, setDueDate] = useState(
-    todo.dueDate ? new Date(todo.dueDate).toLocaleDateString("en-CA") : ""
-  );
-  const [dueTime, setDueTime] = useState(
-    todo.dueDate
-      ? new Date(todo.dueDate).toLocaleTimeString("en-GB", {
-          hour: "2-digit",
-          minute: "2-digit",
-        })
-      : ""
-  );
+  const dueInit = duePartsFromIso(todo.dueDate);
+  const [dueDate, setDueDate] = useState(dueInit.date);
+  const [dueTime, setDueTime] = useState(dueInit.time);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -117,11 +113,6 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
   useEffect(() => {
     inputRef.current?.focus();
   }, []);
-
-  function buildDueDate() {
-    if (!dueDate) return null;
-    return dueTime ? `${dueDate}T${dueTime}` : dueDate;
-  }
 
   async function submit(e) {
     e.preventDefault();
@@ -137,7 +128,7 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
         text: trimmed,
         priority,
         categoryId: categoryId || null,
-        dueDate: buildDueDate(),
+        dueDate: buildDueIso(dueDate, dueTime),
       });
       onClose();
     } catch (err) {
@@ -145,8 +136,6 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
       setSaving(false);
     }
   }
-
-  const pm = PRIORITY_META[priority] || PRIORITY_META.medium;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -343,7 +332,8 @@ function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
           </span>
           {todo.dueDate ? (
             <span className="text-[11px] text-gold">
-              Due {fmtDate(todo.dueDate)} · {fmtTime(todo.dueDate)}
+              Due {fmtDate(todo.dueDate)}
+              {fmtDueTime(todo.dueDate) ? ` · ${fmtDueTime(todo.dueDate)}` : ""}
             </span>
           ) : null}
         </div>
@@ -401,11 +391,6 @@ function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
     inputRef.current?.focus();
   }, []);
 
-  function buildDueDate() {
-    if (!dueDate) return null;
-    return dueTime ? `${dueDate}T${dueTime}` : dueDate;
-  }
-
   async function submit(e) {
     e.preventDefault();
     const trimmed = text.trim();
@@ -420,7 +405,7 @@ function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
         text: trimmed,
         priority,
         categoryId: categoryId || null,
-        dueDate: buildDueDate(),
+        dueDate: buildDueIso(dueDate, dueTime),
       });
       setText("");
       setDueDate("");
@@ -519,119 +504,6 @@ function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
   );
 }
 
-function NewCategoryModal({ onClose, onCreated }) {
-  const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("");
-  const [color, setColor] = useState(PALETTE[0]);
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  async function submit(e) {
-    e.preventDefault();
-    const trimmed = name.trim();
-    if (!trimmed) {
-      setError("Category name is required.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      const cat = await createTodoCategory({ name: trimmed, emoji: emoji.trim(), color });
-      onCreated(cat);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <button
-        type="button"
-        aria-label="Close"
-        onClick={onClose}
-        className="absolute inset-0 bg-[#0b0f18]/70 backdrop-blur-sm"
-      />
-      <div className="relative w-full max-w-sm rounded-2xl border border-line bg-[#1e2638] p-6 shadow-2xl">
-        <h2 className="mb-4 text-base font-semibold">New Category</h2>
-
-        <form onSubmit={submit} className="space-y-4">
-          <div className="flex gap-2">
-            <input
-              value={emoji}
-              onChange={(e) => setEmoji(e.target.value)}
-              placeholder="🏷"
-              maxLength={4}
-              className="w-16 rounded-xl bg-white/5 px-2 py-2 text-center text-lg outline-none ring-1 ring-line focus:ring-cyan/40"
-            />
-            <input
-              ref={inputRef}
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Category name (e.g. Work)"
-              className="flex-1 rounded-xl bg-white/5 px-3 py-2 text-sm text-ink placeholder-muted outline-none ring-1 ring-line focus:ring-cyan/40"
-            />
-          </div>
-
-          <div>
-            <p className="mb-2 text-xs text-muted">Color</p>
-            <div className="flex flex-wrap gap-2">
-              {PALETTE.map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  onClick={() => setColor(c)}
-                  className={`h-7 w-7 rounded-full border-2 transition-transform hover:scale-110 ${
-                    color === c ? "border-ink scale-110" : "border-transparent"
-                  }`}
-                  style={{ background: c }}
-                  aria-label={c}
-                />
-              ))}
-            </div>
-          </div>
-
-          <div
-            className="flex items-center gap-2 rounded-xl px-3 py-2"
-            style={{ background: `${color}12`, border: `1px solid ${color}30` }}
-          >
-            <span className="text-lg">{emoji || "🏷"}</span>
-            <span className="text-sm font-medium" style={{ color }}>
-              {name || "Preview"}
-            </span>
-          </div>
-
-          {error ? <p className="text-xs text-coral">{error}</p> : null}
-
-          <div className="flex justify-end gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              className="rounded-lg px-3 py-1.5 text-xs text-muted hover:bg-white/5 hover:text-ink"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="rounded-lg px-4 py-1.5 text-xs font-medium text-[#0b0f18] disabled:opacity-50"
-              style={{ background: color }}
-            >
-              {saving ? "Creating…" : "Create"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 function StatCard({ label, value, sub, color = "#6ec8ff" }) {
   return (
     <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
@@ -660,6 +532,7 @@ export default function TodoHome() {
   const [showNewCategory, setShowNewCategory] = useState(
     searchParams.get("new") === "category"
   );
+  const [editingCategory, setEditingCategory] = useState(null);
   const [editingTodo, setEditingTodo] = useState(null);
 
   useEffect(() => {
@@ -667,6 +540,16 @@ export default function TodoHome() {
       setSearchParams({}, { replace: true });
     }
   }, []);
+
+  useEffect(() => {
+    const editId = searchParams.get("editCategory");
+    if (!editId || categories.length === 0) return;
+    const cat = categories.find((c) => c._id === editId);
+    if (cat) setEditingCategory(cat);
+    const next = new URLSearchParams(searchParams);
+    next.delete("editCategory");
+    setSearchParams(next, { replace: true });
+  }, [categories, searchParams]);
 
   const [filterStatus, setFilterStatus] = useState("all"); // all | pending | done
   const [filterCategory, setFilterCategory] = useState("all"); // all | cat-id
@@ -753,15 +636,20 @@ export default function TodoHome() {
         ts.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t))
       );
       if (filterCategory === id) setFilterCategory("all");
+      setEditingCategory((c) => (c?._id === id ? null : c));
       refreshTodoCategories?.();
     } catch (err) {
       setError(err.message);
     }
   }
 
-  function handleCategoryCreated(cat) {
-    setCategories((cs) => [...cs, cat]);
+  function handleCategorySaved(cat) {
+    setCategories((cs) => {
+      const exists = cs.some((c) => c._id === cat._id);
+      return exists ? cs.map((c) => (c._id === cat._id ? cat : c)) : [...cs, cat];
+    });
     setShowNewCategory(false);
+    setEditingCategory(null);
     refreshTodoCategories?.();
   }
 
@@ -1053,6 +941,25 @@ export default function TodoHome() {
                         type="button"
                         onClick={(e) => {
                           e.preventDefault();
+                          setEditingCategory(cat);
+                        }}
+                        className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                        title="Edit category"
+                      >
+                        <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
+                          <path
+                            d="M11 2l3 3-8 8H3v-3l8-8z"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
                           handleDeleteCategory(cat._id);
                         }}
                         className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-coral/15 hover:text-coral"
@@ -1122,9 +1029,18 @@ export default function TodoHome() {
       ) : null}
 
       {showNewCategory ? (
-        <NewCategoryModal
+        <CategoryFormModal
           onClose={() => setShowNewCategory(false)}
-          onCreated={handleCategoryCreated}
+          onSaved={handleCategorySaved}
+        />
+      ) : null}
+
+      {editingCategory ? (
+        <CategoryFormModal
+          category={editingCategory}
+          onClose={() => setEditingCategory(null)}
+          onSaved={handleCategorySaved}
+          onDelete={() => handleDeleteCategory(editingCategory._id)}
         />
       ) : null}
 

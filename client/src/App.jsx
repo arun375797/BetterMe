@@ -1,7 +1,8 @@
-import { lazy } from "react";
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 
+const TodayPage = lazy(() => import("./pages/TodayPage.jsx"));
 const LearningHome = lazy(() => import("./pages/LearningHome.jsx"));
 const SubjectHub = lazy(() => import("./pages/SubjectHub.jsx"));
 const SubjectPage = lazy(() => import("./pages/SubjectPage.jsx"));
@@ -17,6 +18,7 @@ const HealthHomePage = lazy(() => import("./pages/HealthHomePage.jsx"));
 const HealthSoonPage = lazy(() => import("./pages/HealthSoonPage.jsx"));
 const ExercisePage = lazy(() => import("./pages/ExercisePage.jsx"));
 const ExerciseKindPage = lazy(() => import("./pages/ExerciseKindPage.jsx"));
+const SleepPage = lazy(() => import("./pages/SleepPage.jsx"));
 const MyNotebooksHome = lazy(() => import("./pages/MyNotebooksHome.jsx"));
 const NotebookBookIndex = lazy(() => import("./pages/NotebookBookIndex.jsx"));
 const NotebookBookWrite = lazy(() => import("./pages/NotebookBookWrite.jsx"));
@@ -31,6 +33,11 @@ const PersonalityItemPage = lazy(
 );
 const TodoHome = lazy(() => import("./pages/TodoHome.jsx"));
 const TodoCategoryPage = lazy(() => import("./pages/TodoCategoryPage.jsx"));
+const ReportStatsPage = lazy(() => import("./pages/ReportStatsPage.jsx"));
+const Sit25Layout = lazy(() => import("./pages/Sit25Layout.jsx"));
+const Sit25BreakPage = lazy(() => import("./pages/Sit25BreakPage.jsx"));
+const Sit25DefinePage = lazy(() => import("./pages/Sit25DefinePage.jsx"));
+const MusicPage = lazy(() => import("./pages/MusicPage.jsx"));
 
 function NestedTopicPage() {
   const { section } = useParams();
@@ -39,9 +46,16 @@ function NestedTopicPage() {
 
 export default function App() {
   return (
-    <Routes>
-      <Route element={<Layout />}>
-        <Route path="/" element={<Navigate to="/learning" replace />} />
+    <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
+      <Routes>
+        <Route path="/sit25" element={<Sit25Layout />}>
+          <Route index element={<Sit25BreakPage />} />
+          <Route path="define" element={<Sit25DefinePage />} />
+        </Route>
+        <Route path="/music" element={<MusicPage />} />
+        <Route element={<Layout />}>
+        <Route path="/" element={<Navigate to="/today" replace />} />
+        <Route path="/today" element={<TodayPage />} />
         <Route path="/learning" element={<LearningHome />} />
         <Route path="/learning/:slug" element={<SubjectHub />} />
         <Route path="/learning/:slug/:section" element={<SubjectPage />} />
@@ -64,6 +78,7 @@ export default function App() {
         <Route path="/health/food/:foodId" element={<RecipePage />} />
         <Route path="/health/exercise" element={<ExercisePage />} />
         <Route path="/health/exercise/:kind" element={<ExerciseKindPage />} />
+        <Route path="/health/sleep" element={<SleepPage />} />
         <Route path="/health/:item" element={<HealthSoonPage />} />
         <Route path="/notebooks" element={<MyNotebooksHome />} />
         <Route path="/notebooks/:bookId" element={<NotebookBookIndex />} />
@@ -85,7 +100,10 @@ export default function App() {
           path="/todos/category/:categoryId"
           element={<TodoCategoryPage />}
         />
+        <Route path="/report" element={<Navigate to="/report/statistics" replace />} />
+        <Route path="/report/statistics" element={<ReportStatsPage />} />
       </Route>
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

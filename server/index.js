@@ -14,10 +14,15 @@ import exerciseRoutes from "./routes/exercise.js";
 import notebookRoutes from "./routes/notebooks.js";
 import personalityRoutes from "./routes/personality.js";
 import todoRoutes from "./routes/todos.js";
+import sleepRoutes from "./routes/sleep.js";
+import reportRoutes from "./routes/report.js";
+import sitBreakRoutes from "./routes/sitBreak.js";
+import musicRoutes from "./routes/music.js";
 import {
   ensureSubjects,
   renamePracticalSolveTitles,
   ensureTopicSerialNumbers,
+  ensureSitBreakVideos,
 } from "./seed.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -88,6 +93,17 @@ app.use("/api/exercise", exerciseRoutes);
 app.use("/api/notebooks", notebookRoutes);
 app.use("/api/personality", personalityRoutes);
 app.use("/api/todos", todoRoutes);
+app.use("/api/sleep", sleepRoutes);
+app.use("/api/report", reportRoutes);
+app.use("/api/sit-break", sitBreakRoutes);
+app.use("/api/music", musicRoutes);
+
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    message:
+      "API route not found. Restart the backend if you recently added new features.",
+  });
+});
 
 app.use(
   express.static(clientDist, {
@@ -127,6 +143,10 @@ async function runBootJobs() {
   const numbered = await ensureTopicSerialNumbers();
   if (numbered) {
     console.log(`Filled serial numbers on ${numbered} topics/subtopics.`);
+  }
+  const sitBreak = await ensureSitBreakVideos();
+  if (sitBreak) {
+    console.log(`Seeded ${sitBreak} sit-break videos.`);
   }
 }
 

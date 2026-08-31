@@ -21,8 +21,8 @@ export function pad(n) {
   return String(n).padStart(2, "0");
 }
 
-export function todayKey() {
-  const d = new Date();
+export function todayKey(now = new Date()) {
+  const d = now instanceof Date ? now : new Date();
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 

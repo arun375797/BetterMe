@@ -161,43 +161,44 @@ export default function TopicDetail() {
           </button>
         </div>
 
-        {section === "theory" ? (
-          <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
-                  Special section
-                </p>
-                <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
-              </div>
-              <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
-                {topic.subtopics?.filter((s) => s.inReview).length || 0}
-              </span>
+        <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
+                Special section
+              </p>
+              <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
             </div>
-            <ul className="mt-4 space-y-2">
-              {topic.subtopics?.filter((s) => s.inReview).length ? (
-                topic.subtopics
-                  .filter((s) => s.inReview)
-                  .map((sub) => (
-                    <li key={sub._id}>
-                      <Link
-                        to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
-                        className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
-                      >
-                        <span className="min-w-0 flex-1 break-words font-medium">{sub.title}</span>
-                        <span className="shrink-0 text-[11px] text-teal">Open notebook →</span>
-                      </Link>
-                    </li>
-                  ))
-              ) : (
-                <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
-                  No review items yet. Open a subsection notebook and click
-                  Add to review.
-                </li>
-              )}
-            </ul>
+            <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
+              {topic.subtopics?.filter((s) => s.inReview).length || 0}
+            </span>
           </div>
-        ) : null}
+          <ul className="mt-4 space-y-2">
+            {topic.subtopics?.filter((s) => s.inReview).length ? (
+              topic.subtopics
+                .filter((s) => s.inReview)
+                .map((sub) => (
+                  <li key={sub._id}>
+                    <Link
+                      to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
+                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                    >
+                      <span className="min-w-0 flex-1 break-words font-medium">{sub.title}</span>
+                      <span className="shrink-0 text-[11px] text-teal">
+                        {section === "practical" ? "Open questions →" : "Open notebook →"}
+                      </span>
+                    </Link>
+                  </li>
+                ))
+            ) : (
+              <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
+                {section === "practical"
+                  ? "No review items yet. Open a subtopic and click Add to review."
+                  : "No review items yet. Open a subsection notebook and click Add to review."}
+              </li>
+            )}
+          </ul>
+        </div>
 
         <ul className="mt-6 space-y-3">
           {topic.subtopics?.length ? (
@@ -238,7 +239,7 @@ export default function TopicDetail() {
                     Open questions →
                   </Link>
                 ) : null}
-                {section !== "practical" && sub.inReview ? (
+                {sub.inReview ? (
                   <span className="rounded-full border border-teal/30 bg-teal/12 px-2 py-0.5 text-[10px] text-teal">
                     Review
                   </span>
@@ -321,24 +322,23 @@ export default function TopicDetail() {
             <span className="text-muted">Subtopics</span>
             <span className="text-teal">{topic.subtopics?.length || 0}</span>
           </div>
-          {section !== "practical" ? (
           <div className="flex justify-between">
             <span className="text-muted">Review topics</span>
             <span className="text-teal">
               {topic.subtopics?.filter((s) => s.inReview).length || 0}
             </span>
           </div>
-          ) : (
-          <div className="flex justify-between">
-            <span className="text-muted">Questions</span>
-            <span className="text-teal">
-              {topic.subtopics?.reduce(
-                (sum, s) => sum + (s.questionCount || 0),
-                0
-              ) || 0}
-            </span>
-          </div>
-          )}
+          {section === "practical" ? (
+            <div className="flex justify-between">
+              <span className="text-muted">Questions</span>
+              <span className="text-teal">
+                {topic.subtopics?.reduce(
+                  (sum, s) => sum + (s.questionCount || 0),
+                  0
+                ) || 0}
+              </span>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <span className="text-muted">Highlight</span>
             <span className={topic.highlighted ? "text-gold" : "text-muted"}>

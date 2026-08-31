@@ -106,9 +106,11 @@ async function request(base, path, options = {}) {
   try {
     body = text ? JSON.parse(text) : {};
   } catch {
-    throw new Error(
-      "API did not return JSON. Redeploy the frontend so it calls Railway."
-    );
+    const hint =
+      import.meta.env.DEV
+        ? "Backend may be offline or running old code — restart with npm run dev."
+        : "Redeploy the frontend so it calls Railway.";
+    throw new Error(`API did not return JSON. ${hint}`);
   }
   if (!res.ok) {
     throw new Error(body.message || "Request failed");
@@ -152,6 +154,10 @@ const EXERCISE_API = "/api/exercise";
 const BOOKS_API = "/api/notebooks";
 const PERSONALITY_API = "/api/personality";
 const TODOS_API = "/api/todos";
+const SLEEP_API = "/api/sleep";
+const REPORT_API = "/api/report";
+const SIT_BREAK_API = "/api/sit-break";
+const MUSIC_API = "/api/music";
 
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
@@ -161,6 +167,10 @@ const EXERCISE = [EXERCISE_API];
 const BOOKS = [BOOKS_API];
 const PERSONALITY = [PERSONALITY_API];
 const TODOS = [TODOS_API];
+const SLEEP = [SLEEP_API];
+const REPORT = [REPORT_API];
+const SIT_BREAK = [SIT_BREAK_API];
+const MUSIC = [MUSIC_API];
 
 export const peekSubjects = () => peek(API, "/subjects");
 export const peekReviewQueue = () => peek(API, "/review");
@@ -213,9 +223,9 @@ export const deleteQuestion = (id) =>
 
 export const getSugarReadings = () => get(SUGAR_API, "/");
 export const createSugarReading = (data) =>
-  mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, SUGAR);
+  mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SUGAR, ...REPORT]);
 export const deleteSugarReading = (id) =>
-  mutate(SUGAR_API, `/${id}`, { method: "DELETE" }, SUGAR);
+  mutate(SUGAR_API, `/${id}`, { method: "DELETE" }, [...SUGAR, ...REPORT]);
 
 export const getVitaminItems = () => get(VITAMIN_API, "/");
 export const createVitaminItem = (data) =>
@@ -250,9 +260,9 @@ export const deleteFoodItem = (id) =>
   mutate(FOOD_API, `/items/${id}`, { method: "DELETE" }, FOOD);
 export const getMealLogs = () => get(FOOD_API, "/logs");
 export const upsertMealLog = (data) =>
-  mutate(FOOD_API, "/logs", { method: "POST", body: JSON.stringify(data) }, FOOD);
+  mutate(FOOD_API, "/logs", { method: "POST", body: JSON.stringify(data) }, [...FOOD, ...REPORT]);
 export const deleteMealLog = (id) =>
-  mutate(FOOD_API, `/logs/${id}`, { method: "DELETE" }, FOOD);
+  mutate(FOOD_API, `/logs/${id}`, { method: "DELETE" }, [...FOOD, ...REPORT]);
 
 export const getExerciseSessions = (kind) => {
   const query = kind ? `?kind=${encodeURIComponent(kind)}` : "";
@@ -263,17 +273,17 @@ export const createExerciseSession = (data) =>
     EXERCISE_API,
     "/",
     { method: "POST", body: JSON.stringify(data) },
-    EXERCISE
+    [...EXERCISE, ...REPORT]
   );
 export const updateExerciseSession = (id, data) =>
   mutate(
     EXERCISE_API,
     `/${id}`,
     { method: "PATCH", body: JSON.stringify(data) },
-    EXERCISE
+    [...EXERCISE, ...REPORT]
   );
 export const deleteExerciseSession = (id) =>
-  mutate(EXERCISE_API, `/${id}`, { method: "DELETE" }, EXERCISE);
+  mutate(EXERCISE_API, `/${id}`, { method: "DELETE" }, [...EXERCISE, ...REPORT]);
 
 export const getBooks = () => get(BOOKS_API, "/");
 export const createBook = (data) =>
@@ -374,3 +384,66 @@ export const updateTodo = (id, data) =>
   );
 export const deleteTodo = (id) =>
   mutate(TODOS_API, `/${id}`, { method: "DELETE" }, TODOS);
+
+export const getSleepLogs = () => get(SLEEP_API, "/");
+export const createSleepLog = (data) =>
+  mutate(SLEEP_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SLEEP, ...REPORT]);
+export const updateSleepLog = (id, data) =>
+  mutate(
+    SLEEP_API,
+    `/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    [...SLEEP, ...REPORT]
+  );
+export const deleteSleepLog = (id) =>
+  mutate(SLEEP_API, `/${id}`, { method: "DELETE" }, [...SLEEP, ...REPORT]);
+
+export const getReportStats = () => get(REPORT_API, "/stats");
+
+export const peekSitBreakVideos = () => peek(SIT_BREAK_API, "/")?.videos;
+export const getSitBreakVideos = () => get(SIT_BREAK_API, "/");
+export const createSitBreakVideo = (data) =>
+  mutate(
+    SIT_BREAK_API,
+    "/",
+    { method: "POST", body: JSON.stringify(data) },
+    SIT_BREAK
+  );
+export const updateSitBreakVideo = (id, data) =>
+  mutate(
+    SIT_BREAK_API,
+    `/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    SIT_BREAK
+  );
+export const deleteSitBreakVideo = (id) =>
+  mutate(SIT_BREAK_API, `/${id}`, { method: "DELETE" }, SIT_BREAK);
+
+export const peekMusicTracks = () => peek(MUSIC_API, "/")?.tracks;
+export const peekMusicCategories = () => peek(MUSIC_API, "/")?.categories;
+export const getMusicTracks = () => get(MUSIC_API, "/");
+export const createMusicTrack = (data) =>
+  mutate(
+    MUSIC_API,
+    "/",
+    { method: "POST", body: JSON.stringify(data) },
+    MUSIC
+  );
+export const updateMusicTrack = (id, data) =>
+  mutate(
+    MUSIC_API,
+    `/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    MUSIC
+  );
+export const deleteMusicTrack = (id) =>
+  mutate(MUSIC_API, `/${id}`, { method: "DELETE" }, MUSIC);
+export const createMusicCategory = (data) =>
+  mutate(
+    MUSIC_API,
+    "/categories",
+    { method: "POST", body: JSON.stringify(data) },
+    MUSIC
+  );
+export const deleteMusicCategory = (id) =>
+  mutate(MUSIC_API, `/categories/${id}`, { method: "DELETE" }, MUSIC);

@@ -6,6 +6,7 @@ import {
   getTopic,
   peekTopic,
   updateQuestion,
+  updateTopic,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
@@ -26,6 +27,7 @@ export default function QuestionViewPage() {
   const [error, setError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [status, setStatus] = useState("");
 
   const listPath = `/learning/${slug}/${section}/${topicId}/${subId}`;
 
@@ -70,6 +72,20 @@ export default function QuestionViewPage() {
     await deleteQuestion(question._id);
     await refreshSubjects();
     navigate(listPath);
+  }
+
+  async function toggleReview() {
+    if (!sub) return;
+    const next = !sub.inReview;
+    setSub((prev) => (prev ? { ...prev, inReview: next } : prev));
+    try {
+      await updateTopic(subId, { inReview: next });
+      await refreshSubjects();
+      setStatus(next ? "Marked for review" : "Removed from review");
+      setTimeout(() => setStatus(""), 1800);
+    } catch (err) {
+      setStatus(err.message || "Could not update review");
+    }
   }
 
   if (error) {
@@ -121,6 +137,9 @@ export default function QuestionViewPage() {
               Related: {question.relatedSection.title}
             </p>
           ) : null}
+          {status ? (
+            <p className="mt-2 text-xs text-teal">{status}</p>
+          ) : null}
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <span
@@ -130,6 +149,17 @@ export default function QuestionViewPage() {
           >
             {difficultyMeta(question.difficulty).label}
           </span>
+          <button
+            type="button"
+            onClick={toggleReview}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              sub.inReview
+                ? "border-teal/50 bg-teal/20 text-teal"
+                : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {sub.inReview ? "✓ In review" : "Add to review"}
+          </button>
           <button
             type="button"
             onClick={() => setEditOpen(true)}

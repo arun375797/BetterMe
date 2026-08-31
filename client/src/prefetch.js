@@ -14,8 +14,13 @@ import {
   getSubject,
   getSubjects,
   getSugarReadings,
+  getSleepLogs,
+  getReportStats,
+  getSitBreakVideos,
+  getMusicTracks,
   getTopic,
   getVitaminItems,
+  getTodos,
 } from "./api.js";
 
 const lastAt = new Map();
@@ -26,6 +31,9 @@ function quiet(promise) {
 }
 
 function pageLoaders(pathname) {
+  if (pathname === "/" || pathname === "/today") {
+    return () => import("./pages/TodayPage.jsx");
+  }
   if (pathname === "/learning") return () => import("./pages/LearningHome.jsx");
   if (/^\/learning\/[^/]+$/.test(pathname)) {
     return () => import("./pages/SubjectHub.jsx");
@@ -60,6 +68,7 @@ function pageLoaders(pathname) {
   if (/^\/health\/exercise\/[^/]+$/.test(pathname)) {
     return () => import("./pages/ExerciseKindPage.jsx");
   }
+  if (pathname === "/health/sleep") return () => import("./pages/SleepPage.jsx");
   if (pathname === "/notebooks") {
     return () => import("./pages/MyNotebooksHome.jsx");
   }
@@ -78,11 +87,36 @@ function pageLoaders(pathname) {
   if (/^\/personality\/[^/]+$/.test(pathname)) {
     return () => import("./pages/PersonalitySectionPage.jsx");
   }
+  if (pathname === "/report/statistics") {
+    return () => import("./pages/ReportStatsPage.jsx");
+  }
+  if (pathname === "/sit25" || pathname === "/sit25/define") {
+    return () =>
+      Promise.all([
+        import("./pages/Sit25Layout.jsx"),
+        pathname === "/sit25/define"
+          ? import("./pages/Sit25DefinePage.jsx")
+          : import("./pages/Sit25BreakPage.jsx"),
+      ]);
+  }
+  if (pathname === "/music") return () => import("./pages/MusicPage.jsx");
   return null;
 }
 
 function dataPrefetch(pathname) {
-  if (pathname === "/learning" || pathname === "/") {
+  if (pathname === "/" || pathname === "/today") {
+    return [
+      getTodos({ done: false }),
+      getReviewQueue(),
+      getVitaminItems(),
+      getMealLogs(),
+      getSugarReadings(),
+      getSleepLogs(),
+      getExerciseSessions(),
+      getPersonalityItems(),
+    ];
+  }
+  if (pathname === "/learning") {
     return [getSubjects(), getReviewQueue()];
   }
 
@@ -103,7 +137,7 @@ function dataPrefetch(pathname) {
   }
 
   if (pathname === "/health") {
-    return [getSugarReadings(), getMealLogs()];
+    return [getSugarReadings(), getMealLogs(), getSleepLogs()];
   }
   if (pathname === "/health/sugar") return [getSugarReadings()];
   if (pathname === "/health/vitamin") return [getVitaminItems()];
@@ -113,6 +147,13 @@ function dataPrefetch(pathname) {
   if (pathname === "/health/exercise") return [getExerciseSessions()];
   const kind = pathname.match(/^\/health\/exercise\/([^/]+)$/);
   if (kind) return [getExerciseSessions(kind[1])];
+  if (pathname === "/health/sleep") return [getSleepLogs()];
+
+  if (pathname === "/report/statistics") return [getReportStats()];
+  if (pathname === "/sit25" || pathname === "/sit25/define") {
+    return [getSitBreakVideos()];
+  }
+  if (pathname === "/music") return [getMusicTracks()];
 
   if (pathname === "/notebooks") return [getBooks()];
   const bookIndex = pathname.match(/^\/notebooks\/([^/]+)$/);

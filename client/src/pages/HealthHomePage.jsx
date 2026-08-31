@@ -3,7 +3,10 @@ import { Link } from "react-router-dom";
 import FoodAdherenceChart, {
   buildDayRows,
 } from "../components/FoodAdherenceChart.jsx";
-import { getMealLogs, getSugarReadings, peek } from "../api.js";
+import SleepDurationChart from "../components/SleepDurationChart.jsx";
+import SleepQualityCard from "../components/SleepQualityCard.jsx";
+import { formatMinutes } from "../lib/sleepStats.js";
+import { getMealLogs, getSleepLogs, getSugarReadings, peek } from "../api.js";
 
 function daysAgo(n) {
   const d = new Date();
@@ -22,17 +25,26 @@ export default function HealthHomePage() {
     () => peek("/api/sugar", "/")?.readings || []
   );
   const [logs, setLogs] = useState(() => peek("/api/food", "/logs")?.logs || []);
+  const [sleepLogs, setSleepLogs] = useState(
+    () => peek("/api/sleep", "/")?.logs || []
+  );
+  const [sleepStats, setSleepStats] = useState(
+    () => peek("/api/sleep", "/")?.stats || null
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const [sugar, food] = await Promise.all([
+        const [sugar, food, sleep] = await Promise.all([
           getSugarReadings(),
           getMealLogs(),
+          getSleepLogs(),
         ]);
         setReadings(sugar.readings || []);
         setLogs(food.logs || []);
+        setSleepLogs(sleep.logs || []);
+        setSleepStats(sleep.stats || null);
         setError("");
       } catch (err) {
         setError(err.message);
@@ -62,8 +74,8 @@ export default function HealthHomePage() {
       </p>
       <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Overview</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Sugar statistics live here. Full readings stay on the Sugar page. Food
-        shows how many of the four meals you actually ate each day.
+        Sugar, food, and sleep at a glance. Open each section for full logs and
+        charts.
       </p>
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
 
@@ -154,6 +166,75 @@ export default function HealthHomePage() {
           </span>
         </div>
         <FoodAdherenceChart logs={logs} dayCount={30} />
+      </div>
+
+      <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
+            Sleep
+          </p>
+          <h3 className="mt-1 text-lg font-semibold">
+            Duration and quality from bed to wake
+          </h3>
+        </div>
+        <Link to="/health/sleep" className="text-sm text-coral hover:underline">
+          Open sleep page
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Last night"
+          value={
+            sleepStats?.lastNight
+              ? formatMinutes(sleepStats.lastNight.durationMinutes)
+              : "—"
+          }
+          hint={
+            sleepStats?.lastNight
+              ? `${sleepStats.lastNight.bedTime} → ${sleepStats.lastNight.wakeTime}`
+              : "No entry yet"
+          }
+        />
+        <StatCard
+          label="Quality"
+          value={
+            sleepStats?.lastNight?.analysis?.overall != null
+              ? sleepStats.lastNight.analysis.overall
+              : "—"
+          }
+          hint={
+            sleepStats?.lastNight?.analysis?.label || "Log sleep to score"
+          }
+        />
+        <StatCard
+          label="7-day average"
+          value={
+            sleepStats?.weekAvgMinutes
+              ? formatMinutes(sleepStats.weekAvgMinutes)
+              : "—"
+          }
+          hint="Hours per night"
+        />
+        <StatCard
+          label="Good nights"
+          value={sleepStats ? `${sleepStats.goodNights} / 7` : "—"}
+          hint={
+            sleepStats?.weekAvgScore != null
+              ? `Avg score ${sleepStats.weekAvgScore}`
+              : "Score 70+ counts as good"
+          }
+        />
+      </div>
+
+      <div className="mt-6 grid gap-4 lg:grid-cols-2">
+        <SleepQualityCard log={sleepStats?.lastNight} compact />
+        <div className="rounded-2xl border border-line bg-[#222838]/80 p-5">
+          <h4 className="text-sm font-semibold">30-day sleep</h4>
+          <div className="mt-4">
+            <SleepDurationChart logs={sleepLogs} dayCount={30} />
+          </div>
+        </div>
       </div>
     </div>
   );

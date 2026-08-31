@@ -88,13 +88,13 @@ export default function SubjectPage() {
   }, [subject, query]);
 
   const reviewItems = useMemo(() => {
-    if (!isTheory || !subject?.topics) return [];
+    if (!subject?.topics) return [];
     return subject.topics.flatMap((topic) =>
       (topic.subtopics || [])
         .filter((sub) => sub.inReview)
         .map((sub) => ({ ...sub, parentTitle: topic.title, parentId: topic._id }))
     );
-  }, [isTheory, subject]);
+  }, [subject]);
 
   async function saveMainTopic(values) {
     await updateTopic(editTopic._id, {
@@ -174,46 +174,45 @@ export default function SubjectPage() {
           </div>
         </div>
 
-        {isTheory ? (
-          <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
-                  Special section
-                </p>
-                <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
-              </div>
-              <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
-                {reviewItems.length}
-              </span>
+        <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
+                Special section
+              </p>
+              <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
             </div>
-            <ul className="mt-4 space-y-2">
-              {reviewItems.length ? (
-                reviewItems.map((item) => (
-                  <li key={item._id}>
-                    <Link
-                      to={`/learning/${slug}/${section}/${item.parentId}/${item._id}`}
-                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
-                    >
-                      <span className="min-w-0 flex-1">
-                        <span className="break-words font-medium">{item.title}</span>
-                        <span className="ml-2 text-xs text-muted">
-                          in {item.parentTitle}
-                        </span>
-                      </span>
-                      <span className="shrink-0 text-[11px] text-teal">Open →</span>
-                    </Link>
-                  </li>
-                ))
-              ) : (
-                <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
-                  Subtopics you mark Add to review in a notebook will land
-                  here.
-                </li>
-              )}
-            </ul>
+            <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
+              {reviewItems.length}
+            </span>
           </div>
-        ) : null}
+          <ul className="mt-4 space-y-2">
+            {reviewItems.length ? (
+              reviewItems.map((item) => (
+                <li key={item._id}>
+                  <Link
+                    to={`/learning/${slug}/${section}/${item.parentId}/${item._id}`}
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="break-words font-medium">{item.title}</span>
+                      <span className="ml-2 text-xs text-muted">
+                        in {item.parentTitle}
+                      </span>
+                    </span>
+                    <span className="shrink-0 text-[11px] text-teal">Open →</span>
+                  </Link>
+                </li>
+              ))
+            ) : (
+              <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
+                {isPractical
+                  ? "Subtopics you mark Add to review on a question page will land here."
+                  : "Subtopics you mark Add to review in a notebook will land here."}
+              </li>
+            )}
+          </ul>
+        </div>
 
         <ul className="mt-6 space-y-3">
           {filtered.map((topic) => {

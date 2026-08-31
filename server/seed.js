@@ -11,6 +11,7 @@ import VitaminItem from "./models/VitaminItem.js";
 import Book from "./models/Book.js";
 import BookPage from "./models/BookPage.js";
 import PersonalityItem from "./models/PersonalityItem.js";
+import SitBreakVideo from "./models/SitBreakVideo.js";
 
 dotenv.config();
 
@@ -63,6 +64,72 @@ export async function ensureSubjects() {
 
   await Subject.insertMany(SUBJECTS);
   return SUBJECTS.length;
+}
+
+const SIT_BREAK_VIDEOS = [
+  {
+    title: "Hip mobility",
+    youtubeId: "Qd8RhEW0Vw8",
+    youtubeUrl: "https://www.youtube.com/watch?v=Qd8RhEW0Vw8",
+    durationSeconds: 282,
+    order: 1,
+    seeded: true,
+  },
+  {
+    title: "Yoga for hips",
+    youtubeId: "eBdfCX5XnX4",
+    youtubeUrl: "https://www.youtube.com/watch?v=eBdfCX5XnX4",
+    durationSeconds: 376,
+    order: 2,
+    seeded: true,
+  },
+  {
+    title: "Tight hips",
+    youtubeId: "kLki77SN32c",
+    youtubeUrl: "https://www.youtube.com/watch?v=kLki77SN32c",
+    durationSeconds: 327,
+    order: 3,
+    seeded: true,
+  },
+  {
+    title: "Desk hip flexors",
+    youtubeId: "gdJWWZpDnlA",
+    youtubeUrl: "https://www.youtube.com/watch?v=gdJWWZpDnlA",
+    durationSeconds: 405,
+    order: 4,
+    seeded: true,
+  },
+  {
+    title: "Daily APT routine",
+    youtubeId: "2NZMaI-HeNU",
+    youtubeUrl: "https://www.youtube.com/watch?v=2NZMaI-HeNU",
+    durationSeconds: 493,
+    order: 5,
+    seeded: true,
+  },
+  {
+    title: "APT follow-along",
+    youtubeId: "iqgeDuyM88w",
+    youtubeUrl: "https://www.youtube.com/watch?v=iqgeDuyM88w",
+    durationSeconds: 707,
+    order: 6,
+    seeded: true,
+  },
+  {
+    title: "APT from sitting",
+    youtubeId: "K-CrEi0ymMg",
+    youtubeUrl: "https://www.youtube.com/watch?v=K-CrEi0ymMg",
+    durationSeconds: 435,
+    order: 7,
+    seeded: true,
+  },
+];
+
+export async function ensureSitBreakVideos() {
+  const existing = await SitBreakVideo.countDocuments();
+  if (existing > 0) return 0;
+  await SitBreakVideo.insertMany(SIT_BREAK_VIDEOS);
+  return SIT_BREAK_VIDEOS.length;
 }
 
 export async function resetUserContent() {

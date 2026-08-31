@@ -1,7 +1,11 @@
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import Logo from "./Logo.jsx";
+import Sit25Mark from "./Sit25Mark.jsx";
+import MusicControl from "./MusicControl.jsx";
+import { MusicNowPlaying } from "./MusicProgress.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
+import { deleteTodoCategory } from "../api.js";
 
 const healthItems = [
   { label: "Sugar", path: "/health/sugar" },
@@ -16,18 +20,21 @@ const healthItems = [
   },
   { label: "Vitamin", path: "/health/vitamin" },
   { label: "Food", path: "/health/food" },
+  { label: "Sleep", path: "/health/sleep" },
 ];
 
-function Chevron({ open }) {
+const reportItems = [{ label: "Statistics", path: "/report/statistics" }];
+
+function ChevronUp() {
   return (
     <svg
       viewBox="0 0 20 20"
       fill="none"
-      className={`h-4 w-4 transition-transform ${open ? "rotate-180" : "rotate-0"}`}
+      className="h-4 w-4"
       aria-hidden="true"
     >
       <path
-        d="M5 8l5 5 5-5"
+        d="M5 12l5-5 5 5"
         stroke="currentColor"
         strokeWidth="1.8"
         strokeLinecap="round"
@@ -41,20 +48,39 @@ export default function Sidebar({
   subjects,
   books = [],
   todoCategories = [],
+  refreshTodoCategories,
   open = false,
   onClose,
 }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const todayOpen =
+    location.pathname === "/today" || location.pathname === "/";
   const learningOpen = location.pathname.startsWith("/learning");
   const healthOpen = location.pathname.startsWith("/health");
   const notebooksOpen = location.pathname.startsWith("/notebooks");
   const personalityOpen = location.pathname.startsWith("/personality");
   const todosOpen = location.pathname.startsWith("/todos");
+  const reportOpen = location.pathname.startsWith("/report");
   const [learningExpanded, setLearningExpanded] = useState(false);
   const [healthExpanded, setHealthExpanded] = useState(false);
   const [notebooksExpanded, setNotebooksExpanded] = useState(false);
   const [personalityExpanded, setPersonalityExpanded] = useState(false);
   const [todosExpanded, setTodosExpanded] = useState(true);
+  const [reportExpanded, setReportExpanded] = useState(true);
+
+  async function handleDeleteTodoCategory(e, catId) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm("Delete this category? Todos will become uncategorized.")) return;
+    try {
+      await deleteTodoCategory(catId);
+      refreshTodoCategories?.();
+      if (location.pathname.includes(catId)) navigate("/todos");
+    } catch {
+      /* ignore */
+    }
+  }
 
   return (
     <>
@@ -68,14 +94,27 @@ export default function Sidebar({
         }`}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-[min(280px,88vw)] shrink-0 flex-col border-r border-line/80 bg-[#171c2a] px-4 py-5 shadow-[16px_0_40px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out lg:static lg:z-0 lg:h-auto lg:min-h-screen lg:w-[260px] lg:translate-x-0 lg:bg-[#171c2a]/90 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(280px,88vw)] shrink-0 flex-col overflow-hidden border-r border-line/80 bg-[#171c2a] px-4 py-5 shadow-[16px_0_40px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-0 lg:h-dvh lg:w-[260px] lg:translate-x-0 lg:bg-[#171c2a]/90 lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
-        <div className="mb-8 flex items-center justify-between px-2">
-          <NavLink to="/learning" className="min-w-0" onClick={onClose}>
+        <div className="mb-4 flex shrink-0 items-center gap-2 px-2">
+          <NavLink to="/today" className="min-w-0 flex-1" onClick={onClose}>
             <Logo />
           </NavLink>
+          <NavLink
+            to="/sit25"
+            state={{ from: location.pathname }}
+            onClick={onClose}
+            title="Sit break"
+            aria-label="Open 25-minute sit break"
+            className="shrink-0 rounded-full ring-teal/0 transition hover:ring-2 hover:ring-teal/40"
+          >
+            <Sit25Mark title="" />
+          </NavLink>
+          <span onClick={onClose}>
+            <MusicControl />
+          </span>
           <button
             type="button"
             onClick={onClose}
@@ -92,8 +131,26 @@ export default function Sidebar({
             </svg>
           </button>
         </div>
+        <MusicNowPlaying compact className="mb-4 shrink-0 px-2" />
 
-        <nav className="flex-1 space-y-6 overflow-y-auto" data-lenis-prevent>
+        <nav
+          className="sidebar-nav min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain pb-8"
+          data-lenis-prevent
+        >
+          <div>
+            <NavLink
+              to="/today"
+              onClick={onClose}
+              className={`flex items-center rounded-xl px-3 py-2.5 text-sm font-medium ${
+                todayOpen
+                  ? "bg-teal/12 text-ink ring-1 ring-teal/30"
+                  : "text-muted hover:bg-white/5 hover:text-ink"
+              }`}
+            >
+              Today
+            </NavLink>
+          </div>
+
           <div>
             <div
               className={`flex items-center rounded-xl text-sm font-medium ${
@@ -104,21 +161,22 @@ export default function Sidebar({
             >
               <NavLink
                 to="/learning"
+                onClick={() => setLearningExpanded(true)}
                 className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
               >
                 Learning
               </NavLink>
-              <button
-                type="button"
-                aria-label={
-                  learningExpanded ? "Collapse Learning" : "Expand Learning"
-                }
-                aria-expanded={learningExpanded}
-                onClick={() => setLearningExpanded((value) => !value)}
-                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
-              >
-                <Chevron open={learningExpanded} />
-              </button>
+              {learningExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse Learning"
+                  aria-expanded
+                  onClick={() => setLearningExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
             </div>
 
             {learningExpanded ? (
@@ -187,21 +245,22 @@ export default function Sidebar({
             >
               <NavLink
                 to="/health"
+                onClick={() => setHealthExpanded(true)}
                 className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
               >
                 My Health
               </NavLink>
-              <button
-                type="button"
-                aria-label={
-                  healthExpanded ? "Collapse My Health" : "Expand My Health"
-                }
-                aria-expanded={healthExpanded}
-                onClick={() => setHealthExpanded((value) => !value)}
-                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
-              >
-                <Chevron open={healthExpanded} />
-              </button>
+              {healthExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse My Health"
+                  aria-expanded
+                  onClick={() => setHealthExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
             </div>
             {healthExpanded ? (
               <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
@@ -258,23 +317,22 @@ export default function Sidebar({
             >
               <NavLink
                 to="/notebooks"
+                onClick={() => setNotebooksExpanded(true)}
                 className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
               >
                 My Notebooks
               </NavLink>
-              <button
-                type="button"
-                aria-label={
-                  notebooksExpanded
-                    ? "Collapse My Notebooks"
-                    : "Expand My Notebooks"
-                }
-                aria-expanded={notebooksExpanded}
-                onClick={() => setNotebooksExpanded((value) => !value)}
-                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
-              >
-                <Chevron open={notebooksExpanded} />
-              </button>
+              {notebooksExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse My Notebooks"
+                  aria-expanded
+                  onClick={() => setNotebooksExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
             </div>
             {notebooksExpanded ? (
               <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
@@ -314,23 +372,22 @@ export default function Sidebar({
             >
               <NavLink
                 to="/personality/books"
+                onClick={() => setPersonalityExpanded(true)}
                 className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
               >
                 My Personality
               </NavLink>
-              <button
-                type="button"
-                aria-label={
-                  personalityExpanded
-                    ? "Collapse My Personality"
-                    : "Expand My Personality"
-                }
-                aria-expanded={personalityExpanded}
-                onClick={() => setPersonalityExpanded((value) => !value)}
-                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
-              >
-                <Chevron open={personalityExpanded} />
-              </button>
+              {personalityExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse My Personality"
+                  aria-expanded
+                  onClick={() => setPersonalityExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
             </div>
             {personalityExpanded ? (
               <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
@@ -369,19 +426,22 @@ export default function Sidebar({
             >
               <NavLink
                 to="/todos"
+                onClick={() => setTodosExpanded(true)}
                 className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
               >
                 My Todos
               </NavLink>
-              <button
-                type="button"
-                aria-label={todosExpanded ? "Collapse My Todos" : "Expand My Todos"}
-                aria-expanded={todosExpanded}
-                onClick={() => setTodosExpanded((v) => !v)}
-                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
-              >
-                <Chevron open={todosExpanded} />
-              </button>
+              {todosExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse My Todos"
+                  aria-expanded
+                  onClick={() => setTodosExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
             </div>
 
             {todosExpanded ? (
@@ -402,26 +462,61 @@ export default function Sidebar({
                 {todoCategories.map((cat) => {
                   const inCat = location.pathname === `/todos/category/${cat._id}`;
                   return (
-                    <NavLink
-                      key={cat._id}
-                      to={`/todos/category/${cat._id}`}
-                      className={() =>
-                        `flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
-                          inCat
-                            ? "bg-white/8 text-ink"
-                            : "text-muted hover:bg-white/5 hover:text-ink"
-                        }`
-                      }
-                    >
-                      <span
-                        className="h-2 w-2 shrink-0 rounded-full"
-                        style={{ background: cat.color }}
-                      />
-                      <span className="min-w-0 truncate">
-                        {cat.emoji ? `${cat.emoji} ` : ""}
-                        {cat.name}
-                      </span>
-                    </NavLink>
+                    <div key={cat._id} className="group/cat flex items-center gap-0.5">
+                      <NavLink
+                        to={`/todos/category/${cat._id}`}
+                        className={() =>
+                          `flex min-w-0 flex-1 items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
+                            inCat
+                              ? "bg-white/8 text-ink"
+                              : "text-muted hover:bg-white/5 hover:text-ink"
+                          }`
+                        }
+                      >
+                        <span
+                          className="h-2 w-2 shrink-0 rounded-full"
+                          style={{ background: cat.color }}
+                        />
+                        <span className="min-w-0 truncate">
+                          {cat.emoji ? `${cat.emoji} ` : ""}
+                          {cat.name}
+                        </span>
+                      </NavLink>
+                      <div className="flex shrink-0 opacity-0 transition-opacity group-hover/cat:opacity-100">
+                        <NavLink
+                          to={`/todos?editCategory=${cat._id}`}
+                          onClick={onClose}
+                          title="Edit category"
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-white/8 hover:text-ink"
+                        >
+                          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
+                            <path
+                              d="M11 2l3 3-8 8H3v-3l8-8z"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </NavLink>
+                        <button
+                          type="button"
+                          title="Delete category"
+                          onClick={(e) => handleDeleteTodoCategory(e, cat._id)}
+                          className="flex h-6 w-6 items-center justify-center rounded-md text-muted hover:bg-coral/15 hover:text-coral"
+                        >
+                          <svg viewBox="0 0 16 16" className="h-3 w-3" fill="none">
+                            <path
+                              d="M3 4h10M6 4V3h4v1M5 4l.5 8h5l.5-8"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            />
+                          </svg>
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
                 <NavLink
@@ -438,6 +533,56 @@ export default function Sidebar({
                   </svg>
                   New category
                 </NavLink>
+              </div>
+            ) : null}
+          </div>
+
+          {/* My Report */}
+          <div>
+            <div
+              className={`flex items-center rounded-xl text-sm font-medium ${
+                reportOpen
+                  ? "bg-gold/12 text-ink ring-1 ring-gold/30"
+                  : "text-muted hover:bg-white/5 hover:text-ink"
+              }`}
+            >
+              <NavLink
+                to="/report/statistics"
+                onClick={() => setReportExpanded(true)}
+                className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
+              >
+                My Report
+              </NavLink>
+              {reportExpanded ? (
+                <button
+                  type="button"
+                  aria-label="Collapse My Report"
+                  aria-expanded
+                  onClick={() => setReportExpanded(false)}
+                  className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+                >
+                  <ChevronUp />
+                </button>
+              ) : null}
+            </div>
+
+            {reportExpanded ? (
+              <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
+                {reportItems.map((item) => (
+                  <NavLink
+                    key={item.path}
+                    to={item.path}
+                    className={({ isActive }) =>
+                      `block rounded-lg px-2.5 py-1.5 text-[13px] ${
+                        isActive
+                          ? "bg-white/8 text-ink"
+                          : "text-muted hover:bg-white/5 hover:text-ink"
+                      }`
+                    }
+                  >
+                    {item.label}
+                  </NavLink>
+                ))}
               </div>
             ) : null}
           </div>
