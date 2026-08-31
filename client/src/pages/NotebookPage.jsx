@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useOutletContext, useParams } from "react-router-dom";
-import { getTopic, updateTopic, createTopic } from "../api.js";
+import { getTopic, peekTopic, updateTopic, createTopic } from "../api.js";
 import { DIFFICULTIES, difficultyMeta } from "../difficulty.js";
 import {
   emptyNotebook,
@@ -37,7 +37,21 @@ const HIGHLIGHTS = [
 ];
 const LANGS = ["javascript", "html", "css", "json", "python", "text"];
 
-const LINE_PX = 32;
+function normalizeUrlForHref(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  if (/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw)) return raw;
+  return `https://${raw}`;
+}
+
+function linePx(el) {
+  const paper = el?.closest?.(".notebook-paper");
+  const raw = paper
+    ? getComputedStyle(paper).getPropertyValue("--nb-line")
+    : "";
+  const n = parseFloat(raw);
+  return n > 0 ? n : 32;
+}
 
 function lineBlocks(el) {
   return [...el.children].filter((node) =>
@@ -76,7 +90,7 @@ function jumpToClickedLine(el, clientY) {
   const rect = el.getBoundingClientRect();
   const padTop = parseFloat(getComputedStyle(el).paddingTop) || 0;
   const y = clientY - rect.top - padTop;
-  const lineIndex = Math.max(0, Math.floor(y / LINE_PX));
+  const lineIndex = Math.max(0, Math.floor(y / linePx(el)));
   const filled = Math.max(1, lineBlocks(el).length);
   if (lineIndex < filled) return false;
   const target = padToLine(el, lineIndex);
@@ -123,6 +137,7 @@ export default function NotebookPage() {
   const [nested, setNested] = useState([]);
   const [showFromNote, setShowFromNote] = useState(false);
   const [selText, setSelText] = useState("");
+  const [youtubeUrlDraft, setYoutubeUrlDraft] = useState("");
   const [paperTheme, setPaperTheme] = useState(readNbTheme);
   const paperRef = useRef(null);
 
@@ -136,11 +151,23 @@ export default function NotebookPage() {
   }
 
   useEffect(() => {
-    setSub(null);
+    const cached = peekTopic(subId);
+    if (cached) {
+      setSub(cached);
+      setNested(cached.nested || []);
+      setYoutubeUrlDraft(cached.youtubeUrl || "");
+      const fromApi = normalizeNotebook(cached.notebook);
+      const local = readLocalNotebook(subId);
+      const next = notebookHasContent(fromApi) || !local ? fromApi : local;
+      setNotebook(next);
+    } else {
+      setSub(null);
+    }
     getTopic(subId)
       .then((data) => {
         setSub(data);
         setNested(data.nested || []);
+        setYoutubeUrlDraft(data.youtubeUrl || "");
         const fromApi = normalizeNotebook(data.notebook);
         const local = readLocalNotebook(subId);
         const next =
@@ -197,6 +224,7 @@ export default function NotebookPage() {
     tagged.forEach((el) => {
       const span = document.createElement("span");
       span.style.fontSize = `${px}px`;
+      span.style.lineHeight = "var(--nb-line)";
       while (el.firstChild) span.appendChild(el.firstChild);
       el.replaceWith(span);
     });
@@ -265,6 +293,12 @@ export default function NotebookPage() {
     }
   }
 
+  async function saveYoutubeUrl() {
+    const normalized = normalizeUrlForHref(youtubeUrlDraft);
+    setYoutubeUrlDraft(normalized);
+    await patchMeta({ youtubeUrl: normalized });
+  }
+
   function collectNotebook() {
     const nodes = paperRef.current?.querySelectorAll("[data-block-id]");
     const htmlById = {};
@@ -310,6 +344,7 @@ export default function NotebookPage() {
   const alreadyFromNote = nested.some(
     (item) => noteTitleKey(item.title) === noteTitleKey(selText)
   );
+  const youtubeHref = normalizeUrlForHref(sub.youtubeUrl || youtubeUrlDraft);
 
   return (
     <div className="page-pad min-h-screen">
@@ -329,18 +364,20 @@ export default function NotebookPage() {
           {parentTitle}
         </Link>
       </p>
-      <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h2 className="text-2xl font-semibold break-words sm:text-3xl">{sub.title}</h2>
+      <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
+          <h2 className="min-w-0 max-w-full flex-1 text-2xl font-semibold break-words sm:text-3xl">
+            {sub.title}
+          </h2>
           <span
-            className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
+            className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] ${
               difficultyMeta(sub.difficulty).className
             }`}
           >
             {difficultyMeta(sub.difficulty).label}
           </span>
           {sub.inReview ? (
-            <span className="rounded-full border border-teal/30 bg-teal/12 px-2.5 py-0.5 text-[11px] text-teal">
+            <span className="shrink-0 rounded-full border border-teal/30 bg-teal/12 px-2.5 py-0.5 text-[11px] text-teal">
               In review
             </span>
           ) : null}
@@ -355,6 +392,49 @@ export default function NotebookPage() {
           >
             {saving ? "Saving…" : "Save"}
           </button>
+        </div>
+      </div>
+
+      <div className="mt-4 max-w-4xl rounded-2xl border border-line bg-[#222838]/80 px-4 py-3">
+        <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
+          Video link (clickable)
+        </p>
+        <div className="mt-2 flex flex-wrap items-center gap-2">
+          <input
+            value={youtubeUrlDraft}
+            onChange={(e) => setYoutubeUrlDraft(e.target.value)}
+            placeholder="Paste YouTube link here"
+            className="min-w-[220px] flex-1 rounded-xl border border-line bg-[#171c2a] px-4 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50"
+          />
+          <button
+            type="button"
+            onClick={saveYoutubeUrl}
+            className="rounded-xl border border-line bg-white/5 px-4 py-2 text-sm"
+          >
+            Save link
+          </button>
+          {youtubeHref ? (
+            <a
+              href={youtubeHref}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-[#2a2410]"
+            >
+              Watch video →
+            </a>
+          ) : null}
+          {youtubeHref ? (
+            <a
+              href={youtubeHref}
+              target="_blank"
+              rel="noreferrer"
+              className="min-w-0 break-all text-xs text-cyan hover:underline"
+            >
+              {youtubeHref}
+            </a>
+          ) : (
+            <span className="text-xs text-muted">No link yet.</span>
+          )}
         </div>
       </div>
 
@@ -550,7 +630,7 @@ export default function NotebookPage() {
           {notebook.blocks.map((block) =>
             block.type === "code" ? (
               <div key={block.id} className="notebook-code">
-                <div className="mb-2 flex items-center gap-2" style={{ lineHeight: "32px" }}>
+                <div className="mb-2 flex items-center gap-2" style={{ lineHeight: "var(--nb-line)" }}>
                   <select
                     value={block.language}
                     onChange={(e) =>

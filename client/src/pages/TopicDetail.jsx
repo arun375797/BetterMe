@@ -4,6 +4,7 @@ import {
   createTopic,
   deleteTopic,
   getTopic,
+  peekTopic,
   updateTopic,
 } from "../api.js";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
@@ -21,7 +22,7 @@ export default function TopicDetail() {
   const { slug, section, topicId } = useParams();
   const { refreshSubjects } = useOutletContext();
   const navigate = useNavigate();
-  const [topic, setTopic] = useState(null);
+  const [topic, setTopic] = useState(() => peekTopic(topicId) || null);
   const [error, setError] = useState("");
   const [editMain, setEditMain] = useState(false);
   const [editSub, setEditSub] = useState(null);
@@ -40,7 +41,9 @@ export default function TopicDetail() {
   }
 
   useEffect(() => {
-    setTopic(null);
+    const cached = peekTopic(topicId);
+    if (cached) setTopic(cached);
+    else setTopic(null);
     load();
   }, [topicId]);
 
@@ -108,13 +111,13 @@ export default function TopicDetail() {
 
         <div className="mt-3 flex flex-wrap items-start gap-3">
           {topic.highlighted ? (
-            <span className="mt-2 text-gold">
+            <span className="mt-2 shrink-0 text-gold">
               <StarIcon filled className="h-5 w-5" />
             </span>
           ) : null}
           <h2 className="min-w-0 flex-1 text-2xl font-semibold break-words sm:text-3xl">{topic.title}</h2>
           <span
-            className={`mt-1 rounded-full px-2.5 py-0.5 text-[11px] capitalize ${
+            className={`mt-1 shrink-0 rounded-full px-2.5 py-0.5 text-[11px] capitalize ${
               levelClass[topic.level] || levelClass.medium
             }`}
           >
@@ -124,7 +127,7 @@ export default function TopicDetail() {
         <p className="mt-2 text-sm text-muted">
           {section === "practical"
             ? "Click a subtopic to open its questions. Add a subtopic first if this topic is empty."
-            ? "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."
+            : "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -179,10 +182,10 @@ export default function TopicDetail() {
                     <li key={sub._id}>
                       <Link
                         to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
-                        className="flex items-center justify-between gap-3 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                        className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
                       >
-                        <span className="font-medium">{sub.title}</span>
-                        <span className="text-[11px] text-teal">Open notebook →</span>
+                        <span className="min-w-0 flex-1 break-words font-medium">{sub.title}</span>
+                        <span className="shrink-0 text-[11px] text-teal">Open notebook →</span>
                       </Link>
                     </li>
                   ))
@@ -203,29 +206,30 @@ export default function TopicDetail() {
                 key={sub._id}
                 className="rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
               >
-                <div className="flex flex-wrap items-center gap-3">
-                <span className="w-8 text-sm text-muted">
+                <div className="topic-row">
+                <span className="topic-row-meta w-8 text-sm text-muted">
                   {String(sub.slNo ?? index + 1).padStart(2, "0")}
                 </span>
                 <Link
                   to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
-                  className="min-w-0 flex-1 font-medium hover:text-teal"
+                  className="topic-row-title font-medium hover:text-teal"
                 >
                   {sub.title}
                 </Link>
                 {section === "practical" ? (
-                  <span className="text-xs text-muted">
+                  <span className="topic-row-meta text-xs text-muted">
                     {sub.questionCount || 0} questions
                   </span>
                 ) : (
                   <span
-                    className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                    className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
                       difficultyMeta(sub.difficulty).className
                     }`}
                   >
                     {difficultyMeta(sub.difficulty).label}
                   </span>
                 )}
+                <div className="topic-row-actions">
                 {section === "practical" ? (
                   <Link
                     to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
@@ -275,13 +279,14 @@ export default function TopicDetail() {
                   delete
                 </button>
                 </div>
+                </div>
                 {openNested[sub._id] && section !== "practical" ? (
                   <ul className="mt-3 ml-8 space-y-1.5 border-l border-line pl-3">
                     {sub.nested?.length ? (
                       sub.nested.map((note) => (
                         <li key={note._id}>
-                          <span className="flex items-center gap-2 rounded-lg bg-[#171c2a] px-3 py-1.5 text-sm text-gold">
-                            {note.title}
+                          <span className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-[#171c2a] px-3 py-1.5 text-sm text-gold">
+                            <span className="min-w-0 break-words">{note.title}</span>
                             <span className="text-[10px] text-muted">
                               from note
                             </span>

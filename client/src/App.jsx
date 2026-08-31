@@ -1,26 +1,34 @@
+import { lazy } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
-import LearningHome from "./pages/LearningHome.jsx";
-import SubjectHub from "./pages/SubjectHub.jsx";
-import SubjectPage from "./pages/SubjectPage.jsx";
-import TopicDetail from "./pages/TopicDetail.jsx";
-import NotebookPage from "./pages/NotebookPage.jsx";
-import QuestionsPage from "./pages/QuestionsPage.jsx";
-import QuestionViewPage from "./pages/QuestionViewPage.jsx";
-import SugarPage from "./pages/SugarPage.jsx";
-import VitaminPage from "./pages/VitaminPage.jsx";
-import FoodPage from "./pages/FoodPage.jsx";
-import RecipePage from "./pages/RecipePage.jsx";
-import HealthHomePage from "./pages/HealthHomePage.jsx";
-import HealthSoonPage from "./pages/HealthSoonPage.jsx";
-import ExercisePage from "./pages/ExercisePage.jsx";
-import ExerciseKindPage from "./pages/ExerciseKindPage.jsx";
-import MyNotebooksHome from "./pages/MyNotebooksHome.jsx";
-import NotebookBookIndex from "./pages/NotebookBookIndex.jsx";
-import NotebookBookWrite from "./pages/NotebookBookWrite.jsx";
-import PersonalityBooksPage from "./pages/PersonalityBooksPage.jsx";
-import PersonalitySectionPage from "./pages/PersonalitySectionPage.jsx";
-import PersonalityItemPage from "./pages/PersonalityItemPage.jsx";
+
+const LearningHome = lazy(() => import("./pages/LearningHome.jsx"));
+const SubjectHub = lazy(() => import("./pages/SubjectHub.jsx"));
+const SubjectPage = lazy(() => import("./pages/SubjectPage.jsx"));
+const TopicDetail = lazy(() => import("./pages/TopicDetail.jsx"));
+const NotebookPage = lazy(() => import("./pages/NotebookPage.jsx"));
+const QuestionsPage = lazy(() => import("./pages/QuestionsPage.jsx"));
+const QuestionViewPage = lazy(() => import("./pages/QuestionViewPage.jsx"));
+const SugarPage = lazy(() => import("./pages/SugarPage.jsx"));
+const VitaminPage = lazy(() => import("./pages/VitaminPage.jsx"));
+const FoodPage = lazy(() => import("./pages/FoodPage.jsx"));
+const RecipePage = lazy(() => import("./pages/RecipePage.jsx"));
+const HealthHomePage = lazy(() => import("./pages/HealthHomePage.jsx"));
+const HealthSoonPage = lazy(() => import("./pages/HealthSoonPage.jsx"));
+const ExercisePage = lazy(() => import("./pages/ExercisePage.jsx"));
+const ExerciseKindPage = lazy(() => import("./pages/ExerciseKindPage.jsx"));
+const MyNotebooksHome = lazy(() => import("./pages/MyNotebooksHome.jsx"));
+const NotebookBookIndex = lazy(() => import("./pages/NotebookBookIndex.jsx"));
+const NotebookBookWrite = lazy(() => import("./pages/NotebookBookWrite.jsx"));
+const PersonalityBooksPage = lazy(
+  () => import("./pages/PersonalityBooksPage.jsx")
+);
+const PersonalitySectionPage = lazy(
+  () => import("./pages/PersonalitySectionPage.jsx")
+);
+const PersonalityItemPage = lazy(
+  () => import("./pages/PersonalityItemPage.jsx")
+);
 
 function NestedTopicPage() {
   const { section } = useParams();

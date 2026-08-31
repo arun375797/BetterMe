@@ -27,10 +27,11 @@ export default function SmoothScroll({ children }) {
       root
       options={{
         autoRaf: true,
-        lerp: 0.08,
-        duration: 1.15,
+        lerp: 0.16,
+        duration: 0.7,
         smoothWheel: true,
-        anchors: true,
+        anchors: false,
+        syncTouch: false,
       }}
     >
       <ScrollToTop />

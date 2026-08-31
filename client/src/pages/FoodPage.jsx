@@ -11,6 +11,7 @@ import {
   createFoodItem,
   getFoodItems,
   getMealLogs,
+  peek,
   updateFoodItem,
   upsertMealLog,
 } from "../api.js";
@@ -21,8 +22,10 @@ const VIEWS = [
 ];
 
 export default function FoodPage() {
-  const [items, setItems] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [items, setItems] = useState(
+    () => peek("/api/food", "/items")?.items || []
+  );
+  const [logs, setLogs] = useState(() => peek("/api/food", "/logs")?.logs || []);
   const [error, setError] = useState("");
   const [view, setView] = useState("today");
   const [foodModal, setFoodModal] = useState(null);

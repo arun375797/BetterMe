@@ -1,12 +1,13 @@
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
-import { getBooks, getSubjects } from "../api.js";
+import { getBooks, getSubjects, peekBooks, peekSubjects } from "../api.js";
+import { prefetchPath } from "../prefetch.js";
 
 export default function Layout() {
   const location = useLocation();
-  const [subjects, setSubjects] = useState([]);
-  const [books, setBooks] = useState([]);
+  const [subjects, setSubjects] = useState(() => peekSubjects() || []);
+  const [books, setBooks] = useState(() => peekBooks() || []);
   const [error, setError] = useState("");
   const [navOpen, setNavOpen] = useState(false);
 
@@ -32,6 +33,29 @@ export default function Layout() {
   useEffect(() => {
     refreshSubjects();
     refreshBooks();
+  }, []);
+
+  useEffect(() => {
+    function onIntent(event) {
+      const link = event.target.closest?.("a[href]");
+      if (!link) return;
+      try {
+        const url = new URL(link.href, window.location.origin);
+        if (url.origin !== window.location.origin) return;
+        prefetchPath(url.pathname);
+      } catch {
+        /* ignore */
+      }
+    }
+    document.addEventListener("pointerover", onIntent, true);
+    document.addEventListener("touchstart", onIntent, {
+      capture: true,
+      passive: true,
+    });
+    return () => {
+      document.removeEventListener("pointerover", onIntent, true);
+      document.removeEventListener("touchstart", onIntent, true);
+    };
   }, []);
 
   useEffect(() => {
@@ -86,7 +110,11 @@ export default function Layout() {
               </div>
             </div>
           ) : null}
-          <Outlet context={{ subjects, refreshSubjects, books, refreshBooks }} />
+          <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
+            <Outlet
+              context={{ subjects, refreshSubjects, books, refreshBooks }}
+            />
+          </Suspense>
         </main>
       </div>
     </div>

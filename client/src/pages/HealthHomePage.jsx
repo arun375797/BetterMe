@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import FoodAdherenceChart, {
   buildDayRows,
 } from "../components/FoodAdherenceChart.jsx";
-import { getMealLogs, getSugarReadings } from "../api.js";
+import { getMealLogs, getSugarReadings, peek } from "../api.js";
 
 function daysAgo(n) {
   const d = new Date();
@@ -18,8 +18,10 @@ function avg(values) {
 }
 
 export default function HealthHomePage() {
-  const [readings, setReadings] = useState([]);
-  const [logs, setLogs] = useState([]);
+  const [readings, setReadings] = useState(
+    () => peek("/api/sugar", "/")?.readings || []
+  );
+  const [logs, setLogs] = useState(() => peek("/api/food", "/logs")?.logs || []);
   const [error, setError] = useState("");
 
   useEffect(() => {

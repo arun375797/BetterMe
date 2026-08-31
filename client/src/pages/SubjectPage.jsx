@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { createTopic, getSubject, updateTopic } from "../api.js";
+import { createTopic, getSubject, peekSubject, updateTopic } from "../api.js";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { accentMap } from "../theme.jsx";
 
@@ -13,7 +13,9 @@ const levelClass = {
 export default function SubjectPage() {
   const { slug, section } = useParams();
   const { refreshSubjects } = useOutletContext();
-  const [subject, setSubject] = useState(null);
+  const [subject, setSubject] = useState(
+    () => peekSubject(slug, section) || null
+  );
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -36,13 +38,27 @@ export default function SubjectPage() {
   }
 
   useEffect(() => {
-    setSubject(null);
+    const cached = peekSubject(slug, section);
+    if (cached) setSubject(cached);
+    else setSubject(null);
     setQuery("");
     setModalOpen(false);
     setEditTopic(null);
     setShowTree(false);
     setOpenIds({});
-    load();
+    let live = true;
+    getSubject(slug, section)
+      .then((data) => {
+        if (!live) return;
+        setSubject(data);
+        setError("");
+      })
+      .catch((err) => {
+        if (live) setError(err.message);
+      });
+    return () => {
+      live = false;
+    };
   }, [slug, section]);
 
   async function addMainTopic({ title, level, slNo, highlighted }) {
@@ -177,15 +193,15 @@ export default function SubjectPage() {
                   <li key={item._id}>
                     <Link
                       to={`/learning/${slug}/${section}/${item.parentId}/${item._id}`}
-                      className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
                     >
-                      <span>
-                        <span className="font-medium">{item.title}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="break-words font-medium">{item.title}</span>
                         <span className="ml-2 text-xs text-muted">
                           in {item.parentTitle}
                         </span>
                       </span>
-                      <span className="text-[11px] text-teal">Open →</span>
+                      <span className="shrink-0 text-[11px] text-teal">Open →</span>
                     </Link>
                   </li>
                 ))
@@ -213,30 +229,31 @@ export default function SubjectPage() {
                     : "border-line"
                 }`}
               >
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="topic-row">
                   {topic.highlighted ? (
-                    <span className="text-gold">
+                    <span className="topic-row-meta text-gold">
                       <StarIcon filled />
                     </span>
                   ) : (
-                    <span className="w-4" />
+                    <span className="topic-row-meta w-4" />
                   )}
-                  <span className="w-8 text-sm text-muted">
+                  <span className="topic-row-meta w-8 text-sm text-muted">
                     {String(topic.slNo ?? "").padStart(2, "0")}
                   </span>
                   <Link
                     to={`/learning/${slug}/${section}/${topic._id}`}
-                    className="min-w-0 flex-1 text-lg font-medium hover:text-teal"
+                    className="topic-row-title text-lg font-medium hover:text-teal"
                   >
                     {topic.title}
                   </Link>
                   <span
-                    className={`rounded-full px-2.5 py-0.5 text-[11px] capitalize ${
+                    className={`topic-row-meta rounded-full px-2.5 py-0.5 text-[11px] capitalize ${
                       levelClass[topic.level] || levelClass.medium
                     }`}
                   >
                     {topic.level || "medium"}
                   </span>
+                  <div className="topic-row-actions">
                   <span className="text-xs text-muted">
                     {topic.subtopics?.length || 0} {childLabel}
                     {isPractical
@@ -270,6 +287,7 @@ export default function SubjectPage() {
                   >
                     Edit
                   </button>
+                  </div>
                 </div>
 
                 {opened ? (
@@ -280,22 +298,22 @@ export default function SubjectPage() {
                           <li key={sub._id}>
                             <Link
                               to={`/learning/${slug}/${section}/${topic._id}/${sub._id}`}
-                              className="flex items-center gap-3 rounded-xl bg-[#171c2a] px-3 py-2 text-sm hover:bg-white/5"
+                              className="flex flex-wrap items-start gap-2 rounded-xl bg-[#171c2a] px-3 py-2 text-sm hover:bg-white/5 sm:items-center"
                             >
-                              <span className="w-6 text-xs text-muted">
+                              <span className="w-6 shrink-0 text-xs text-muted">
                                 {String(sub.slNo ?? index + 1).padStart(2, "0")}
                               </span>
-                              <span className="min-w-0 flex-1">{sub.title}</span>
+                              <span className="min-w-0 flex-1 break-words">{sub.title}</span>
                               {sub.nested?.length ? (
-                                <span className="text-[10px] text-gold">
+                                <span className="shrink-0 text-[10px] text-gold">
                                   {sub.nested.length} in note
                                 </span>
                               ) : null}
                               {sub.inReview ? (
-                                <span className="text-[10px] text-teal">review</span>
+                                <span className="shrink-0 text-[10px] text-teal">review</span>
                               ) : null}
                               {isPractical && sub.questionCount ? (
-                                <span className="text-[10px] text-muted">
+                                <span className="shrink-0 text-[10px] text-muted">
                                   {sub.questionCount} questions
                                 </span>
                               ) : null}

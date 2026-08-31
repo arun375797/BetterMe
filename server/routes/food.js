@@ -9,12 +9,32 @@ function num(value, fallback = 0) {
   return Number.isFinite(n) ? n : fallback;
 }
 
+function cleanUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { url: "" };
+
+  let text = raw;
+  if (!/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(text)) {
+    text = `https://${text}`;
+  }
+  try {
+    const parsed = new URL(text);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return { error: "Video link must start with http or https." };
+    }
+    return { url: parsed.toString() };
+  } catch {
+    return { error: "Video link must be a valid URL." };
+  }
+}
+
 function cleanItem(body) {
   const name = String(body?.name || "").trim();
   const style = String(body?.style || "").trim();
   const instructions = String(body?.instructions || "").trim();
   const sugarNote = String(body?.sugarNote || "").trim();
   const glycemicIndex = body?.glycemicIndex || "medium";
+  const youtube = cleanUrl(body?.youtubeUrl);
   const slots = Array.isArray(body?.slots)
     ? [...new Set(body.slots.filter((item) => SLOTS.includes(item)))]
     : [];
@@ -25,6 +45,7 @@ function cleanItem(body) {
   if (!GI.includes(glycemicIndex)) {
     return { error: "Glycemic index must be low, medium, or high." };
   }
+  if (youtube.error) return { error: youtube.error };
 
   return {
     data: {
@@ -33,6 +54,7 @@ function cleanItem(body) {
       slots,
       instructions,
       sugarNote,
+      youtubeUrl: youtube.url,
       glycemicIndex,
       carbsG: num(body?.carbsG),
       fiberG: num(body?.fiberG),

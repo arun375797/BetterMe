@@ -2,9 +2,30 @@ import { Router } from "express";
 import Subject from "../models/Subject.js";
 import Topic from "../models/Topic.js";
 import Question from "../models/Question.js";
+import { memoClear, memoGet } from "../memo.js";
 
 const router = Router();
 const SECTIONS = ["theory", "practical"];
+const LIST_SELECT = "-notebook";
+
+function cleanUrl(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return { url: "" };
+
+  let text = raw;
+  if (!/^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(text)) {
+    text = `https://${text}`;
+  }
+  try {
+    const parsed = new URL(text);
+    if (!["http:", "https:"].includes(parsed.protocol)) {
+      return { error: "Video link must start with http or https." };
+    }
+    return { url: parsed.toString() };
+  } catch {
+    return { error: "Video link must be a valid URL." };
+  }
+}
 
 function newSolutionId() {
   return `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -70,13 +91,15 @@ function uniqueByTitle(items) {
 }
 
 async function deleteTopicTree(rootId) {
-  const ids = [];
-  async function collect(id) {
-    ids.push(id);
-    const children = await Topic.find({ parent: id }).select("_id");
-    for (const child of children) await collect(child._id);
+  const ids = [rootId];
+  let frontier = [rootId];
+  while (frontier.length) {
+    const children = await Topic.find({ parent: { $in: frontier } })
+      .select("_id")
+      .lean();
+    frontier = children.map((child) => child._id);
+    ids.push(...frontier);
   }
-  await collect(rootId);
   await Question.deleteMany({ topic: { $in: ids } });
   await Topic.deleteMany({ _id: { $in: ids } });
   return ids;
@@ -143,31 +166,31 @@ function statsFromTopics(topics, questionCount = 0) {
 
 router.get("/review", async (_req, res) => {
   try {
-    const items = await Topic.find({
-      inReview: true,
-      parent: { $ne: null },
-    })
-      .populate("subject")
-      .populate("parent")
-      .sort({ updatedAt: -1 });
-
-    const rank = { hard: 0, ec: 1, medium: 2, easy: 3 };
-    items.sort(
-      (a, b) =>
-        (rank[a.difficulty] ?? 2) - (rank[b.difficulty] ?? 2) ||
-        new Date(b.updatedAt) - new Date(a.updatedAt)
-    );
-
-    res.json(
-      items.map((item) => {
-        const obj = item.toObject();
-        return {
-          ...obj,
-          parentTopic: obj.parent,
-          parent: obj.parent?._id || obj.parent,
-        };
+    const payload = await memoGet("learning:review", 20_000, async () => {
+      const items = await Topic.find({
+        inReview: true,
+        parent: { $ne: null },
       })
-    );
+        .select(LIST_SELECT)
+        .populate("subject", "name slug shortName accent")
+        .populate("parent", "title")
+        .sort({ updatedAt: -1 })
+        .lean();
+
+      const rank = { hard: 0, ec: 1, medium: 2, easy: 3 };
+      items.sort(
+        (a, b) =>
+          (rank[a.difficulty] ?? 2) - (rank[b.difficulty] ?? 2) ||
+          new Date(b.updatedAt) - new Date(a.updatedAt)
+      );
+
+      return items.map((item) => ({
+        ...item,
+        parentTopic: item.parent,
+        parent: item.parent?._id || item.parent,
+      }));
+    });
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -175,33 +198,36 @@ router.get("/review", async (_req, res) => {
 
 router.get("/subjects", async (_req, res) => {
   try {
-    const subjects = await Subject.find().sort({ order: 1 });
-    const topics = await Topic.find();
-    const questions = await Question.find().select("topic");
-    const topicById = Object.fromEntries(
-      topics.map((t) => [String(t._id), t])
-    );
-    const questionsBySubject = {};
-    for (const q of questions) {
-      const topic = topicById[String(q.topic)];
-      if (!topic) continue;
-      const sid = String(topic.subject);
-      questionsBySubject[sid] = (questionsBySubject[sid] || 0) + 1;
-    }
-
-    const payload = subjects.map((subject) => {
-      const subjectTopics = topics.filter(
-        (t) => String(t.subject) === String(subject._id)
+    const payload = await memoGet("learning:subjects", 20_000, async () => {
+      const [subjects, topics, questionCounts] = await Promise.all([
+        Subject.find().sort({ order: 1 }).lean(),
+        Topic.find().select("subject parent section fromNote inReview").lean(),
+        Question.aggregate([{ $group: { _id: "$topic", n: { $sum: 1 } } }]),
+      ]);
+      const topicById = Object.fromEntries(
+        topics.map((topic) => [String(topic._id), topic])
       );
-      return {
-        ...subject.toObject(),
-        stats: statsFromTopics(
-          subjectTopics,
-          questionsBySubject[String(subject._id)] || 0
-        ),
-      };
-    });
+      const questionsBySubject = {};
+      for (const row of questionCounts) {
+        const topic = topicById[String(row._id)];
+        if (!topic) continue;
+        const sid = String(topic.subject);
+        questionsBySubject[sid] = (questionsBySubject[sid] || 0) + row.n;
+      }
 
+      return subjects.map((subject) => {
+        const subjectTopics = topics.filter(
+          (topic) => String(topic.subject) === String(subject._id)
+        );
+        return {
+          ...subject,
+          stats: statsFromTopics(
+            subjectTopics,
+            questionsBySubject[String(subject._id)] || 0
+          ),
+        };
+      });
+    });
     res.json(payload);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -210,61 +236,69 @@ router.get("/subjects", async (_req, res) => {
 
 router.get("/subjects/:slug", async (req, res) => {
   try {
-    const subject = await Subject.findOne({ slug: req.params.slug });
-    if (!subject) {
-      return res.status(404).json({ message: "Subject not found" });
-    }
-
-    const all = await Topic.find({ subject: subject._id }).sort({
-      slNo: 1,
-      order: 1,
-      createdAt: 1,
-    });
-    const questionCount = await Question.countDocuments({
-      topic: { $in: all.map((t) => t._id) },
-    });
-
+    const slug = req.params.slug;
     const section = SECTIONS.includes(req.query.section)
       ? req.query.section
       : null;
-    const scoped = section
-      ? all.filter((t) => (t.section || "theory") === section)
-      : [];
+    const payload = await memoGet(
+      `learning:subject:${slug}:${section || "all"}`,
+      15_000,
+      async () => {
+        const subject = await Subject.findOne({ slug }).lean();
+        if (!subject) return null;
 
-    let topics = section ? nestTopics(scoped) : [];
-    if (section === "practical" && topics.length) {
-      const childIds = topics.flatMap((t) =>
-        (t.subtopics || []).map((s) => s._id)
-      );
-      let countMap = {};
-      if (childIds.length) {
-        const counts = await Question.aggregate([
-          { $match: { topic: { $in: childIds } } },
-          { $group: { _id: "$topic", n: { $sum: 1 } } },
-        ]);
-        countMap = Object.fromEntries(
-          counts.map((c) => [String(c._id), c.n])
-        );
+        const all = await Topic.find({ subject: subject._id })
+          .select(LIST_SELECT)
+          .sort({ slNo: 1, order: 1, createdAt: 1 })
+          .lean();
+        const questionCount = await Question.countDocuments({
+          topic: { $in: all.map((topic) => topic._id) },
+        });
+
+        const scoped = section
+          ? all.filter((topic) => (topic.section || "theory") === section)
+          : [];
+
+        let topics = section ? nestTopics(scoped) : [];
+        if (section === "practical" && topics.length) {
+          const childIds = topics.flatMap((topic) =>
+            (topic.subtopics || []).map((sub) => sub._id)
+          );
+          let countMap = {};
+          if (childIds.length) {
+            const counts = await Question.aggregate([
+              { $match: { topic: { $in: childIds } } },
+              { $group: { _id: "$topic", n: { $sum: 1 } } },
+            ]);
+            countMap = Object.fromEntries(
+              counts.map((row) => [String(row._id), row.n])
+            );
+          }
+          topics = topics.map((topic) => ({
+            ...topic,
+            subtopics: (topic.subtopics || []).map((sub) => ({
+              ...sub,
+              questionCount: countMap[String(sub._id)] || 0,
+            })),
+            questionCount: (topic.subtopics || []).reduce(
+              (sum, sub) => sum + (countMap[String(sub._id)] || 0),
+              0
+            ),
+          }));
+        }
+
+        return {
+          ...subject,
+          section,
+          topics,
+          stats: statsFromTopics(all, questionCount),
+        };
       }
-      topics = topics.map((t) => ({
-        ...t,
-        subtopics: (t.subtopics || []).map((s) => ({
-          ...s,
-          questionCount: countMap[String(s._id)] || 0,
-        })),
-        questionCount: (t.subtopics || []).reduce(
-          (sum, s) => sum + (countMap[String(s._id)] || 0),
-          0
-        ),
-      }));
+    );
+    if (!payload) {
+      return res.status(404).json({ message: "Subject not found" });
     }
-
-    res.json({
-      ...subject.toObject(),
-      section,
-      topics,
-      stats: statsFromTopics(all, questionCount),
-    });
+    res.json(payload);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -329,6 +363,7 @@ router.post("/topics", async (req, res) => {
           const ids = await deleteTopicTree(item._id);
           removedIds.push(...ids.map((id) => String(id)));
         }
+        memoClear("learning");
         return res.json({
           removed: true,
           title: matches[0].title,
@@ -338,6 +373,7 @@ router.post("/topics", async (req, res) => {
     }
 
     const topic = await Topic.create(payload);
+    memoClear("learning");
     res.status(201).json(topic);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -346,67 +382,80 @@ router.post("/topics", async (req, res) => {
 
 router.get("/topics/:id", async (req, res) => {
   try {
-    const topic = await Topic.findById(req.params.id);
+    const topic = await Topic.findById(req.params.id).lean();
     if (!topic) {
       return res.status(404).json({ message: "Topic not found" });
     }
 
-    const subject = await Subject.findById(topic.subject);
+    const subject = await Subject.findById(topic.subject).lean();
 
     if (topic.parent) {
-      const parentTopic = await Topic.findById(topic.parent);
-      const nested = uniqueByTitle(
-        (await Topic.find({ parent: topic._id }).sort({
-          order: 1,
-          createdAt: 1,
-        })).map((item) => item.toObject())
-      );
+      const [parentTopic, nested, siblings] = await Promise.all([
+        Topic.findById(topic.parent).select(LIST_SELECT).lean(),
+        Topic.find({ parent: topic._id })
+          .select(LIST_SELECT)
+          .sort({ order: 1, createdAt: 1 })
+          .lean(),
+        Topic.find({
+          parent: topic.parent,
+          fromNote: { $ne: true },
+        })
+          .select(LIST_SELECT)
+          .sort({ slNo: 1, order: 1, createdAt: 1 })
+          .lean(),
+      ]);
       return res.json({
-        ...topic.toObject(),
+        ...topic,
         subject,
-        parentTopic,
-        nested,
+        parentTopic: parentTopic
+          ? { ...parentTopic, subtopics: siblings }
+          : null,
+        nested: uniqueByTitle(nested),
       });
     }
 
     const subtopics = await Topic.find({
       parent: topic._id,
       fromNote: { $ne: true },
-    }).sort({ slNo: 1, order: 1, createdAt: 1 });
+    })
+      .select(LIST_SELECT)
+      .sort({ slNo: 1, order: 1, createdAt: 1 })
+      .lean();
     const subIds = subtopics.map((item) => item._id);
     const fromNotes = subIds.length
-      ? await Topic.find({ parent: { $in: subIds } }).sort({
-          order: 1,
-          createdAt: 1,
-        })
+      ? await Topic.find({ parent: { $in: subIds } })
+          .select(LIST_SELECT)
+          .sort({ order: 1, createdAt: 1 })
+          .lean()
       : [];
     const notesByParent = new Map();
     for (const note of fromNotes) {
       const key = idKey(note.parent);
       if (!notesByParent.has(key)) notesByParent.set(key, []);
-      notesByParent.get(key).push(note.toObject());
+      notesByParent.get(key).push(note);
     }
 
     let nested = subtopics.map((item) => ({
-      ...item.toObject(),
+      ...item,
       nested: uniqueByTitle(notesByParent.get(idKey(item._id)) || []),
     }));
     if (topic.section === "practical" && nested.length) {
       const counts = await Question.aggregate([
-        { $match: { topic: { $in: nested.map((s) => s._id) } } },
+        { $match: { topic: { $in: nested.map((sub) => sub._id) } } },
         { $group: { _id: "$topic", n: { $sum: 1 } } },
       ]);
       const countMap = Object.fromEntries(
-        counts.map((c) => [String(c._id), c.n])
+        counts.map((row) => [String(row._id), row.n])
       );
-      nested = nested.map((s) => ({
-        ...s,
-        questionCount: countMap[String(s._id)] || 0,
+      nested = nested.map((sub) => ({
+        ...sub,
+        questionCount: countMap[String(sub._id)] || 0,
       }));
     }
 
     res.json({
-      ...topic.toObject(),
+      ...topic,
+      notebook: undefined,
       subject,
       subtopics: nested,
     });
@@ -425,6 +474,7 @@ router.patch("/topics/:id", async (req, res) => {
       "notebook",
       "difficulty",
       "inReview",
+      "youtubeUrl",
     ];
     const updates = {};
     for (const key of allowed) {
@@ -438,6 +488,13 @@ router.patch("/topics/:id", async (req, res) => {
     }
     if (updates.inReview !== undefined) {
       updates.inReview = Boolean(updates.inReview);
+    }
+    if (updates.youtubeUrl !== undefined) {
+      const cleaned = cleanUrl(updates.youtubeUrl);
+      if (cleaned.error) {
+        return res.status(400).json({ message: cleaned.error });
+      }
+      updates.youtubeUrl = cleaned.url;
     }
 
     const topic = await Topic.findById(req.params.id);
@@ -453,6 +510,7 @@ router.patch("/topics/:id", async (req, res) => {
     }
 
     const saved = await topic.save();
+    memoClear("learning");
     res.json(saved);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -467,6 +525,7 @@ router.delete("/topics/:id", async (req, res) => {
     }
 
     await deleteTopicTree(topic._id);
+    memoClear("learning");
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -480,9 +539,11 @@ router.get("/topics/:id/questions", async (req, res) => {
       return res.status(404).json({ message: "Topic not found" });
     }
     const questions = await Question.find({ topic: topic._id })
+      .select("title difficulty order relatedSection createdAt")
       .populate("relatedSection", "title")
-      .sort({ order: 1, createdAt: 1 });
-    res.json(questions.map(withSolutions));
+      .sort({ order: 1, createdAt: 1 })
+      .lean();
+    res.json(questions);
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -534,6 +595,7 @@ router.post("/topics/:id/questions", async (req, res) => {
       "relatedSection",
       "title"
     );
+    memoClear("learning");
     res.status(201).json(withSolutions(populated));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -542,10 +604,9 @@ router.post("/topics/:id/questions", async (req, res) => {
 
 router.get("/questions/:id", async (req, res) => {
   try {
-    const question = await Question.findById(req.params.id).populate(
-      "relatedSection",
-      "title"
-    );
+    const question = await Question.findById(req.params.id)
+      .populate("relatedSection", "title")
+      .lean();
     if (!question) {
       return res.status(404).json({ message: "Question not found" });
     }
@@ -607,6 +668,7 @@ router.patch("/questions/:id", async (req, res) => {
       "relatedSection",
       "title"
     );
+    memoClear("learning");
     res.json(withSolutions(populated));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -620,6 +682,7 @@ router.delete("/questions/:id", async (req, res) => {
       return res.status(404).json({ message: "Question not found" });
     }
     await Question.findByIdAndDelete(question._id);
+    memoClear("learning");
     res.json({ ok: true });
   } catch (error) {
     res.status(500).json({ message: error.message });

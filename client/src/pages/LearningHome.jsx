@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
-import { getReviewQueue } from "../api.js";
+import { getReviewQueue, peekReviewQueue } from "../api.js";
 import { difficultyMeta } from "../difficulty.js";
 import { accentMap } from "../theme.jsx";
 
@@ -14,7 +14,7 @@ function notebookPath(item) {
 
 export default function LearningHome() {
   const { subjects } = useOutletContext();
-  const [review, setReview] = useState([]);
+  const [review, setReview] = useState(() => peekReviewQueue() || []);
   const totals = subjects.reduce(
     (acc, s) => {
       acc.theory += s.stats?.theory?.mainTopics || 0;
@@ -29,7 +29,7 @@ export default function LearningHome() {
     getReviewQueue()
       .then(setReview)
       .catch(() => setReview([]));
-  }, [subjects]);
+  }, []);
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -70,17 +70,17 @@ export default function LearningHome() {
                 <li key={item._id}>
                   <Link
                     to={notebookPath(item)}
-                    className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15"
+                    className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15 sm:items-center"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block font-medium">{item.title}</span>
+                      <span className="block break-words font-medium">{item.title}</span>
                       <span className="text-xs text-muted">
                         {item.subject?.shortName || item.subject?.name} ·{" "}
                         {item.parentTopic?.title || "Topic"}
                       </span>
                     </span>
                     <span
-                      className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                      className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] ${
                         difficultyMeta(item.difficulty).className
                       }`}
                     >

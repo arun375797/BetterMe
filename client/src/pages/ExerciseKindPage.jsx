@@ -6,6 +6,7 @@ import {
   createExerciseSession,
   deleteExerciseSession,
   getExerciseSessions,
+  peek,
   updateExerciseSession,
 } from "../api.js";
 
@@ -22,7 +23,11 @@ function formatWhen(iso) {
 export default function ExerciseKindPage() {
   const { kind } = useParams();
   const meta = KINDS.find((item) => item.id === kind);
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState(
+    () =>
+      peek("/api/exercise", `/?kind=${encodeURIComponent(kind)}`)?.sessions ||
+      []
+  );
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
 

@@ -4,7 +4,7 @@ import ExerciseMinutesChart, {
   KINDS,
   buildExerciseDays,
 } from "../components/ExerciseMinutesChart.jsx";
-import { getExerciseSessions } from "../api.js";
+import { getExerciseSessions, peek } from "../api.js";
 
 function daysAgo(n) {
   const d = new Date();
@@ -29,7 +29,9 @@ function streakFrom(rows) {
 }
 
 export default function ExercisePage() {
-  const [sessions, setSessions] = useState([]);
+  const [sessions, setSessions] = useState(
+    () => peek("/api/exercise", "/")?.sessions || []
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {

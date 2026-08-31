@@ -4,6 +4,7 @@ import {
   createVitaminItem,
   deleteVitaminItem,
   getVitaminItems,
+  peek,
   updateVitaminItem,
 } from "../api.js";
 
@@ -22,7 +23,9 @@ const FOOD_LABEL = {
 };
 
 export default function VitaminPage() {
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(
+    () => peek("/api/vitamins", "/")?.items || []
+  );
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
   const [filter, setFilter] = useState("all");

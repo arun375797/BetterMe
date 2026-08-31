@@ -107,6 +107,11 @@ export async function renamePracticalSolveTitles() {
 }
 
 export async function ensureTopicSerialNumbers() {
+  const missing = await Topic.countDocuments({
+    $or: [{ slNo: { $exists: false } }, { slNo: null }, { slNo: { $lte: 0 } }],
+  });
+  if (!missing) return 0;
+
   const topics = await Topic.find({});
   const groups = new Map();
   for (const item of topics) {

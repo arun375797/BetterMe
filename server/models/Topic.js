@@ -37,8 +37,13 @@ const topicSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: () => ({ fontSize: 18, blocks: [] }),
     },
+    youtubeUrl: { type: String, default: "", trim: true },
   },
   { timestamps: true }
 );
+
+topicSchema.index({ subject: 1, section: 1, parent: 1, slNo: 1 });
+topicSchema.index({ parent: 1, fromNote: 1 });
+topicSchema.index({ inReview: 1, parent: 1, updatedAt: -1 });
 
 export default mongoose.model("Topic", topicSchema);

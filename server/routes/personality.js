@@ -49,8 +49,14 @@ router.get("/", async (req, res) => {
   const filter = SECTIONS.includes(section) ? { section } : {};
   const items = await PersonalityItem.find(filter)
     .sort({ updatedAt: -1 })
+    .select("section title subtitle status updatedAt details")
     .lean();
-  res.json({ items });
+  res.json({
+    items: items.map((item) => ({
+      ...item,
+      details: String(item.details || "").slice(0, 160),
+    })),
+  });
 });
 
 router.get("/:id", async (req, res) => {

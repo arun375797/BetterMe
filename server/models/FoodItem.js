@@ -19,6 +19,7 @@ const foodItemSchema = new mongoose.Schema(
     fatG: { type: Number, default: 0, min: 0, max: 200 },
     glycemicIndex: { type: String, enum: GI, default: "medium" },
     sugarNote: { type: String, default: "", trim: true },
+    youtubeUrl: { type: String, default: "", trim: true },
     favorite: { type: Boolean, default: false },
     demo: { type: Boolean, default: false },
   },

@@ -4,6 +4,7 @@ import {
   deleteQuestion,
   getQuestion,
   getTopic,
+  peekTopic,
   updateQuestion,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
@@ -17,8 +18,10 @@ export default function QuestionViewPage() {
   const { slug, section, topicId, subId, questionId } = useParams();
   const { refreshSubjects } = useOutletContext();
   const navigate = useNavigate();
-  const [sub, setSub] = useState(null);
-  const [parent, setParent] = useState(null);
+  const [sub, setSub] = useState(() => peekTopic(subId) || null);
+  const [parent, setParent] = useState(
+    () => peekTopic(subId)?.parentTopic || null
+  );
   const [question, setQuestion] = useState(null);
   const [error, setError] = useState("");
   const [editOpen, setEditOpen] = useState(false);
@@ -34,7 +37,9 @@ export default function QuestionViewPage() {
       ]);
       setSub(topic);
       setQuestion(item);
-      if (topic.parent || topic.parentTopic?._id) {
+      if (topic.parentTopic?.subtopics) {
+        setParent(topic.parentTopic);
+      } else if (topic.parent || topic.parentTopic?._id) {
         const parentData = await getTopic(
           topic.parentTopic?._id || topic.parent
         );
@@ -47,7 +52,11 @@ export default function QuestionViewPage() {
   }
 
   useEffect(() => {
-    setQuestion(null);
+    const cached = peekTopic(subId);
+    if (cached) {
+      setSub(cached);
+      if (cached.parentTopic) setParent(cached.parentTopic);
+    }
     load();
   }, [questionId, subId]);
 

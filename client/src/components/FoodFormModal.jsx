@@ -10,6 +10,7 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
     item?.slots?.length ? item.slots : [defaultSlot || "afternoon"]
   );
   const [instructions, setInstructions] = useState(item?.instructions || "");
+  const [youtubeUrl, setYoutubeUrl] = useState(item?.youtubeUrl || "");
   const [carbsG, setCarbsG] = useState(item?.carbsG ?? "");
   const [fiberG, setFiberG] = useState(item?.fiberG ?? "");
   const [proteinG, setProteinG] = useState(item?.proteinG ?? "");
@@ -39,6 +40,7 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
         style,
         slots,
         instructions,
+        youtubeUrl,
         carbsG,
         fiberG,
         proteinG,
@@ -107,6 +109,16 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
           className={`${fieldClass} mt-1 min-h-24`}
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
+        />
+
+        <label className="mt-4 block text-xs text-muted">
+          Video link (YouTube)
+        </label>
+        <input
+          className={`${fieldClass} mt-1`}
+          value={youtubeUrl}
+          onChange={(e) => setYoutubeUrl(e.target.value)}
+          placeholder="Paste a YouTube link (optional)"
         />
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">

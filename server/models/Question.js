@@ -35,4 +35,6 @@ const questionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+questionSchema.index({ topic: 1, order: 1 });
+
 export default mongoose.model("Question", questionSchema);

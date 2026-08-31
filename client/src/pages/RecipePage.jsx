@@ -124,6 +124,35 @@ export default function RecipePage() {
       </div>
 
       <div className="mt-4 max-w-2xl rounded-2xl border border-line bg-[#222838]/80 p-5">
+        <h3 className="text-lg font-semibold">Video link</h3>
+        {item.youtubeUrl ? (
+          <div className="mt-3 flex flex-wrap items-center gap-3 text-sm">
+            <span className="text-muted">YouTube:</span>
+            <a
+              href={item.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-xl bg-coral px-4 py-2 text-sm font-semibold text-[#2a1410]"
+            >
+              Watch video →
+            </a>
+            <a
+              href={item.youtubeUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="min-w-0 break-all text-xs text-cyan hover:underline"
+            >
+              {item.youtubeUrl}
+            </a>
+          </div>
+        ) : (
+          <p className="mt-3 text-sm leading-6 text-ink/90">
+            No video link yet.
+          </p>
+        )}
+      </div>
+
+      <div className="mt-4 max-w-2xl rounded-2xl border border-line bg-[#222838]/80 p-5">
         <h3 className="text-lg font-semibold">Sugar note</h3>
         <p className="mt-3 text-sm leading-6 text-ink/90">
           {item.sugarNote || "No sugar note yet."}

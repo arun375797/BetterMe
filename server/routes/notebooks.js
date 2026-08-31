@@ -71,6 +71,17 @@ function publicPage(page, index) {
   };
 }
 
+function publicPageMeta(page, index) {
+  const item = publicPage(page, index);
+  return {
+    _id: item._id,
+    heading: item.heading,
+    order: item.order,
+    updatedAt: item.updatedAt,
+    headings: item.headings,
+  };
+}
+
 async function nextPageOrder(bookId) {
   const last = await BookPage.findOne({ book: bookId }).sort({ order: -1 }).lean();
   return (last?.order ?? 0) + 1;
@@ -125,7 +136,7 @@ router.get("/:bookId", async (req, res) => {
     .lean();
   res.json({
     book,
-    pages: pages.map((page, index) => publicPage(page, index)),
+    pages: pages.map((page, index) => publicPageMeta(page, index)),
   });
 });
 
@@ -139,7 +150,7 @@ router.get("/:bookId/index", async (req, res) => {
     .lean();
   res.json({
     book,
-    pages: pages.map((page, index) => publicPage(page, index)),
+    pages: pages.map((page, index) => publicPageMeta(page, index)),
   });
 });
 
@@ -193,6 +204,7 @@ router.post("/:bookId/pages", async (req, res) => {
 
 router.get("/:bookId/pages/:pageId", async (req, res) => {
   const pages = await BookPage.find({ book: req.params.bookId })
+    .select("heading title order")
     .sort({ order: 1, createdAt: 1 })
     .lean();
   const index = pages.findIndex(
@@ -201,10 +213,16 @@ router.get("/:bookId/pages/:pageId", async (req, res) => {
   if (index < 0) {
     return res.status(404).json({ message: "Page not found." });
   }
-  const book = await Book.findById(req.params.bookId).lean();
+  const [book, page] = await Promise.all([
+    Book.findById(req.params.bookId).lean(),
+    BookPage.findById(req.params.pageId).lean(),
+  ]);
+  if (!page) {
+    return res.status(404).json({ message: "Page not found." });
+  }
   res.json({
     book,
-    page: publicPage(pages[index], index),
+    page: publicPage(page, index),
     pages: pages.map((item, i) => ({
       _id: item._id,
       heading: pageHeading(item, i),

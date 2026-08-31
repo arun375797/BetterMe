@@ -3,8 +3,11 @@ import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
 import {
   createQuestion,
   deleteQuestion,
+  getQuestion,
   getQuestions,
   getTopic,
+  peekQuestions,
+  peekTopic,
   updateQuestion,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
@@ -15,9 +18,11 @@ import { accentMap } from "../theme.jsx";
 export default function QuestionsPage() {
   const { slug, section, topicId, subId } = useParams();
   const { refreshSubjects } = useOutletContext();
-  const [sub, setSub] = useState(null);
-  const [parent, setParent] = useState(null);
-  const [questions, setQuestions] = useState([]);
+  const [sub, setSub] = useState(() => peekTopic(subId) || null);
+  const [parent, setParent] = useState(
+    () => peekTopic(subId)?.parentTopic || null
+  );
+  const [questions, setQuestions] = useState(() => peekQuestions(subId) || []);
   const [error, setError] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
@@ -31,7 +36,9 @@ export default function QuestionsPage() {
       ]);
       setSub(topic);
       setQuestions(list);
-      if (topic.parent || topic.parentTopic?._id) {
+      if (topic.parentTopic?.subtopics) {
+        setParent(topic.parentTopic);
+      } else if (topic.parent || topic.parentTopic?._id) {
         const parentData = await getTopic(
           topic.parentTopic?._id || topic.parent
         );
@@ -44,7 +51,15 @@ export default function QuestionsPage() {
   }
 
   useEffect(() => {
-    setSub(null);
+    const cached = peekTopic(subId);
+    const cachedQs = peekQuestions(subId);
+    if (cached) {
+      setSub(cached);
+      if (cached.parentTopic) setParent(cached.parentTopic);
+    } else {
+      setSub(null);
+    }
+    if (cachedQs) setQuestions(cachedQs);
     load();
   }, [subId]);
 
@@ -127,24 +142,25 @@ export default function QuestionsPage() {
             questions.map((item, index) => (
               <li
                 key={item._id}
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+                className="topic-row rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
               >
-                <span className="w-8 text-sm text-muted">
+                <span className="topic-row-meta w-8 text-sm text-muted">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <Link
                   to={`/learning/${slug}/${section}/${topicId}/${subId}/${item._id}`}
-                  className="min-w-0 flex-1 font-medium hover:text-teal"
+                  className="topic-row-title font-medium hover:text-teal"
                 >
                   {item.title}
                 </Link>
                 <span
-                  className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                  className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
                     difficultyMeta(item.difficulty).className
                   }`}
                 >
                   {difficultyMeta(item.difficulty).label}
                 </span>
+                <div className="topic-row-actions">
                 <Link
                   to={`/learning/${slug}/${section}/${topicId}/${subId}/${item._id}`}
                   className="rounded-lg border border-teal/35 bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal hover:bg-teal/15"
@@ -153,7 +169,14 @@ export default function QuestionsPage() {
                 </Link>
                 <button
                   type="button"
-                  onClick={() => setEditItem(item)}
+                  onClick={async () => {
+                    try {
+                      const full = await getQuestion(item._id);
+                      setEditItem(full);
+                    } catch (err) {
+                      setError(err.message);
+                    }
+                  }}
                   className="rounded-lg border border-cyan/30 px-2.5 py-1 text-xs text-cyan hover:bg-cyan/10"
                 >
                   Edit
@@ -171,6 +194,7 @@ export default function QuestionsPage() {
                 >
                   Delete
                 </button>
+                </div>
               </li>
             ))
           ) : (

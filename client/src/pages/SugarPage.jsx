@@ -5,6 +5,7 @@ import {
   createSugarReading,
   deleteSugarReading,
   getSugarReadings,
+  peek,
 } from "../api.js";
 
 const statusClass = {
@@ -66,7 +67,9 @@ function filterReadings(readings, filterId) {
 }
 
 export default function SugarPage() {
-  const [readings, setReadings] = useState([]);
+  const [readings, setReadings] = useState(
+    () => peek("/api/sugar", "/")?.readings || []
+  );
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
   const [filter, setFilter] = useState("twoMonths");
