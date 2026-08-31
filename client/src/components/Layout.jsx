@@ -81,8 +81,8 @@ export default function Layout() {
           {error ? (
             <div className="page-pad">
               <div className="rounded-xl border border-coral/40 bg-coral/10 px-4 py-3 text-sm">
-                Could not reach the API. Start MongoDB and the Node server, then
-                refresh. ({error})
+                Could not reach the API. Check that the Railway backend is
+                online, then refresh. ({error})
               </div>
             </div>
           ) : null}

@@ -1,5 +1,7 @@
+const API_ORIGIN = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+
 async function request(base, path, options = {}) {
-  const res = await fetch(`${base}${path}`, {
+  const res = await fetch(`${API_ORIGIN}${base}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...options,
   });
