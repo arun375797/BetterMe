@@ -29,6 +29,8 @@ const PersonalitySectionPage = lazy(
 const PersonalityItemPage = lazy(
   () => import("./pages/PersonalityItemPage.jsx")
 );
+const TodoHome = lazy(() => import("./pages/TodoHome.jsx"));
+const TodoCategoryPage = lazy(() => import("./pages/TodoCategoryPage.jsx"));
 
 function NestedTopicPage() {
   const { section } = useParams();
@@ -77,6 +79,11 @@ export default function App() {
         <Route
           path="/personality/:section"
           element={<PersonalitySectionPage />}
+        />
+        <Route path="/todos" element={<TodoHome />} />
+        <Route
+          path="/todos/category/:categoryId"
+          element={<TodoCategoryPage />}
         />
       </Route>
     </Routes>

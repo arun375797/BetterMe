@@ -151,6 +151,7 @@ const FOOD_API = "/api/food";
 const EXERCISE_API = "/api/exercise";
 const BOOKS_API = "/api/notebooks";
 const PERSONALITY_API = "/api/personality";
+const TODOS_API = "/api/todos";
 
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
@@ -159,6 +160,7 @@ const FOOD = [FOOD_API];
 const EXERCISE = [EXERCISE_API];
 const BOOKS = [BOOKS_API];
 const PERSONALITY = [PERSONALITY_API];
+const TODOS = [TODOS_API];
 
 export const peekSubjects = () => peek(API, "/subjects");
 export const peekReviewQueue = () => peek(API, "/review");
@@ -327,3 +329,48 @@ export const updatePersonalityItem = (id, data) =>
   );
 export const deletePersonalityItem = (id) =>
   mutate(PERSONALITY_API, `/${id}`, { method: "DELETE" }, PERSONALITY);
+
+export const peekTodoCategories = () =>
+  peek(TODOS_API, "/categories")?.categories;
+
+export const getTodoCategories = () => get(TODOS_API, "/categories");
+export const createTodoCategory = (data) =>
+  mutate(
+    TODOS_API,
+    "/categories",
+    { method: "POST", body: JSON.stringify(data) },
+    TODOS
+  );
+export const updateTodoCategory = (id, data) =>
+  mutate(
+    TODOS_API,
+    `/categories/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    TODOS
+  );
+export const deleteTodoCategory = (id) =>
+  mutate(TODOS_API, `/categories/${id}`, { method: "DELETE" }, TODOS);
+
+export const getTodos = (filter = {}) => {
+  const params = new URLSearchParams();
+  if (filter.category != null) params.set("category", filter.category);
+  if (filter.done != null) params.set("done", String(filter.done));
+  const qs = params.toString() ? `?${params}` : "";
+  return get(TODOS_API, `/${qs}`, 0);
+};
+export const createTodo = (data) =>
+  mutate(
+    TODOS_API,
+    "/",
+    { method: "POST", body: JSON.stringify(data) },
+    TODOS
+  );
+export const updateTodo = (id, data) =>
+  mutate(
+    TODOS_API,
+    `/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    TODOS
+  );
+export const deleteTodo = (id) =>
+  mutate(TODOS_API, `/${id}`, { method: "DELETE" }, TODOS);

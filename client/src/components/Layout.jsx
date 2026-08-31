@@ -2,13 +2,23 @@ import { Suspense, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
 import Logo from "./Logo.jsx";
-import { getBooks, getSubjects, peekBooks, peekSubjects } from "../api.js";
+import {
+  getBooks,
+  getSubjects,
+  getTodoCategories,
+  peekBooks,
+  peekSubjects,
+  peekTodoCategories,
+} from "../api.js";
 import { prefetchPath } from "../prefetch.js";
 
 export default function Layout() {
   const location = useLocation();
   const [subjects, setSubjects] = useState(() => peekSubjects() || []);
   const [books, setBooks] = useState(() => peekBooks() || []);
+  const [todoCategories, setTodoCategories] = useState(
+    () => peekTodoCategories() || []
+  );
   const [error, setError] = useState("");
   const [navOpen, setNavOpen] = useState(false);
 
@@ -31,9 +41,19 @@ export default function Layout() {
     }
   }
 
+  async function refreshTodoCategories() {
+    try {
+      const data = await getTodoCategories();
+      setTodoCategories(data.categories || []);
+    } catch {
+      setTodoCategories([]);
+    }
+  }
+
   useEffect(() => {
     refreshSubjects();
     refreshBooks();
+    refreshTodoCategories();
   }, []);
 
   useEffect(() => {
@@ -77,6 +97,7 @@ export default function Layout() {
       <Sidebar
         subjects={subjects}
         books={books}
+        todoCategories={todoCategories}
         open={navOpen}
         onClose={() => setNavOpen(false)}
       />
@@ -113,7 +134,14 @@ export default function Layout() {
           ) : null}
           <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
             <Outlet
-              context={{ subjects, refreshSubjects, books, refreshBooks }}
+              context={{
+                subjects,
+                refreshSubjects,
+                books,
+                refreshBooks,
+                todoCategories,
+                refreshTodoCategories,
+              }}
             />
           </Suspense>
         </main>

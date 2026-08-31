@@ -24,8 +24,11 @@ export default function NotebookBookWrite() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const bodyRef = useRef(null);
   const headingRef = useRef(heading);
+  const savedRangeRef = useRef(null);
 
   useEffect(() => {
     headingRef.current = heading;
@@ -57,6 +60,44 @@ export default function NotebookBookWrite() {
   function applyFormat(command, value) {
     document.execCommand(command, false, value);
     bodyRef.current?.focus();
+  }
+
+  function openLinkModal(e) {
+    e.preventDefault();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+    setLinkUrl("");
+    setLinkModalOpen(true);
+  }
+
+  function applyLink() {
+    const url = linkUrl.trim();
+    if (!url) return;
+    const fullUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    bodyRef.current?.focus();
+    const sel = window.getSelection();
+    if (savedRangeRef.current) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
+    document.execCommand("createLink", false, fullUrl);
+    // Set target=_blank on the newly created link(s)
+    bodyRef.current?.querySelectorAll(`a[href="${fullUrl}"]`).forEach((a) => {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    });
+    setLinkModalOpen(false);
+    save();
+  }
+
+  function handleBodyClick(e) {
+    const anchor = e.target.closest("a[href]");
+    if (anchor) {
+      e.preventDefault();
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
+    }
   }
 
   async function save() {
@@ -160,6 +201,13 @@ export default function NotebookBookWrite() {
           >
             List
           </button>
+          <button
+            type="button"
+            onMouseDown={openLinkModal}
+            title="Insert hyperlink"
+          >
+            🔗 Link
+          </button>
         </div>
         <div
           ref={bodyRef}
@@ -167,6 +215,7 @@ export default function NotebookBookWrite() {
           contentEditable
           suppressContentEditableWarning
           onBlur={save}
+          onClick={handleBodyClick}
         />
 
         <div className="mt-10 flex flex-wrap items-center justify-between gap-3 border-t border-[#d2c6ae] pt-5 text-sm">
@@ -203,6 +252,43 @@ export default function NotebookBookWrite() {
             navigate(`/notebooks/${bookId}`);
           }}
         />
+      ) : null}
+
+      {linkModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-[#d2c6ae] bg-[#faf6ef] p-6 shadow-xl">
+            <h3 className="mb-1 text-sm font-semibold text-[#4a4336]">Insert hyperlink</h3>
+            <p className="mb-4 text-xs text-[#8d8168]">Paste a URL — the selected text will become a clickable link.</p>
+            <input
+              autoFocus
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyLink();
+                if (e.key === "Escape") setLinkModalOpen(false);
+              }}
+              className="w-full rounded-lg border border-[#d2c6ae] bg-white px-3 py-2 text-sm text-[#2d2a22] outline-none focus:border-[#b5a47a] focus:ring-2 focus:ring-[#b5a47a]/30"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkModalOpen(false)}
+                className="rounded-lg border border-[#d2c6ae] px-4 py-1.5 text-sm text-[#6f6758]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={applyLink}
+                className="rounded-lg bg-[#1d211c] px-4 py-1.5 text-sm font-semibold text-[#f4efe4]"
+              >
+                Insert
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );

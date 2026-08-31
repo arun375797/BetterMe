@@ -13,6 +13,7 @@ import foodRoutes from "./routes/food.js";
 import exerciseRoutes from "./routes/exercise.js";
 import notebookRoutes from "./routes/notebooks.js";
 import personalityRoutes from "./routes/personality.js";
+import todoRoutes from "./routes/todos.js";
 import {
   ensureSubjects,
   renamePracticalSolveTitles,
@@ -86,6 +87,7 @@ app.use("/api/food", foodRoutes);
 app.use("/api/exercise", exerciseRoutes);
 app.use("/api/notebooks", notebookRoutes);
 app.use("/api/personality", personalityRoutes);
+app.use("/api/todos", todoRoutes);
 
 app.use(
   express.static(clientDist, {

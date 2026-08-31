@@ -9,6 +9,7 @@ import {
   peekQuestions,
   peekTopic,
   updateQuestion,
+  updateTopic,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
@@ -24,6 +25,7 @@ export default function QuestionsPage() {
   );
   const [questions, setQuestions] = useState(() => peekQuestions(subId) || []);
   const [error, setError] = useState("");
+  const [status, setStatus] = useState("");
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [confirm, setConfirm] = useState(null);
@@ -83,6 +85,20 @@ export default function QuestionsPage() {
     await afterChange();
   }
 
+  async function toggleReview() {
+    if (!sub) return;
+    const next = !sub.inReview;
+    setSub((prev) => (prev ? { ...prev, inReview: next } : prev));
+    try {
+      await updateTopic(subId, { inReview: next });
+      await refreshSubjects();
+      setStatus(next ? "Marked for review" : "Removed from review");
+      setTimeout(() => setStatus(""), 1800);
+    } catch (err) {
+      setStatus(err.message || "Could not update review");
+    }
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -127,14 +143,30 @@ export default function QuestionsPage() {
               Only the questions are listed here. Use View to open the
               answers.
             </p>
+            {status ? (
+              <p className="mt-1 text-xs text-teal">{status}</p>
+            ) : null}
           </div>
-          <button
-            type="button"
-            onClick={() => setAddOpen(true)}
-            className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-[#10201e]"
-          >
-            Add question
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleReview}
+              className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
+                sub.inReview
+                  ? "border-teal/50 bg-teal/20 text-teal"
+                  : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {sub.inReview ? "✓ In review" : "Add to review"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setAddOpen(true)}
+              className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-[#10201e]"
+            >
+              Add question
+            </button>
+          </div>
         </div>
 
         <ul className="mt-6 space-y-3">

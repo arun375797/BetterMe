@@ -40,6 +40,7 @@ function Chevron({ open }) {
 export default function Sidebar({
   subjects,
   books = [],
+  todoCategories = [],
   open = false,
   onClose,
 }) {
@@ -48,10 +49,12 @@ export default function Sidebar({
   const healthOpen = location.pathname.startsWith("/health");
   const notebooksOpen = location.pathname.startsWith("/notebooks");
   const personalityOpen = location.pathname.startsWith("/personality");
-  const [learningExpanded, setLearningExpanded] = useState(true);
-  const [healthExpanded, setHealthExpanded] = useState(true);
-  const [notebooksExpanded, setNotebooksExpanded] = useState(true);
-  const [personalityExpanded, setPersonalityExpanded] = useState(true);
+  const todosOpen = location.pathname.startsWith("/todos");
+  const [learningExpanded, setLearningExpanded] = useState(false);
+  const [healthExpanded, setHealthExpanded] = useState(false);
+  const [notebooksExpanded, setNotebooksExpanded] = useState(false);
+  const [personalityExpanded, setPersonalityExpanded] = useState(false);
+  const [todosExpanded, setTodosExpanded] = useState(true);
 
   return (
     <>
@@ -351,6 +354,90 @@ export default function Sidebar({
                     </NavLink>
                   );
                 })}
+              </div>
+            ) : null}
+          </div>
+
+          {/* My Todos */}
+          <div>
+            <div
+              className={`flex items-center rounded-xl text-sm font-medium ${
+                todosOpen
+                  ? "bg-cyan/12 text-ink ring-1 ring-cyan/30"
+                  : "text-muted hover:bg-white/5 hover:text-ink"
+              }`}
+            >
+              <NavLink
+                to="/todos"
+                className="min-w-0 flex-1 truncate rounded-xl px-3 py-2.5"
+              >
+                My Todos
+              </NavLink>
+              <button
+                type="button"
+                aria-label={todosExpanded ? "Collapse My Todos" : "Expand My Todos"}
+                aria-expanded={todosExpanded}
+                onClick={() => setTodosExpanded((v) => !v)}
+                className="mr-1.5 ml-1 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink"
+              >
+                <Chevron open={todosExpanded} />
+              </button>
+            </div>
+
+            {todosExpanded ? (
+              <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
+                <NavLink
+                  to="/todos"
+                  end
+                  className={({ isActive }) =>
+                    `block rounded-lg px-2.5 py-1.5 text-[13px] ${
+                      isActive
+                        ? "bg-white/8 text-ink"
+                        : "text-muted hover:bg-white/5 hover:text-ink"
+                    }`
+                  }
+                >
+                  All Todos
+                </NavLink>
+                {todoCategories.map((cat) => {
+                  const inCat = location.pathname === `/todos/category/${cat._id}`;
+                  return (
+                    <NavLink
+                      key={cat._id}
+                      to={`/todos/category/${cat._id}`}
+                      className={() =>
+                        `flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] transition-colors ${
+                          inCat
+                            ? "bg-white/8 text-ink"
+                            : "text-muted hover:bg-white/5 hover:text-ink"
+                        }`
+                      }
+                    >
+                      <span
+                        className="h-2 w-2 shrink-0 rounded-full"
+                        style={{ background: cat.color }}
+                      />
+                      <span className="min-w-0 truncate">
+                        {cat.emoji ? `${cat.emoji} ` : ""}
+                        {cat.name}
+                      </span>
+                    </NavLink>
+                  );
+                })}
+                <NavLink
+                  to="/todos?new=category"
+                  className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] text-muted hover:bg-white/5 hover:text-cyan"
+                >
+                  <svg viewBox="0 0 14 14" className="h-3 w-3 shrink-0" fill="none">
+                    <path
+                      d="M7 2v10M2 7h10"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                  New category
+                </NavLink>
               </div>
             ) : null}
           </div>

@@ -139,7 +139,10 @@ export default function NotebookPage() {
   const [selText, setSelText] = useState("");
   const [youtubeUrlDraft, setYoutubeUrlDraft] = useState("");
   const [paperTheme, setPaperTheme] = useState(readNbTheme);
+  const [linkModalOpen, setLinkModalOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const paperRef = useRef(null);
+  const savedRangeRef = useRef(null);
 
   function changePaperTheme(id) {
     setPaperTheme(id);
@@ -229,6 +232,69 @@ export default function NotebookPage() {
       el.replaceWith(span);
     });
     flushNoteHtml();
+  }
+
+  function applyList(type) {
+    document.execCommand(
+      type === "ul" ? "insertUnorderedList" : "insertOrderedList",
+      false,
+      null
+    );
+  }
+
+  const DIFFICULTY_HIGHLIGHT = {
+    easy: "#b5f7e8",
+    medium: "#ffe08a",
+    hard: "#ffc2b6",
+    ec: "#bae6fd",
+  };
+
+  function applyDifficulty(id) {
+    const sel = window.getSelection();
+    const hasSelection = sel && !sel.isCollapsed && String(sel).trim().length > 0;
+    if (hasSelection) {
+      document.execCommand("hiliteColor", false, DIFFICULTY_HIGHLIGHT[id]);
+      flushNoteHtml();
+    }
+    patchMeta({ difficulty: id });
+  }
+
+  function openLinkModal(e) {
+    e.preventDefault();
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount > 0) {
+      savedRangeRef.current = sel.getRangeAt(0).cloneRange();
+    }
+    setLinkUrl("");
+    setLinkModalOpen(true);
+  }
+
+  function applyLink() {
+    const url = linkUrl.trim();
+    if (!url) return;
+    const fullUrl = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+    const editor = paperRef.current?.querySelector("[data-block-id]");
+    editor?.focus();
+    const sel = window.getSelection();
+    if (savedRangeRef.current) {
+      sel.removeAllRanges();
+      sel.addRange(savedRangeRef.current);
+    }
+    document.execCommand("createLink", false, fullUrl);
+    paperRef.current?.querySelectorAll(`a[href="${fullUrl}"]`).forEach((a) => {
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+    });
+    flushNoteHtml();
+    setLinkModalOpen(false);
+  }
+
+  function handlePaperClick(e) {
+    const anchor = e.target.closest("a[href]");
+    if (anchor) {
+      e.preventDefault();
+      window.open(anchor.href, "_blank", "noopener,noreferrer");
+    }
   }
 
   function noteTitleKey(value) {
@@ -468,8 +534,8 @@ export default function NotebookPage() {
         </div>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-[#222838]/80 px-3 py-2">
-        <span className="text-xs text-muted">Size</span>
+      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[#1c2133] px-3 py-2.5">
+        <span className="text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">Size</span>
         {FONT_SIZES.map((size) => (
           <button
             key={size}
@@ -477,12 +543,13 @@ export default function NotebookPage() {
             title="Select text, then click a size"
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => applyFontSize(size)}
-            className="rounded-lg border border-line px-2 py-1 text-[11px] text-muted hover:bg-white/5"
+            className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
           >
             {size}
           </button>
         ))}
-        <span className="ml-2 text-xs text-muted">Highlight</span>
+        <span className="mx-1 h-4 w-px bg-white/15" />
+        <span className="text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">Highlight</span>
         {HIGHLIGHTS.map((item) => (
           <button
             key={item.id}
@@ -490,7 +557,7 @@ export default function NotebookPage() {
             title={`Highlight ${item.id}`}
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => applyHighlight(item.color)}
-            className="h-6 w-6 rounded-full border border-white/20"
+            className="h-6 w-6 rounded-full border-2 border-white/30 shadow-sm hover:scale-110 transition-transform"
             style={{ background: item.color }}
           />
         ))}
@@ -498,16 +565,17 @@ export default function NotebookPage() {
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => document.execCommand("removeFormat")}
-          className="rounded-lg px-2 py-1 text-xs text-muted hover:bg-white/5"
+          className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
         >
           Clear mark
         </button>
+        <span className="mx-1 h-4 w-px bg-white/15" />
         <button
           type="button"
           title="Bullet list"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyList("ul")}
-          className="rounded-lg border border-line px-2 py-1 text-xs text-muted hover:bg-white/5"
+          className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
         >
           • List
         </button>
@@ -516,42 +584,52 @@ export default function NotebookPage() {
           title="Numbered list"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => applyList("ol")}
-          className="rounded-lg border border-line px-2 py-1 text-xs text-muted hover:bg-white/5"
+          className="rounded-lg border border-white/15 bg-white/5 px-2.5 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
         >
           1. List
         </button>
-        <span className="mx-1 hidden h-4 w-px bg-white/10 sm:block" />
-        <span className="text-xs text-muted">Paper</span>
+        <button
+          type="button"
+          title="Select text and click to insert a hyperlink"
+          onMouseDown={openLinkModal}
+          className="rounded-lg border border-cyan/30 bg-cyan/10 px-2.5 py-1 text-[11px] text-cyan hover:bg-cyan/20"
+        >
+          🔗 Link
+        </button>
+        <span className="mx-1 h-4 w-px bg-white/15" />
+        <span className="text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">Paper</span>
         {NB_THEMES.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => changePaperTheme(item.id)}
-            className={`rounded-lg border px-2.5 py-1 text-[11px] ${
+            className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
               paperTheme === item.id
-                ? "border-teal/40 bg-teal/15 text-teal"
-                : "border-line text-muted hover:bg-white/5"
+                ? "border-teal/50 bg-teal/20 text-teal"
+                : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
             }`}
           >
             {item.label}
           </button>
         ))}
-        <span className="mx-1 hidden h-4 w-px bg-white/10 sm:block" />
-        <span className="text-xs text-muted">Difficulty</span>
+        <span className="mx-1 h-4 w-px bg-white/15" />
+        <span className="text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">Difficulty</span>
         {DIFFICULTIES.map((item) => (
           <button
             key={item.id}
             type="button"
-            onClick={() => patchMeta({ difficulty: item.id })}
-            className={`rounded-lg border px-2 py-1 text-[11px] ${
+            title={`Set difficulty to ${item.label}. Select text first to also highlight it.`}
+            onClick={() => applyDifficulty(item.id)}
+            className={`rounded-lg border px-2.5 py-1 text-[11px] font-semibold ${
               (sub.difficulty || "medium") === item.id
                 ? item.className
-                : "border-line text-muted hover:bg-white/5"
+                : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10"
             }`}
           >
             {item.label}
           </button>
         ))}
+        <span className="mx-1 h-4 w-px bg-white/15" />
         <button
           type="button"
           title="Select text in the notebook, then add it as a nested subtopic. Click again to remove it."
@@ -559,22 +637,22 @@ export default function NotebookPage() {
           onClick={addSelectionAsSubtopic}
           className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
             alreadyFromNote
-              ? "border-gold/50 bg-gold/20 text-gold"
-              : "border-gold/40 bg-gold/12 text-gold"
+              ? "border-gold/50 bg-gold/25 text-gold"
+              : "border-gold/40 bg-gold/12 text-gold hover:bg-gold/20"
           }`}
         >
-          {alreadyFromNote ? "Added as subtopic" : "Add to subtopic"}
+          {alreadyFromNote ? "✓ Added as subtopic" : "Add to subtopic"}
         </button>
         <button
           type="button"
           onClick={() => patchMeta({ inReview: !sub.inReview })}
           className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
             sub.inReview
-              ? "border-teal/40 bg-teal/15 text-teal"
-              : "border-line text-muted hover:bg-white/5"
+              ? "border-teal/50 bg-teal/20 text-teal"
+              : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
           }`}
         >
-          {sub.inReview ? "In review" : "Add to review"}
+          {sub.inReview ? "✓ In review" : "Add to review"}
         </button>
         <button
           type="button"
@@ -584,7 +662,7 @@ export default function NotebookPage() {
               blocks: [...prev.blocks, newBlock("text")],
             }))
           }
-          className="ml-auto rounded-lg border border-line px-3 py-1 text-xs"
+          className="ml-auto rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
         >
           Add note
         </button>
@@ -596,7 +674,7 @@ export default function NotebookPage() {
               blocks: [...prev.blocks, newBlock("code")],
             }))
           }
-          className="rounded-lg border border-teal/40 bg-teal/10 px-3 py-1 text-xs text-teal"
+          className="rounded-lg border border-teal/40 bg-teal/15 px-3 py-1 text-[11px] font-medium text-teal hover:bg-teal/25"
         >
           Add code
         </button>
@@ -607,6 +685,7 @@ export default function NotebookPage() {
         data-nb-theme={paperTheme}
         className="notebook-paper mt-5 min-h-[70vh] overflow-hidden rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.35)]"
         style={{ fontSize: "18px" }}
+        onClick={handlePaperClick}
         onMouseDown={(e) => {
           if (
             e.target.closest(
@@ -708,6 +787,42 @@ export default function NotebookPage() {
           )}
         </div>
       </div>
+      {linkModalOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#1c2133] p-6 shadow-2xl">
+            <h3 className="mb-1 text-sm font-semibold text-ink">Insert hyperlink</h3>
+            <p className="mb-4 text-xs text-muted">Select text first, then paste any URL. Clicking the link will open it in a new tab.</p>
+            <input
+              autoFocus
+              type="url"
+              placeholder="https://youtube.com/watch?v=..."
+              value={linkUrl}
+              onChange={(e) => setLinkUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") applyLink();
+                if (e.key === "Escape") setLinkModalOpen(false);
+              }}
+              className="w-full rounded-xl border border-white/15 bg-[#222838] px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/20"
+            />
+            <div className="mt-4 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLinkModalOpen(false)}
+                className="rounded-xl border border-white/15 px-4 py-1.5 text-sm text-muted hover:bg-white/5"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={applyLink}
+                className="rounded-xl bg-cyan px-4 py-1.5 text-sm font-semibold text-[#0d1a1f]"
+              >
+                Insert link
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
