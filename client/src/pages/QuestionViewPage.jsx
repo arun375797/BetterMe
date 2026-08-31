@@ -77,7 +77,7 @@ export default function QuestionViewPage() {
   const ways = solutionsOf(question);
 
   return (
-    <div className="min-h-screen px-6 py-8 lg:px-8">
+    <div className="page-pad min-h-screen">
       <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
         <Link to={`/learning/${slug}`} className="hover:underline">
           {sub.subject?.shortName || slug}
@@ -101,7 +101,7 @@ export default function QuestionViewPage() {
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-3xl font-semibold">{question.title}</h2>
+          <h2 className="text-2xl font-semibold break-words sm:text-3xl">{question.title}</h2>
           {question.prompt ? (
             <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-muted">
               {question.prompt}

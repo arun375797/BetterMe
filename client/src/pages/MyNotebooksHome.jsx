@@ -9,13 +9,13 @@ export default function MyNotebooksHome() {
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <div className="e-notebook-shell px-8 py-8">
+    <div className="e-notebook-shell page-pad">
       <div className="mx-auto flex w-full max-w-5xl flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[12px] tracking-[0.22em] text-gold uppercase">
             E-notebooks
           </p>
-          <h2 className="mt-2 text-3xl font-semibold">My Notebooks</h2>
+          <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">My Notebooks</h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
             Each notebook is its own book. Open one to read the index, then jump
             to a page by its heading.

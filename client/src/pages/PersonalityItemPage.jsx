@@ -47,7 +47,7 @@ export default function PersonalityItemPage() {
 
   if (!meta) {
     return (
-      <div className="px-8 py-8 text-sm text-muted">Section not found.</div>
+      <div className="page-pad text-sm text-muted">Section not found.</div>
     );
   }
 
@@ -81,7 +81,7 @@ export default function PersonalityItemPage() {
   }
 
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <Link
         to={`/personality/${section}`}
         className="text-sm text-muted hover:text-ink"
@@ -91,7 +91,7 @@ export default function PersonalityItemPage() {
       <p className="mt-4 text-[12px] tracking-[0.18em] text-violet uppercase">
         My Personality · {meta.label}
       </p>
-      <h2 className="mt-2 text-3xl font-semibold">
+      <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">
         {item?.title || "Loading…"}
       </h2>
       <p className="mt-2 max-w-xl text-sm text-muted">

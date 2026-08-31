@@ -104,7 +104,7 @@ export default function HealthHomePage() {
         />
       </div>
 
-      <div className="mt-10 flex items-end justify-between gap-3">
+      <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
             Food consumption

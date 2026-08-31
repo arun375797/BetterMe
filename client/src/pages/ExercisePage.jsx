@@ -93,11 +93,11 @@ export default function ExercisePage() {
   });
 
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <p className="text-[12px] tracking-[0.18em] text-coral uppercase">
         My Health · Exercise
       </p>
-      <h2 className="mt-2 text-3xl font-semibold">Daily movement</h2>
+      <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Daily movement</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
         Yoga, badminton, and weight training each keep their own log. This
         page shows how minutes and how you felt change day by day.

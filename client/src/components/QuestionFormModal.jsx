@@ -96,7 +96,7 @@ export default function QuestionFormModal({
         onSubmit={handleSubmit}
         className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden lg:grid-cols-[minmax(0,1.65fr)_300px]"
       >
-        <div className="min-h-0 space-y-4 overflow-auto border-b border-white/8 p-6 lg:border-r lg:border-b-0">
+        <div className="min-h-0 space-y-4 overflow-auto border-b border-white/8 p-4 sm:p-6 lg:border-r lg:border-b-0">
           <label className="block">
             <span className="mb-1.5 block text-xs text-muted">Title</span>
             <input
@@ -209,7 +209,7 @@ export default function QuestionFormModal({
           </div>
         </div>
 
-        <div className="flex flex-col bg-[#171c2a]/50 p-6">
+        <div className="flex flex-col bg-[#171c2a]/50 p-4 sm:p-6">
           <p className="text-[11px] tracking-[0.18em] text-gold uppercase">
             Related section
           </p>

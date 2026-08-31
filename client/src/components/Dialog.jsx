@@ -29,7 +29,7 @@ export function Dialog({ size = "form", onClose, children }) {
       <div
         role="dialog"
         aria-modal="true"
-        className={`${SIZE[size] || SIZE.form} overflow-hidden rounded-2xl border border-white/10 bg-[#1e2434] shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5`}
+        className={`${SIZE[size] || SIZE.form} overflow-hidden rounded-t-2xl border border-white/10 bg-[#1e2434] shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5 sm:rounded-2xl`}
         onClick={(e) => e.stopPropagation()}
       >
         {children}

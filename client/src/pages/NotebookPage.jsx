@@ -271,7 +271,7 @@ export default function NotebookPage() {
   const parentTitle = sub.parentTopic?.title || "Topic";
 
   return (
-    <div className="min-h-screen px-4 py-6 lg:px-8">
+    <div className="page-pad min-h-screen">
       <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
         <Link to={`/learning/${slug}`} className="hover:underline">
           {sub.subject?.shortName || slug}
@@ -290,7 +290,7 @@ export default function NotebookPage() {
       </p>
       <div className="mt-2 flex flex-wrap items-end justify-between gap-3">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <h2 className="text-3xl font-semibold">{sub.title}</h2>
+          <h2 className="text-2xl font-semibold break-words sm:text-3xl">{sub.title}</h2>
           <span
             className={`rounded-full border px-2.5 py-0.5 text-[11px] ${
               difficultyMeta(sub.difficulty).className

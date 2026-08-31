@@ -7,11 +7,11 @@ const copy = {
 export default function HealthSoonPage() {
   const { item } = useParams();
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
         My Health
       </p>
-      <h2 className="mt-2 text-3xl font-semibold capitalize">{item}</h2>
+      <h2 className="mt-2 text-2xl font-semibold break-words capitalize sm:text-3xl">{item}</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
         {copy[item] || "This part of health is not open yet."}
       </p>

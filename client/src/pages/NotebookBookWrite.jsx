@@ -132,7 +132,7 @@ export default function NotebookBookWrite() {
         </div>
       </div>
 
-      <article className="e-page-sheet px-8 py-10 sm:px-14">
+      <article className="e-page-sheet px-5 py-8 sm:px-14 sm:py-10">
         <p className="text-[11px] tracking-[0.2em] text-[#8d8168] uppercase">
           {book.title} · page {pageNumber}
         </p>

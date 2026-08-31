@@ -87,8 +87,8 @@ export default function QuestionsPage() {
   const siblingSections = parent?.subtopics || [];
 
   return (
-    <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[1fr_260px]">
-      <section className="px-6 py-8 lg:px-8">
+    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px]">
+      <section className="page-pad">
         <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
           <Link to={`/learning/${slug}`} className="hover:underline">
             {sub.subject?.shortName || slug}
@@ -107,7 +107,7 @@ export default function QuestionsPage() {
         </p>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="text-3xl font-semibold">{sub.title}</h2>
+            <h2 className="text-2xl font-semibold break-words sm:text-3xl">{sub.title}</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted">
               Only the questions are listed here. Use View to open the
               answers.
@@ -181,7 +181,7 @@ export default function QuestionsPage() {
         </ul>
       </section>
 
-      <aside className="border-l border-line/80 bg-[#171c2a]/70 px-6 py-8">
+      <aside className="page-aside">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           Subtopic
         </p>

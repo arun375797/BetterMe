@@ -35,7 +35,7 @@ export default function NotebookBookIndex() {
 
   return (
     <div className="e-notebook-shell flex flex-col items-center px-4 py-6">
-      <div className="mb-4 flex w-full max-w-[760px] items-center justify-between gap-3 text-sm">
+      <div className="mb-4 flex w-full max-w-[760px] flex-wrap items-center justify-between gap-3 text-sm">
         <Link to="/notebooks" className="text-muted hover:text-ink">
           All notebooks
         </Link>
@@ -65,7 +65,7 @@ export default function NotebookBookIndex() {
         </div>
       </div>
 
-      <article className="e-index-sheet px-10 py-12 sm:px-14">
+      <article className="e-index-sheet px-5 py-8 sm:px-14 sm:py-12">
         <p className="e-index-title text-center text-[11px] text-[#8d8168]">
           Index
         </p>

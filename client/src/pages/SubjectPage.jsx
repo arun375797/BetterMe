@@ -111,7 +111,7 @@ export default function SubjectPage() {
   const sectionStats = subject.stats?.[section] || {};
 
   return (
-    <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[1fr_280px]">
+    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
       <section className="page-pad">
         <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
           <Link to={`/learning/${slug}`} className="hover:underline">

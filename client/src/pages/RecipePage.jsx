@@ -48,7 +48,7 @@ export default function RecipePage() {
 
   if (error && !item) {
     return (
-      <div className="px-8 py-8">
+      <div className="page-pad">
         <Link to="/health/food" className="text-sm text-coral hover:underline">
           Back to food
         </Link>
@@ -59,7 +59,7 @@ export default function RecipePage() {
 
   if (!item) {
     return (
-      <div className="px-8 py-8 text-sm text-muted">Loading recipe…</div>
+      <div className="page-pad text-sm text-muted">Loading recipe…</div>
     );
   }
 
@@ -69,7 +69,7 @@ export default function RecipePage() {
     .join(", ");
 
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <Link to="/health/food" className="text-sm text-coral hover:underline">
         Back to food styles
       </Link>
@@ -79,7 +79,7 @@ export default function RecipePage() {
           <p className="text-[12px] tracking-[0.18em] text-coral uppercase">
             My Health · Recipe
           </p>
-          <h2 className="mt-2 text-3xl font-semibold">{item.name}</h2>
+          <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">{item.name}</h2>
           <p className="mt-1 text-sm text-muted">
             {item.style}
             {times ? ` · ${times}` : ""}

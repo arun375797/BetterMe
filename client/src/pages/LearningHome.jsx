@@ -32,7 +32,7 @@ export default function LearningHome() {
   }, [subjects]);
 
   return (
-    <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[1fr_280px]">
+    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
       <section className="page-pad">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           BetterMe · Learning
@@ -102,14 +102,14 @@ export default function LearningHome() {
                 to={`/learning/${subject.slug}`}
                 className={`rounded-2xl border border-line bg-[#222838]/80 p-5 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accent.glow}`}
               >
-                <div className="flex items-start justify-between">
-                  <div>
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0">
                     <p className={`text-xs font-medium ${accent.text}`}>
                       {subject.shortName}
                     </p>
-                    <h3 className="mt-1 text-xl font-semibold">{subject.name}</h3>
+                    <h3 className="mt-1 text-xl font-semibold break-words">{subject.name}</h3>
                   </div>
-                  <span className="rounded-lg bg-white/6 px-2 py-1 text-xs">
+                  <span className="shrink-0 rounded-lg bg-white/6 px-2 py-1 text-xs">
                     Theory · Practical
                   </span>
                 </div>

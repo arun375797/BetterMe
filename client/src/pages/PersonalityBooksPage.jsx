@@ -40,13 +40,13 @@ export default function PersonalityBooksPage() {
   );
 
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="text-[12px] tracking-[0.18em] text-violet uppercase">
             My Personality · {meta.label}
           </p>
-          <h2 className="mt-2 text-3xl font-semibold">{meta.title}</h2>
+          <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">{meta.title}</h2>
           <p className="mt-2 max-w-xl text-sm text-muted">{meta.blurb}</p>
         </div>
         <button

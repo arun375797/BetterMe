@@ -71,7 +71,7 @@ export default function VitaminPage() {
   const tabletCount = items.filter((item) => item.kind === "tablet").length;
 
   return (
-    <div className="grid min-h-screen grid-cols-1 xl:grid-cols-[1fr_280px]">
+    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
       <section className="page-pad">
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>

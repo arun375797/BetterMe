@@ -71,7 +71,7 @@ export default function ExerciseKindPage() {
   }, [sessions]);
 
   return (
-    <div className="px-8 py-8">
+    <div className="page-pad">
       <Link
         to="/health/exercise"
         className="text-sm text-muted hover:text-ink"
@@ -83,7 +83,7 @@ export default function ExerciseKindPage() {
           <p className="text-[12px] tracking-[0.18em] text-coral uppercase">
             My Health · Exercise
           </p>
-          <h2 className="mt-2 text-3xl font-semibold">{meta.label}</h2>
+          <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">{meta.label}</h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
             {meta.hint}. Log what you did, why you chose it today, and when.
           </p>
