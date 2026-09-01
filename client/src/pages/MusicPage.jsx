@@ -270,7 +270,7 @@ export default function MusicPage() {
           })}
         </div>
 
-        <form onSubmit={handleAddCategory} className="mt-3 flex gap-2">
+        <form onSubmit={handleAddCategory} className="mt-3 flex flex-col gap-2 sm:flex-row">
           <input
             value={newCategory}
             onChange={(e) => setNewCategory(e.target.value)}
@@ -280,7 +280,7 @@ export default function MusicPage() {
           />
           <button
             type="submit"
-            className="shrink-0 rounded-xl border border-line px-3 py-2.5 text-sm text-muted hover:bg-white/6 hover:text-ink"
+            className="shrink-0 rounded-xl border border-line px-3 py-2.5 text-sm text-muted hover:bg-white/6 hover:text-ink sm:self-auto"
           >
             Add
           </button>
@@ -359,7 +359,7 @@ export default function MusicPage() {
               return (
                 <li
                   key={item._id}
-                  className={`flex min-w-0 items-center gap-1.5 rounded-2xl border bg-[#171c2a] p-2.5 sm:gap-2 sm:p-3 ${
+                  className={`flex min-w-0 items-center gap-1 rounded-2xl border bg-[#171c2a] p-2 sm:gap-2 sm:p-3 ${
                     isThisPlaying
                       ? "border-teal/50 ring-1 ring-teal/30"
                       : "border-line"
@@ -410,9 +410,23 @@ export default function MusicPage() {
                     type="button"
                     onClick={() => handleDelete(item)}
                     aria-label={`Delete ${item.title}`}
-                    className="shrink-0 rounded-lg px-2 py-1 text-xs text-muted hover:bg-coral/15 hover:text-coral"
+                    className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-coral/15 hover:text-coral sm:h-auto sm:w-auto sm:px-2 sm:py-1 sm:text-xs"
                   >
-                    Delete
+                    <span className="hidden sm:inline">Delete</span>
+                    <svg
+                      viewBox="0 0 16 16"
+                      className="h-3.5 w-3.5 sm:hidden"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="M3 4h10M6 4V3h4v1M5 4l.5 8h5l.5-8"
+                        stroke="currentColor"
+                        strokeWidth="1.5"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
                   </button>
                 </li>
               );

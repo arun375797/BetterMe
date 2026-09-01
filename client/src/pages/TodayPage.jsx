@@ -21,11 +21,14 @@ import {
   getPersonalityItems,
   getReviewQueue,
   getSleepLogs,
+  getStudyPlan,
   getSugarReadings,
   getTodos,
   getVitaminItems,
+  logStudyBlock,
   peek,
   peekReviewQueue,
+  peekStudyPlan,
   updateTodo,
 } from "../api.js";
 
@@ -96,6 +99,7 @@ export default function TodayPage() {
   const [personalityItems, setPersonalityItems] = useState(
     () => peek("/api/personality", "/")?.items || []
   );
+  const [studyPlan, setStudyPlan] = useState(() => peekStudyPlan() || null);
   const [error, setError] = useState("");
   const now = new Date();
 
@@ -112,6 +116,7 @@ export default function TodayPage() {
           sleepData,
           exerciseData,
           personalityData,
+          studyData,
         ] = await Promise.all([
           getTodos({ done: false }),
           getReviewQueue(),
@@ -121,6 +126,7 @@ export default function TodayPage() {
           getSleepLogs(),
           getExerciseSessions(),
           getPersonalityItems(),
+          getStudyPlan(),
         ]);
         if (cancelled) return;
         setTodos(todoData.todos || []);
@@ -131,6 +137,7 @@ export default function TodayPage() {
         setSleepStats(sleepData.stats || null);
         setSessions(exerciseData.sessions || []);
         setPersonalityItems(personalityData.items || []);
+        setStudyPlan(studyData);
         setError("");
       } catch (err) {
         if (!cancelled) setError(err.message);
@@ -170,6 +177,26 @@ export default function TodayPage() {
   const sleepIsLastNight =
     lastNight &&
     (lastNight.day === todayKey() || lastNight.wakeDate === todayKey());
+  const studyToday = studyPlan?.today;
+  const studyTitle = studyToday?.lineup?.length
+    ? studyToday.lineup.map((item) => item.name).join(" + ")
+    : "Pick today's subjects";
+
+  async function markStudy(block, status) {
+    if (!studyToday) return;
+    try {
+      const next = await logStudyBlock({
+        day: studyToday.key,
+        kind: block.kind,
+        status,
+        subject: block.subject?._id || null,
+        topic: block.topic?._id || null,
+      });
+      setStudyPlan(next);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
 
   async function toggleTodo(todo) {
     const next = !todo.done;
@@ -240,17 +267,85 @@ export default function TodayPage() {
 
       <Section
         kicker="Learning"
-        title="Review queue"
+        title={studyTitle}
         to="/learning"
-        linkLabel="Learning"
+        linkLabel="Study plan"
       >
-        {!reviewTop.length ? (
-          <p className="text-sm text-muted">
-            Nothing in review. Mark a notebook or question Add to review and it
-            will show up here.
-          </p>
-        ) : (
+        {studyToday?.blocks?.length ? (
           <ul className="space-y-2">
+            {studyToday.blocks.map((block) => (
+              <li
+                key={block.id}
+                className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+              >
+                <span className="min-w-0 flex-1">
+                  <span className="block text-xs text-muted">
+                    {block.label}
+                    {block.subject?.shortName
+                      ? ` · ${block.subject.shortName}`
+                      : ""}
+                  </span>
+                  <span className="block break-words font-medium">
+                    {block.topic?.title || "Open the library to add a topic"}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 text-[11px] ${
+                    block.status === "done"
+                      ? "text-teal"
+                      : block.status === "skipped"
+                        ? "text-gold"
+                        : "text-muted"
+                  }`}
+                >
+                  {block.status === "done"
+                    ? "Done"
+                    : block.status === "skipped"
+                      ? "Skipped"
+                      : "Not yet"}
+                </span>
+                <Link
+                  to={block.href}
+                  className="shrink-0 text-sm text-teal hover:underline"
+                >
+                  Study
+                </Link>
+                {block.status === "open" ? (
+                  <button
+                    type="button"
+                    onClick={() => markStudy(block, "done")}
+                    className="shrink-0 text-sm text-muted hover:text-ink"
+                  >
+                    Done
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => markStudy(block, "open")}
+                    className="shrink-0 text-sm text-muted hover:text-ink"
+                  >
+                    Undo
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-sm text-muted">
+            Open the study plan and pick 2 or 3 subjects for today.
+          </p>
+        )}
+        {studyPlan?.tomorrow?.lineup?.length ? (
+          <p className="mt-3 text-xs text-muted">
+            Tomorrow: {studyPlan.tomorrow.weekdayLabel} ·{" "}
+            {studyPlan.tomorrow.lineup
+              .map((item) => item.shortName)
+              .join(" · ")}
+          </p>
+        ) : null}
+
+        {reviewTop.length ? (
+          <ul className="mt-4 space-y-2">
             {reviewTop.map((item) => (
               <li key={item._id}>
                 <Link
@@ -258,6 +353,7 @@ export default function TodayPage() {
                   className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15 sm:items-center"
                 >
                   <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-muted">Review queue</span>
                     <span className="block break-words font-medium">
                       {item.title}
                     </span>
@@ -277,7 +373,7 @@ export default function TodayPage() {
               </li>
             ))}
           </ul>
-        )}
+        ) : null}
         {review.length > 3 ? (
           <p className="mt-3 text-xs text-muted">
             {review.length - 3} more in the full queue on Learning.
@@ -429,14 +525,17 @@ export default function TodayPage() {
 }
 
 function Section({ kicker, title, to, linkLabel, children }) {
+  const slug = String(kicker || title)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-");
   return (
-    <section className="mt-8">
+    <section id={`jump-${slug}`} data-jump={kicker} className="mt-8">
       <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
             {kicker}
           </p>
-          <h3 className="mt-1 text-lg font-semibold">{title}</h3>
+          <h3 className="mt-1 text-lg font-semibold break-words">{title}</h3>
         </div>
         {to ? (
           <Link to={to} className="text-sm text-teal hover:underline">

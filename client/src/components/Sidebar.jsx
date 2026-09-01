@@ -1,11 +1,12 @@
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Logo from "./Logo.jsx";
 import Sit25Mark from "./Sit25Mark.jsx";
 import MusicControl from "./MusicControl.jsx";
 import { MusicNowPlaying } from "./MusicProgress.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
 import { deleteTodoCategory } from "../api.js";
+import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
   { label: "Sugar", path: "/health/sugar" },
@@ -68,6 +69,10 @@ export default function Sidebar({
   const [personalityExpanded, setPersonalityExpanded] = useState(false);
   const [todosExpanded, setTodosExpanded] = useState(true);
   const [reportExpanded, setReportExpanded] = useState(true);
+
+  useEffect(() => {
+    if (learningOpen) setLearningExpanded(true);
+  }, [learningOpen]);
 
   async function handleDeleteTodoCategory(e, catId) {
     e.preventDefault();
@@ -166,7 +171,7 @@ export default function Sidebar({
               >
                 Learning
               </NavLink>
-              {learningExpanded ? (
+              {learningExpanded || learningOpen ? (
                 <button
                   type="button"
                   aria-label="Collapse Learning"
@@ -181,6 +186,19 @@ export default function Sidebar({
 
             {learningExpanded ? (
               <div className="mt-2 ml-2 space-y-0.5 border-l border-line pl-3">
+                <NavLink
+                  to="/learning"
+                  end
+                  className={({ isActive }) =>
+                    `flex items-center rounded-lg px-2.5 py-1.5 text-[13px] ${
+                      isActive
+                        ? "bg-white/8 text-ink"
+                        : "text-muted hover:bg-white/5 hover:text-ink"
+                    }`
+                  }
+                >
+                  Plan
+                </NavLink>
                 {subjects.map((subject) => {
                   const inSubject = location.pathname.startsWith(
                     `/learning/${subject.slug}`
@@ -226,6 +244,20 @@ export default function Sidebar({
                           >
                             Practical
                           </NavLink>
+                          {subject.slug === "dsa" ? (
+                            <NavLink
+                              to="/learning/dsa/namaste-dev"
+                              className={({ isActive }) =>
+                                `block rounded-lg px-2 py-1 text-[12px] ${
+                                  isActive
+                                    ? "text-violet"
+                                    : "text-muted hover:text-ink"
+                                }`
+                              }
+                            >
+                              Namaste Dev
+                            </NavLink>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -587,6 +619,9 @@ export default function Sidebar({
             ) : null}
           </div>
         </nav>
+        <div className="mt-3 shrink-0 border-t border-line/80 pt-3">
+          <LogoutButton onClick={onClose} />
+        </div>
       </aside>
     </>
   );

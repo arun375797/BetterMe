@@ -2,7 +2,11 @@ import { Router } from "express";
 import Subject from "../models/Subject.js";
 import Topic from "../models/Topic.js";
 import Question from "../models/Question.js";
+import CourseVideo from "../models/CourseVideo.js";
+import { formatDuration, parseDuration } from "../lib/duration.js";
 import { memoClear, memoGet } from "../memo.js";
+
+const NAMASTE_DEV = "namaste-dev";
 
 const router = Router();
 const SECTIONS = ["theory", "practical"];
@@ -199,11 +203,15 @@ router.get("/review", async (_req, res) => {
 router.get("/subjects", async (_req, res) => {
   try {
     const payload = await memoGet("learning:subjects", 20_000, async () => {
-      const [subjects, topics, questionCounts] = await Promise.all([
-        Subject.find().sort({ order: 1 }).lean(),
-        Topic.find().select("subject parent section fromNote inReview").lean(),
-        Question.aggregate([{ $group: { _id: "$topic", n: { $sum: 1 } } }]),
-      ]);
+      const [subjects, topics, questionCounts, namasteVideos] =
+        await Promise.all([
+          Subject.find().sort({ order: 1 }).lean(),
+          Topic.find().select("subject parent section fromNote inReview").lean(),
+          Question.aggregate([{ $group: { _id: "$topic", n: { $sum: 1 } } }]),
+          CourseVideo.find({ courseSlug: NAMASTE_DEV })
+            .select("durationSeconds")
+            .lean(),
+        ]);
       const topicById = Object.fromEntries(
         topics.map((topic) => [String(topic._id), topic])
       );
@@ -215,6 +223,14 @@ router.get("/subjects", async (_req, res) => {
         questionsBySubject[sid] = (questionsBySubject[sid] || 0) + row.n;
       }
 
+      const namasteDev = {
+        videos: namasteVideos.length,
+        totalSeconds: namasteVideos.reduce(
+          (sum, item) => sum + (item.durationSeconds || 0),
+          0
+        ),
+      };
+
       return subjects.map((subject) => {
         const subjectTopics = topics.filter(
           (topic) => String(topic.subject) === String(subject._id)
@@ -225,6 +241,7 @@ router.get("/subjects", async (_req, res) => {
             subjectTopics,
             questionsBySubject[String(subject._id)] || 0
           ),
+          ...(subject.slug === "dsa" ? { namasteDev } : {}),
         };
       });
     });
@@ -684,6 +701,189 @@ router.delete("/questions/:id", async (req, res) => {
     await Question.findByIdAndDelete(question._id);
     memoClear("learning");
     res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+function mapVideo(item) {
+  return {
+    ...item,
+    duration:
+      item.durationSeconds == null
+        ? "—"
+        : formatDuration(item.durationSeconds),
+  };
+}
+
+function coursePayload(videos) {
+  const list = [...videos].sort(
+    (a, b) =>
+      (a.sectionOrder ?? 0) - (b.sectionOrder ?? 0) ||
+      (a.slNo ?? 0) - (b.slNo ?? 0)
+  );
+  const totalSeconds = list.reduce(
+    (sum, item) => sum + (item.durationSeconds || 0),
+    0
+  );
+  const longest = list.reduce(
+    (max, item) => Math.max(max, item.durationSeconds || 0),
+    0
+  );
+  const mapped = list.map(mapVideo);
+  const sections = [];
+  for (const item of mapped) {
+    const name = item.section || "";
+    const last = sections[sections.length - 1];
+    if (!last || last.name !== name) {
+      sections.push({ name, videos: [] });
+    }
+    sections[sections.length - 1].videos.push(item);
+  }
+  for (const group of sections) {
+    group.totalSeconds = group.videos.reduce(
+      (sum, item) => sum + (item.durationSeconds || 0),
+      0
+    );
+    group.total = formatDuration(group.totalSeconds);
+  }
+  return {
+    slug: NAMASTE_DEV,
+    title: "Namaste Dev",
+    videos: mapped,
+    sections,
+    totalSeconds,
+    total: formatDuration(totalSeconds),
+    longestSeconds: longest,
+  };
+}
+
+async function loadNamasteDev() {
+  const videos = await CourseVideo.find({ courseSlug: NAMASTE_DEV }).lean();
+  return coursePayload(videos);
+}
+
+router.get("/courses/namaste-dev", async (_req, res) => {
+  try {
+    const payload = await memoGet("learning:course:namaste-dev", 15_000, () =>
+      loadNamasteDev()
+    );
+    res.json(payload);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/courses/namaste-dev/videos", async (req, res) => {
+  try {
+    const title = String(req.body?.title || "").trim();
+    if (!title) {
+      return res.status(400).json({ message: "Video name is required." });
+    }
+    const durationSeconds = parseDuration(
+      req.body?.duration ?? req.body?.durationSeconds
+    );
+    const last = await CourseVideo.findOne({ courseSlug: NAMASTE_DEV })
+      .sort({ slNo: -1 })
+      .select("slNo section sectionOrder")
+      .lean();
+    const slNo = Number(req.body?.slNo) || (last?.slNo || 0) + 1;
+    await CourseVideo.create({
+      courseSlug: NAMASTE_DEV,
+      title,
+      durationSeconds,
+      slNo,
+      section: String(req.body?.section || last?.section || "").trim(),
+      sectionOrder:
+        req.body?.sectionOrder != null
+          ? Number(req.body.sectionOrder)
+          : last?.sectionOrder || 0,
+    });
+    memoClear("learning");
+    res.status(201).json(await loadNamasteDev());
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/courses/namaste-dev/videos/bulk", async (req, res) => {
+  try {
+    const rows = Array.isArray(req.body?.videos) ? req.body.videos : [];
+    const last = await CourseVideo.findOne({ courseSlug: NAMASTE_DEV })
+      .sort({ slNo: -1 })
+      .select("slNo")
+      .lean();
+    let slNo = last?.slNo || 0;
+    const docs = [];
+    for (const row of rows) {
+      const title = String(row?.title || "").trim();
+      if (!title) continue;
+      slNo += 1;
+      docs.push({
+        courseSlug: NAMASTE_DEV,
+        title,
+        durationSeconds: parseDuration(row.duration ?? row.durationSeconds),
+        slNo: Number(row.slNo) || slNo,
+      });
+    }
+    if (docs.length) await CourseVideo.insertMany(docs);
+    memoClear("learning");
+    res.status(201).json(await loadNamasteDev());
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.patch("/courses/namaste-dev/videos/:id", async (req, res) => {
+  try {
+    const video = await CourseVideo.findOne({
+      _id: req.params.id,
+      courseSlug: NAMASTE_DEV,
+    });
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    if (req.body?.title != null) {
+      const title = String(req.body.title).trim();
+      if (!title) {
+        return res.status(400).json({ message: "Video name is required." });
+      }
+      video.title = title;
+    }
+    if (req.body?.duration != null || req.body?.durationSeconds != null) {
+      video.durationSeconds = parseDuration(
+        req.body.duration ?? req.body.durationSeconds
+      );
+    }
+    if (req.body?.slNo != null) {
+      video.slNo = Number(req.body.slNo) || video.slNo;
+    }
+    if (req.body?.done != null) {
+      video.done = Boolean(req.body.done);
+    }
+    if (req.body?.favorite != null) {
+      video.favorite = Boolean(req.body.favorite);
+    }
+    await video.save();
+    memoClear("learning");
+    res.json(await loadNamasteDev());
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.delete("/courses/namaste-dev/videos/:id", async (req, res) => {
+  try {
+    const video = await CourseVideo.findOne({
+      _id: req.params.id,
+      courseSlug: NAMASTE_DEV,
+    });
+    if (!video) {
+      return res.status(404).json({ message: "Video not found" });
+    }
+    await CourseVideo.deleteOne({ _id: video._id });
+    memoClear("learning");
+    res.json(await loadNamasteDev());
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

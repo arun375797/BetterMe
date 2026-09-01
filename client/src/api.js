@@ -1,3 +1,5 @@
+import { authLost, getAuthToken } from "./authSession.js";
+
 const RAILWAY_API = "https://betterme-production.up.railway.app";
 const CACHE_TTL_MS = 2 * 60 * 1000;
 const SESSION_KEY = "betterme-api-cache-v1";
@@ -95,6 +97,10 @@ async function request(base, path, options = {}) {
   ) {
     headers["Content-Type"] = "application/json";
   }
+  const token = getAuthToken();
+  if (token && !headers.Authorization && !headers.authorization) {
+    headers.Authorization = `Bearer ${token}`;
+  }
 
   const res = await fetch(`${API_ORIGIN}${base}${path}`, {
     ...options,
@@ -113,9 +119,17 @@ async function request(base, path, options = {}) {
     throw new Error(`API did not return JSON. ${hint}`);
   }
   if (!res.ok) {
+    if (res.status === 401) authLost();
     throw new Error(body.message || "Request failed");
   }
   return body;
+}
+
+export function login(pin) {
+  return request("/api/auth", "/login", {
+    method: "POST",
+    body: JSON.stringify({ pin }),
+  });
 }
 
 function get(base, path, ttl = CACHE_TTL_MS) {
@@ -158,6 +172,7 @@ const SLEEP_API = "/api/sleep";
 const REPORT_API = "/api/report";
 const SIT_BREAK_API = "/api/sit-break";
 const MUSIC_API = "/api/music";
+const STUDY_API = "/api/study";
 
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
@@ -171,6 +186,7 @@ const SLEEP = [SLEEP_API];
 const REPORT = [REPORT_API];
 const SIT_BREAK = [SIT_BREAK_API];
 const MUSIC = [MUSIC_API];
+const STUDY = [STUDY_API];
 
 export const peekSubjects = () => peek(API, "/subjects");
 export const peekReviewQueue = () => peek(API, "/review");
@@ -189,6 +205,29 @@ export const getSubject = (slug, section) => {
   const query = section ? `?section=${section}` : "";
   return get(API, `/subjects/${slug}${query}`);
 };
+export const peekNamasteDev = () => peek(API, "/courses/namaste-dev");
+export const getNamasteDev = () => get(API, "/courses/namaste-dev");
+export const createNamasteDevVideo = (data) =>
+  mutate(
+    API,
+    "/courses/namaste-dev/videos",
+    { method: "POST", body: JSON.stringify(data) },
+    LEARNING
+  );
+export const updateNamasteDevVideo = (id, data) =>
+  mutate(
+    API,
+    `/courses/namaste-dev/videos/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    LEARNING
+  );
+export const deleteNamasteDevVideo = (id) =>
+  mutate(
+    API,
+    `/courses/namaste-dev/videos/${id}`,
+    { method: "DELETE" },
+    LEARNING
+  );
 export const getTopic = (id) => get(API, `/topics/${id}`);
 export const createTopic = (data) =>
   mutate(API, "/topics", { method: "POST", body: JSON.stringify(data) }, LEARNING);
@@ -220,6 +259,30 @@ export const updateQuestion = (id, data) =>
   );
 export const deleteQuestion = (id) =>
   mutate(API, `/questions/${id}`, { method: "DELETE" }, LEARNING);
+
+export const peekStudyPlan = () => peek(STUDY_API, "/plan");
+export const getStudyPlan = () => get(STUDY_API, "/plan");
+export const updateStudySettings = (data) =>
+  mutate(
+    STUDY_API,
+    "/settings",
+    { method: "PATCH", body: JSON.stringify(data) },
+    STUDY
+  );
+export const logStudyBlock = (data) =>
+  mutate(
+    STUDY_API,
+    "/logs",
+    { method: "POST", body: JSON.stringify(data) },
+    [...STUDY, ...REPORT]
+  );
+export const advanceStudyTopic = (data) =>
+  mutate(
+    STUDY_API,
+    "/advance",
+    { method: "POST", body: JSON.stringify(data) },
+    STUDY
+  );
 
 export const getSugarReadings = () => get(SUGAR_API, "/");
 export const createSugarReading = (data) =>

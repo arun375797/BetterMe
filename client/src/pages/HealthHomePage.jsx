@@ -79,7 +79,11 @@ export default function HealthHomePage() {
       </p>
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
 
-      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+      <div
+        id="jump-sugar"
+        data-jump="Sugar"
+        className="mt-8 flex flex-wrap items-end justify-between gap-3"
+      >
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
             Sugar statistics
@@ -118,7 +122,11 @@ export default function HealthHomePage() {
         />
       </div>
 
-      <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
+      <div
+        id="jump-food"
+        data-jump="Food"
+        className="mt-10 flex flex-wrap items-end justify-between gap-3"
+      >
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
             Food consumption
@@ -168,7 +176,11 @@ export default function HealthHomePage() {
         <FoodAdherenceChart logs={logs} dayCount={30} />
       </div>
 
-      <div className="mt-10 flex flex-wrap items-end justify-between gap-3">
+      <div
+        id="jump-sleep"
+        data-jump="Sleep"
+        className="mt-10 flex flex-wrap items-end justify-between gap-3"
+      >
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
             Sleep

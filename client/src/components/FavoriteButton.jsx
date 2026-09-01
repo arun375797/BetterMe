@@ -1,4 +1,9 @@
-export default function FavoriteButton({ on, onClick, className = "" }) {
+export default function FavoriteButton({
+  on,
+  onClick,
+  className = "",
+  compact = false,
+}) {
   return (
     <button
       type="button"
@@ -9,11 +14,12 @@ export default function FavoriteButton({ on, onClick, className = "" }) {
       }}
       aria-pressed={on}
       aria-label={on ? "Remove from favourites" : "Add to favourites"}
+      title={on ? "Favourited" : "Add to favourites"}
       className={`rounded-lg px-2 py-1 text-sm ${
         on ? "text-gold" : "text-muted hover:text-gold"
       } ${className}`}
     >
-      {on ? "★ Favourite" : "☆ Favourite"}
+      {compact ? (on ? "★" : "☆") : on ? "★ Favourite" : "☆ Favourite"}
     </button>
   );
 }

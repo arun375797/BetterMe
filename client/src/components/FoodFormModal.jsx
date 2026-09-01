@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Dialog } from "./Dialog.jsx";
-import { fieldClass, GI, SLOTS } from "../food.js";
+import { Dialog, DialogFooter, DialogHeader } from "./Dialog.jsx";
+import { fieldClass, SLOTS } from "../food.js";
 
 export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) {
   const editing = Boolean(item?._id);
@@ -15,9 +15,6 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
   const [fiberG, setFiberG] = useState(item?.fiberG ?? "");
   const [proteinG, setProteinG] = useState(item?.proteinG ?? "");
   const [fatG, setFatG] = useState(item?.fatG ?? "");
-  const [glycemicIndex, setGlycemicIndex] = useState(
-    item?.glycemicIndex || "medium"
-  );
   const [sugarNote, setSugarNote] = useState(item?.sugarNote || "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
@@ -45,7 +42,6 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
         fiberG,
         proteinG,
         fatG,
-        glycemicIndex,
         sugarNote,
       });
       onClose();
@@ -58,134 +54,140 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
 
   return (
     <Dialog size="form" onClose={onClose}>
-      <form onSubmit={handleSubmit} className="p-6">
-        <p className="text-[11px] tracking-[0.18em] text-coral uppercase">
-          My Health · Food
-        </p>
-        <h3 className="mt-1 text-xl font-semibold">
-          {editing ? "Edit food" : "Add food"}
-        </h3>
-        <p className="mt-1 text-sm text-muted">
-          Style, how to make it, and the details that move sugar.
-        </p>
-
-        <label className="mt-5 block text-xs text-muted">Name</label>
-        <input
-          className={`${fieldClass} mt-1`}
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          required
+      <form onSubmit={handleSubmit}>
+        <DialogHeader
+          kicker="My Health · Food"
+          title={editing ? "Edit food style" : "New food style"}
+          onClose={onClose}
         />
+        <div className="space-y-4 px-6 py-5">
+          <p className="text-sm leading-6 text-muted">
+            Name the plate, pick meal times, and keep macros for sugar tracking.
+          </p>
 
-        <label className="mt-4 block text-xs text-muted">Style</label>
-        <input
-          className={`${fieldClass} mt-1`}
-          value={style}
-          onChange={(e) => setStyle(e.target.value)}
-          placeholder="South Indian plate, salad, grain bowl"
-          required
-        />
+          <Field label="Name">
+            <input
+              className={fieldClass}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              required
+            />
+          </Field>
 
-        <p className="mt-4 text-xs text-muted">Used at</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {SLOTS.map((slot) => (
-            <button
-              key={slot.id}
-              type="button"
-              onClick={() => toggleSlot(slot.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs ${
-                slots.includes(slot.id)
-                  ? "border-coral/50 bg-coral/15 text-ink"
-                  : "border-line bg-[#171c2a] text-muted"
-              }`}
-            >
-              {slot.label}
-            </button>
-          ))}
-        </div>
+          <Field label="Style">
+            <input
+              className={fieldClass}
+              value={style}
+              onChange={(e) => setStyle(e.target.value)}
+              placeholder="South Indian, salad, grain bowl"
+              required
+            />
+          </Field>
 
-        <label className="mt-4 block text-xs text-muted">How to make it</label>
-        <textarea
-          className={`${fieldClass} mt-1 min-h-24`}
-          value={instructions}
-          onChange={(e) => setInstructions(e.target.value)}
-        />
-
-        <label className="mt-4 block text-xs text-muted">
-          Video link (YouTube)
-        </label>
-        <input
-          className={`${fieldClass} mt-1`}
-          value={youtubeUrl}
-          onChange={(e) => setYoutubeUrl(e.target.value)}
-          placeholder="Paste a YouTube link (optional)"
-        />
-
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
-          {[
-            ["Carbs", carbsG, setCarbsG],
-            ["Fiber", fiberG, setFiberG],
-            ["Protein", proteinG, setProteinG],
-            ["Fat", fatG, setFatG],
-          ].map(([label, value, setValue]) => (
-            <div key={label}>
-              <label className="block text-xs text-muted">{label} g</label>
-              <input
-                className={`${fieldClass} mt-1`}
-                type="number"
-                min="0"
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
-              />
+          <div>
+            <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+              Used at
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {SLOTS.map((slot) => (
+                <button
+                  key={slot.id}
+                  type="button"
+                  onClick={() => toggleSlot(slot.id)}
+                  className={`rounded-lg border px-2 py-2 text-left ${
+                    slots.includes(slot.id)
+                      ? "border-coral/50 bg-coral/12 text-ink"
+                      : "border-line bg-[#171c2a] text-muted"
+                  }`}
+                >
+                  <span className="block text-xs font-semibold">{slot.label}</span>
+                  <span className="text-[10px] opacity-80">{slot.meal}</span>
+                </button>
+              ))}
             </div>
-          ))}
+          </div>
+
+          <Field label="How to make it">
+            <textarea
+              className={`${fieldClass} min-h-24`}
+              value={instructions}
+              onChange={(e) => setInstructions(e.target.value)}
+            />
+          </Field>
+
+          <Field label="YouTube link">
+            <input
+              className={fieldClass}
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              placeholder="Optional"
+            />
+          </Field>
+
+          <div>
+            <p className="text-[11px] font-medium tracking-wide text-muted uppercase">
+              Macros (g)
+            </p>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {[
+                ["Carbs", carbsG, setCarbsG],
+                ["Fiber", fiberG, setFiberG],
+                ["Protein", proteinG, setProteinG],
+                ["Fat", fatG, setFatG],
+              ].map(([label, value, setValue]) => (
+                <label key={label} className="block">
+                  <span className="text-[11px] text-muted">{label}</span>
+                  <input
+                    className={`${fieldClass} mt-1`}
+                    type="number"
+                    min="0"
+                    value={value}
+                    onChange={(e) => setValue(e.target.value)}
+                  />
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <Field label="Sugar note">
+            <textarea
+              className={`${fieldClass} min-h-16`}
+              value={sugarNote}
+              onChange={(e) => setSugarNote(e.target.value)}
+              placeholder="How this meal tends to affect blood sugar"
+            />
+          </Field>
+
+          {error ? <p className="text-sm text-coral">{error}</p> : null}
         </div>
-
-        <p className="mt-4 text-xs text-muted">Glycemic index</p>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {GI.map((option) => (
-            <button
-              key={option.id}
-              type="button"
-              onClick={() => setGlycemicIndex(option.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs ${
-                glycemicIndex === option.id
-                  ? "border-coral/50 bg-coral/15 text-ink"
-                  : "border-line bg-[#171c2a] text-muted"
-              }`}
-            >
-              {option.label}
-            </button>
-          ))}
-        </div>
-
-        <label className="mt-4 block text-xs text-muted">Sugar note</label>
-        <textarea
-          className={`${fieldClass} mt-1 min-h-16`}
-          value={sugarNote}
-          onChange={(e) => setSugarNote(e.target.value)}
-          placeholder="How this meal tends to affect blood sugar"
-        />
-
-        {error ? <p className="mt-3 text-sm text-coral">{error}</p> : null}
-
-        <div className="mt-6 flex justify-end gap-2">
+        <DialogFooter>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-line px-4 py-2 text-sm text-muted"
+            className="rounded-lg border border-line px-4 py-2 text-sm text-muted hover:text-ink"
           >
             Cancel
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="rounded-xl bg-coral px-4 py-2 text-sm font-semibold text-[#2a1410]"
+            className="rounded-lg bg-coral px-4 py-2 text-sm font-semibold text-[#2a1410]"
           >
-            {saving ? "Saving…" : "Save"}
+            {saving ? "Saving…" : "Save style"}
           </button>
-        </div>
+        </DialogFooter>
       </form>
     </Dialog>
+  );
+}
+
+function Field({ label, children }) {
+  return (
+    <label className="block">
+      <span className="text-[11px] font-medium tracking-wide text-muted uppercase">
+        {label}
+      </span>
+      <span className="mt-1.5 block">{children}</span>
+    </label>
   );
 }

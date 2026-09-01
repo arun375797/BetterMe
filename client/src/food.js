@@ -1,8 +1,8 @@
 export const SLOTS = [
-  { id: "morning", label: "Morning" },
-  { id: "afternoon", label: "Afternoon" },
-  { id: "evening", label: "Evening" },
-  { id: "night", label: "Night" },
+  { id: "morning", label: "Morning", meal: "Breakfast", typical: "8:00 AM" },
+  { id: "afternoon", label: "Afternoon", meal: "Lunch", typical: "1:00 PM" },
+  { id: "evening", label: "Evening", meal: "Dinner", typical: "7:30 PM" },
+  { id: "night", label: "Night", meal: "Snack", typical: "4:30 PM / 9:30 PM" },
 ];
 
 export const GI = [

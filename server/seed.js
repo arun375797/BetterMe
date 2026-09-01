@@ -12,6 +12,8 @@ import Book from "./models/Book.js";
 import BookPage from "./models/BookPage.js";
 import PersonalityItem from "./models/PersonalityItem.js";
 import SitBreakVideo from "./models/SitBreakVideo.js";
+import CourseVideo from "./models/CourseVideo.js";
+import { namasteDevDocs, NAMASTE_DEV_SLUG } from "./data/namasteDev.js";
 
 dotenv.config();
 
@@ -130,6 +132,26 @@ export async function ensureSitBreakVideos() {
   if (existing > 0) return 0;
   await SitBreakVideo.insertMany(SIT_BREAK_VIDEOS);
   return SIT_BREAK_VIDEOS.length;
+}
+
+export async function ensureNamasteDevIndex() {
+  const docs = namasteDevDocs();
+  const existing = await CourseVideo.find({ courseSlug: NAMASTE_DEV_SLUG })
+    .sort({ slNo: 1 })
+    .select("title durationSeconds section")
+    .lean();
+  const same =
+    existing.length === docs.length &&
+    existing.every(
+      (item, i) =>
+        item.title === docs[i].title &&
+        item.section === docs[i].section &&
+        (item.durationSeconds ?? null) === (docs[i].durationSeconds ?? null)
+    );
+  if (same) return 0;
+  await CourseVideo.deleteMany({ courseSlug: NAMASTE_DEV_SLUG });
+  if (docs.length) await CourseVideo.insertMany(docs);
+  return docs.length;
 }
 
 export async function resetUserContent() {

@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useState } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import Sidebar from "./Sidebar.jsx";
+import QuickJump from "./QuickJump.jsx";
 import Logo from "./Logo.jsx";
 import Sit25Mark from "./Sit25Mark.jsx";
 import MusicControl from "./MusicControl.jsx";
@@ -14,6 +15,7 @@ import {
   peekTodoCategories,
 } from "../api.js";
 import { prefetchPath } from "../prefetch.js";
+import LogoutButton from "./LogoutButton.jsx";
 
 export default function Layout() {
   const location = useLocation();
@@ -106,7 +108,7 @@ export default function Layout() {
         onClose={() => setNavOpen(false)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b border-line/80 bg-[#171c2a]/94 px-3 backdrop-blur-md lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line/80 bg-[#171c2a]/94 px-3 backdrop-blur-md lg:hidden">
           <button
             type="button"
             onClick={() => setNavOpen(true)}
@@ -136,12 +138,13 @@ export default function Layout() {
             <Sit25Mark className="h-8 w-8" title="" />
           </Link>
           <MusicControl />
+          <LogoutButton compact />
         </header>
         <MusicNowPlaying
           compact
           className="sticky top-14 z-20 border-b border-line/80 bg-[#171c2a]/94 px-3 py-2 backdrop-blur-md lg:hidden"
         />
-        <main className="min-w-0 flex-1">
+        <main className="min-w-0 flex-1 max-lg:[&_.page-pad]:pr-16">
           {error ? (
             <div className="page-pad">
               <div className="rounded-xl border border-coral/40 bg-coral/10 px-4 py-3 text-sm">
@@ -164,6 +167,7 @@ export default function Layout() {
           </Suspense>
         </main>
       </div>
+      <QuickJump subjects={subjects} todoCategories={todoCategories} />
     </div>
   );
 }

@@ -18,11 +18,16 @@ import sleepRoutes from "./routes/sleep.js";
 import reportRoutes from "./routes/report.js";
 import sitBreakRoutes from "./routes/sitBreak.js";
 import musicRoutes from "./routes/music.js";
+import studyRoutes from "./routes/study.js";
+import authRoutes from "./routes/auth.js";
+import { requireAuth } from "./lib/auth.js";
+import { memoClear } from "./memo.js";
 import {
   ensureSubjects,
   renamePracticalSolveTitles,
   ensureTopicSerialNumbers,
   ensureSitBreakVideos,
+  ensureNamasteDevIndex,
 } from "./seed.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -85,7 +90,14 @@ app.get("/api/health", (_req, res) => {
   res.json({ ok: true });
 });
 
+app.use("/api/auth", authRoutes);
+app.use("/api", (req, res, next) => {
+  if (req.path === "/health" || req.path.startsWith("/auth")) return next();
+  return requireAuth(req, res, next);
+});
+
 app.use("/api/learning", learningRoutes);
+app.use("/api/study", studyRoutes);
 app.use("/api/sugar", sugarRoutes);
 app.use("/api/vitamins", vitaminRoutes);
 app.use("/api/food", foodRoutes);
@@ -147,6 +159,11 @@ async function runBootJobs() {
   const sitBreak = await ensureSitBreakVideos();
   if (sitBreak) {
     console.log(`Seeded ${sitBreak} sit-break videos.`);
+  }
+  const namaste = await ensureNamasteDevIndex();
+  if (namaste) {
+    memoClear("learning");
+    console.log(`Loaded Namaste Dev index (${namaste} videos).`);
   }
 }
 

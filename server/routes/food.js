@@ -33,7 +33,6 @@ function cleanItem(body) {
   const style = String(body?.style || "").trim();
   const instructions = String(body?.instructions || "").trim();
   const sugarNote = String(body?.sugarNote || "").trim();
-  const glycemicIndex = body?.glycemicIndex || "medium";
   const youtube = cleanUrl(body?.youtubeUrl);
   const slots = Array.isArray(body?.slots)
     ? [...new Set(body.slots.filter((item) => SLOTS.includes(item)))]
@@ -42,9 +41,6 @@ function cleanItem(body) {
   if (!name) return { error: "Food name is required." };
   if (!style) return { error: "Food style is required." };
   if (!slots.length) return { error: "Pick at least one meal time." };
-  if (!GI.includes(glycemicIndex)) {
-    return { error: "Glycemic index must be low, medium, or high." };
-  }
   if (youtube.error) return { error: youtube.error };
 
   return {
@@ -55,7 +51,6 @@ function cleanItem(body) {
       instructions,
       sugarNote,
       youtubeUrl: youtube.url,
-      glycemicIndex,
       carbsG: num(body?.carbsG),
       fiberG: num(body?.fiberG),
       proteinG: num(body?.proteinG),

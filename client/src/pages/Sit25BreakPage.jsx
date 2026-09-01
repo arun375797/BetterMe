@@ -46,15 +46,16 @@ function Player({ video, onClose }) {
       aria-modal="true"
       aria-label={video.title}
     >
-      <div className="flex items-center gap-3 px-4 py-3 sm:px-6">
+      <div className="flex items-center gap-2 px-3 py-3 sm:gap-3 sm:px-6">
         <p className="min-w-0 flex-1 truncate text-sm font-semibold">{video.title}</p>
         <a
           href={watch}
           target="_blank"
           rel="noreferrer"
-          className="rounded-lg px-3 py-1.5 text-xs text-muted hover:bg-white/6 hover:text-ink"
+          className="shrink-0 rounded-lg px-2 py-1.5 text-xs text-muted hover:bg-white/6 hover:text-ink sm:px-3"
         >
-          Open on YouTube
+          <span className="sm:hidden">YouTube</span>
+          <span className="hidden sm:inline">Open on YouTube</span>
         </a>
         <button
           type="button"

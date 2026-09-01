@@ -436,7 +436,11 @@ export default function ReportStatsPage() {
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
 
       {report ? (
-        <div className="status-window mt-8 rounded-2xl p-4 sm:p-7">
+        <div
+          id="jump-status"
+          data-jump="Status"
+          className="status-window mt-8 rounded-2xl p-4 sm:p-7"
+        >
           <span className="status-corner status-corner-tl" />
           <span className="status-corner status-corner-tr" />
           <span className="status-corner status-corner-bl" />
@@ -528,7 +532,7 @@ export default function ReportStatsPage() {
               </div>
             </div>
 
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
               <MiniStat
                 label="Streak"
                 value={`${summary?.exerciseStreak ?? 0}d`}
@@ -549,11 +553,19 @@ export default function ReportStatsPage() {
                     : "—"
                 }
               />
+              <MiniStat
+                label="Study"
+                value={`${summary?.studyComplete ?? 0}d`}
+              />
             </div>
 
             <div className="my-6 h-px bg-gradient-to-r from-transparent via-gold/35 to-transparent" />
 
-            <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,300px)_1fr]">
+            <div
+              id="jump-attributes"
+              data-jump="Attributes"
+              className="grid items-start gap-8 lg:grid-cols-[minmax(0,300px)_1fr]"
+            >
               <div>
                 <p className="mb-3 text-center font-mono text-[11px] tracking-[0.28em] text-gold/70 uppercase">
                   Attribute Map
@@ -588,7 +600,7 @@ export default function ReportStatsPage() {
             </div>
 
             {effects?.length ? (
-              <>
+              <div id="jump-effects" data-jump="Effects">
                 <div className="my-6 h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent" />
                 <p className="mb-3 font-mono text-[11px] tracking-[0.28em] text-gold/70 uppercase">
                   Active Effects
@@ -625,11 +637,11 @@ export default function ReportStatsPage() {
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
 
             {quests?.length ? (
-              <>
+              <div id="jump-quests" data-jump="Quests">
                 <div className="my-6 h-px bg-gradient-to-r from-transparent via-gold/25 to-transparent" />
                 <p className="mb-3 font-mono text-[11px] tracking-[0.28em] text-gold/70 uppercase">
                   Daily Quests
@@ -663,14 +675,15 @@ export default function ReportStatsPage() {
                     </Link>
                   ))}
                 </div>
-              </>
+              </div>
             ) : null}
 
             <p className="mt-6 text-center text-[11px] text-muted">
               Scores use this week, the last 30 days, and the last 90 days
-              against WHO / ACSM / NSF / ADA-style floors. Skip a few days and
-              awakened stats decay. Nothing is added as a new sidebar section —
-              Nourish and Recovery read Food and Sleep you already have.
+              against WHO / ACSM / NSF / ADA-style floors, plus your Learning
+              mix. Skip a few days and awakened stats decay. Knowledge reads
+              study sessions you mark done — not subjects sitting in the
+              library.
             </p>
           </div>
         </div>

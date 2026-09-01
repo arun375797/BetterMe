@@ -1,4 +1,5 @@
 import { Link, useOutletContext, useParams } from "react-router-dom";
+import { formatDuration } from "../lib/duration.js";
 import { accentMap } from "../theme.jsx";
 
 const tracks = [
@@ -39,7 +40,11 @@ export default function SubjectHub() {
           Practical: topic → subtopic → questions.
         </p>
 
-        <div className="mt-8 grid gap-4 md:grid-cols-2">
+        <div
+          className={`mt-8 grid gap-4 ${
+            slug === "dsa" ? "md:grid-cols-3" : "md:grid-cols-2"
+          }`}
+        >
           {tracks.map((track) => {
             const trackAccent = accentMap[track.accent];
             const stats = subject.stats?.[track.id] || {};
@@ -61,6 +66,21 @@ export default function SubjectHub() {
               </Link>
             );
           })}
+          {slug === "dsa" ? (
+            <Link
+              to="/learning/dsa/namaste-dev"
+              className={`rounded-2xl border border-line bg-[#222838]/80 p-6 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accentMap.violet.glow}`}
+            >
+              <p className={`text-xs font-medium ${accentMap.violet.text}`}>
+                Course
+              </p>
+              <h3 className="mt-2 text-2xl font-semibold">Namaste Dev</h3>
+              <p className="mt-5 text-xs text-muted">
+                {subject.namasteDev?.videos || 0} ·{" "}
+                {formatDuration(subject.namasteDev?.totalSeconds || 0)}
+              </p>
+            </Link>
+          ) : null}
         </div>
       </section>
 

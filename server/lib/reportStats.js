@@ -25,6 +25,7 @@ const CLASS_BY_STAT = {
   dis: { name: "Oathkeeper", epithet: "Every meal a vow kept" },
   ntr: { name: "Kitchen Alchemist", epithet: "Protein, fiber, and a calm glycemic tide" },
   ctl: { name: "Blood Sage", epithet: "The inner tide held still" },
+  kno: { name: "Lorekeeper", epithet: "Two languages a day, written into the body" },
 };
 
 function pad(n) {
@@ -219,6 +220,145 @@ function foodWindow(logs, fromDay, toDay) {
   };
 }
 
+function studyLineup(settings, day) {
+  const key = dayKey(day);
+  if (!key) return [];
+  const [y, m, d] = key.split("-").map(Number);
+  const weekday = new Date(y, m - 1, d).getDay();
+  const slots = Number(settings?.slotsPerDay) === 3 ? 3 : 2;
+  const row = (settings?.rotation || []).find(
+    (item) => Number(item.weekday) === weekday
+  );
+  let ids = [];
+  if (Array.isArray(row?.subjects) && row.subjects.length) {
+    ids = row.subjects.map((item) => String(item?._id || item));
+  } else if (row?.subject) {
+    ids = [String(row.subject)];
+  }
+  const seen = new Set();
+  const out = [];
+  for (const id of ids) {
+    if (!id || seen.has(id)) continue;
+    seen.add(id);
+    out.push(id);
+    if (out.length >= slots) break;
+  }
+  return out;
+}
+
+function studyDayComplete(logs, lineup) {
+  if (!lineup.length) return false;
+  return lineup.every((sid) => {
+    const theory = logs.some(
+      (log) =>
+        log.kind === "theory" &&
+        String(log.subject) === sid &&
+        log.status === "done"
+    );
+    const practical = logs.some(
+      (log) =>
+        log.kind === "practical" &&
+        String(log.subject) === sid &&
+        log.status === "done"
+    );
+    return theory && practical;
+  });
+}
+
+function eachDay(fromDay, toDay, fn) {
+  const [ys, ms, ds] = fromDay.split("-").map(Number);
+  const [ye, me, de] = toDay.split("-").map(Number);
+  const start = new Date(ys, ms - 1, ds);
+  const end = new Date(ye, me - 1, de);
+  for (const d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+    fn(ymd(d));
+  }
+}
+
+function studyWindow(logs, settings, fromDay, toDay) {
+  const inSpan = (logs || []).filter((log) => {
+    const day = dayKey(log.day);
+    return day >= fromDay && day <= toDay;
+  });
+  const byDay = new Map();
+  for (const log of inSpan) {
+    const day = dayKey(log.day);
+    if (!byDay.has(day)) byDay.set(day, []);
+    byDay.get(day).push(log);
+  }
+
+  let theory = 0;
+  let practical = 0;
+  let review = 0;
+  let skipped = 0;
+  let done = 0;
+  const subjects = new Set();
+  for (const log of inSpan) {
+    if (log.status === "skipped") {
+      skipped += 1;
+      continue;
+    }
+    if (log.status !== "done") continue;
+    done += 1;
+    if (log.kind === "theory") theory += 1;
+    if (log.kind === "practical") practical += 1;
+    if (log.kind === "review") review += 1;
+    if (log.subject) subjects.add(String(log.subject));
+  }
+
+  let plannedDays = 0;
+  let complete = 0;
+  eachDay(fromDay, toDay, (key) => {
+    const lineup = studyLineup(settings, key);
+    if (!lineup.length) return;
+    plannedDays += 1;
+    if (studyDayComplete(byDay.get(key) || [], lineup)) complete += 1;
+  });
+
+  const balance =
+    theory && practical
+      ? Math.min(theory, practical) / Math.max(theory, practical)
+      : 0;
+
+  return {
+    plannedDays,
+    complete,
+    theory,
+    practical,
+    review,
+    skipped,
+    done,
+    subjects: subjects.size,
+    balance,
+  };
+}
+
+function studyStreak(logs, settings, dayCount = 90) {
+  let streak = 0;
+  for (let i = 0; i < dayCount; i += 1) {
+    const key = ymd(daysAgo(i));
+    const lineup = studyLineup(settings, key);
+    if (!lineup.length) continue;
+    const dayLogs = (logs || []).filter((log) => dayKey(log.day) === key);
+    if (!studyDayComplete(dayLogs, lineup)) {
+      if (i === 0) continue;
+      break;
+    }
+    streak += 1;
+  }
+  return streak;
+}
+
+function lastStudyDoneDay(logs) {
+  let latest = "";
+  for (const log of logs || []) {
+    if (log.status !== "done") continue;
+    const day = dayKey(log.day);
+    if (day > latest) latest = day;
+  }
+  return latest || null;
+}
+
 function nutritionDays(logs, fromDay, toDay) {
   const byDay = new Map();
   for (const log of logs) {
@@ -389,6 +529,8 @@ export function computeReportStats({
   exerciseSessions = [],
   mealLogs = [],
   sleepLogs = [],
+  studyLogs = [],
+  studySettings = null,
 }) {
   const now = new Date();
   const today = ymd(now);
@@ -729,6 +871,41 @@ export function computeReportStats({
           ),
     month: ctlMonth,
     quarter: ctlQuarter,
+    idleDays: 0,
+  });
+
+  const knoWeek = studyWindow(studyLogs, studySettings, w0.fromDay, today);
+  const knoPrev = studyWindow(studyLogs, studySettings, w1.fromDay, w1.toDay);
+  const knoMonth = studyWindow(studyLogs, studySettings, monthFrom, today);
+  const knoQuarter = studyWindow(studyLogs, studySettings, quarterFrom, today);
+  const knoStreak = studyStreak(studyLogs, studySettings);
+  const knoIdle = daysSinceDay(lastStudyDoneDay(studyLogs));
+  const knoWeekScore =
+    knoWeek.done === 0 && knoWeek.complete === 0
+      ? 0
+      : Math.min(
+          WEEK_CAP,
+          (knoWeek.complete / 5) * 70 +
+            knoWeek.balance * 35 +
+            Math.min(20, knoWeek.done * 2) +
+            Math.min(15, knoStreak * 3)
+        );
+  const kno = combineScore({
+    week: knoWeekScore,
+    month: (knoMonth.complete / 20) * MONTH_CAP,
+    quarter: (knoQuarter.complete / 55) * QUARTER_CAP,
+    idleDays: knoIdle,
+  });
+  const knoPrevScore = combineScore({
+    week:
+      knoPrev.done === 0 && knoPrev.complete === 0
+        ? 0
+        : Math.min(
+            WEEK_CAP,
+            (knoPrev.complete / 5) * 70 + knoPrev.balance * 35
+          ),
+    month: (knoMonth.complete / 20) * MONTH_CAP,
+    quarter: (knoQuarter.complete / 55) * QUARTER_CAP,
     idleDays: 0,
   });
 
@@ -1128,6 +1305,58 @@ export function computeReportStats({
             : "Log the next planned meal’s before or after reading.",
       },
     },
+    {
+      id: "kno",
+      label: "KNO",
+      name: "Knowledge",
+      value: kno,
+      previous: knoPrevScore,
+      color: "#8bb4ff",
+      source: "Study plan",
+      href: "/learning",
+      idleDays: knoIdle,
+      decaying: kno > 0 && knoIdle != null && knoIdle > 2,
+      detail:
+        knoWeek.done === 0
+          ? "No study sessions marked done this week — Knowledge is 0."
+          : `${knoWeek.complete} complete mix day(s) · theory ${knoWeek.theory} · practical ${knoWeek.practical} · ${knoStreak}-day streak`,
+      questTitle: "Keep the Mix",
+      quest:
+        knoWeek.done === 0
+          ? "Open Learning, pick 2 subjects, and mark today’s theory and practical done. Knowledge cannot move without a done session."
+          : knoWeek.practical < knoWeek.theory
+            ? "Practical is behind theory. Open the second card for each language and actually type code."
+            : knoWeek.complete < 5
+              ? `You have ${knoWeek.complete} complete mix day(s). Five full days this week is the Knowledge floor.`
+              : "Protect the streak. ~55 complete mix days in 90 is the climb to 1000.",
+      guide: {
+        meaning:
+          "Whether you actually studied the mix you set — not how many subjects sit in the library. A complete day means every chosen language got theory and practical marked done.",
+        research:
+          "Spaced practice and interleaving beat cramming one topic for a week then abandoning it. Pairing reading with retrieval (practical / questions) is how skill sticks. Two focused blocks beat five unread tabs.",
+        target:
+          "Gold week: 5 complete mix days, theory and practical nearly even. Path to 1000: about 55 complete days in 90, without long gaps.",
+        compare: [
+          compare("Complete mix days this week", knoWeek.complete, 5),
+          compare("Theory sessions this week", knoWeek.theory, 10),
+          compare("Practical sessions this week", knoWeek.practical, 10),
+          compare("Complete mix days in 30d", knoMonth.complete, 20),
+          compare("Complete mix days in 90d", knoQuarter.complete, 55),
+        ],
+        steps: [
+          "Set 2 or 3 subjects on the Learning plan — only what you will open.",
+          "Do theory, then practical, for each language. Mark Done. Skip is honest; silence is not.",
+          "If practical lags, that session is the next Knowledge chunk — reading alone caps the score.",
+          "Copy a mix across the week so mornings are not a debate. Change the mix when you plan, not at midnight.",
+        ],
+        next:
+          knoWeek.done === 0
+            ? "Mark one theory or practical session done today to awaken Knowledge."
+            : knoWeek.practical < knoWeek.theory
+              ? "Finish a practical block for today’s mix."
+              : "Complete both languages today so the mix day can count.",
+      },
+    },
   ];
 
   for (const stat of stats) {
@@ -1199,6 +1428,25 @@ export function computeReportStats({
         detail: `${highWeek} high or elevated readings this week`,
       });
     }
+    if (knoStreak >= 5) {
+      effects.push({
+        kind: "buff",
+        name: "Open Codex",
+        detail: `${knoStreak}-day study streak`,
+      });
+    } else if (knoWeek.done > 0 && knoWeek.practical < knoWeek.theory) {
+      effects.push({
+        kind: "debuff",
+        name: "Unread Drill",
+        detail: "Theory is ahead of practical this week",
+      });
+    } else if (kno > 0 && knoIdle != null && knoIdle > 2) {
+      effects.push({
+        kind: "debuff",
+        name: "Closed Book",
+        detail: "No done study session for more than 2 days",
+      });
+    }
     if (stats.filter((s) => s.decaying).length >= 3) {
       effects.push({
         kind: "debuff",
@@ -1256,6 +1504,8 @@ export function computeReportStats({
       sleepNights: sleepWeekLogs.length,
       sugarReadings: sugarWeek.length,
       foodAdherence: foodWeek.logged ? Math.round(foodWeek.adherence) : null,
+      studyComplete: knoWeek.complete,
+      studyStreak: knoStreak,
     },
     computedAt: now.toISOString(),
   };

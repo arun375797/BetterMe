@@ -13,6 +13,7 @@ import {
   getTodos,
   updateTodo,
 } from "../api.js";
+import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 
 // ── helpers ───────────────────────────────────────────────────
 
@@ -21,32 +22,6 @@ const PRIORITY_META = {
   medium: { label: "Medium", color: "#e8c36a", dot: "bg-[#e8c36a]" },
   low: { label: "Low", color: "#3ce6d4", dot: "bg-[#3ce6d4]" },
 };
-
-function dateGroup(dateStr) {
-  const now = new Date();
-  const d = new Date(dateStr);
-  const startOfToday = new Date(now);
-  startOfToday.setHours(0, 0, 0, 0);
-  const diffMs = startOfToday - new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const diffDays = Math.round(diffMs / 86400000);
-  if (diffDays <= 0) return "Today";
-  if (diffDays === 1) return "Yesterday";
-  if (diffDays <= 6) return "This Week";
-  if (diffDays <= 30) return "This Month";
-  return "Older";
-}
-
-const GROUP_ORDER = ["Today", "Yesterday", "This Week", "This Month", "Older"];
-
-function groupTodos(todos) {
-  const map = {};
-  for (const todo of todos) {
-    const g = dateGroup(todo.createdAt);
-    if (!map[g]) map[g] = [];
-    map[g].push(todo);
-  }
-  return GROUP_ORDER.filter((g) => map[g]).map((g) => ({ group: g, items: map[g] }));
-}
 
 function fmtTime(dateStr) {
   const d = new Date(dateStr);
@@ -326,7 +301,7 @@ function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
           <PriorityDot priority={todo.priority} />
           {category ? <CategoryBadge category={category} /> : null}
           <span className="text-[11px] text-muted">
-            {dateGroup(todo.createdAt) === "Today"
+            {createdGroup(todo.createdAt) === "Today"
               ? fmtTime(todo.createdAt)
               : `${fmtDate(todo.createdAt)} · ${fmtTime(todo.createdAt)}`}
           </span>
@@ -593,7 +568,7 @@ export default function TodoHome() {
   const pending = todos.filter((t) => !t.done).length;
   const doneToday = todos.filter((t) => {
     if (!t.done || !t.completedAt) return false;
-    return dateGroup(t.completedAt) === "Today";
+    return createdGroup(t.completedAt) === "Today";
   }).length;
 
   async function handleToggle(id, done) {

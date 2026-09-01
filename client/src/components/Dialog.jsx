@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 
 const SIZE = {
-  confirm: "w-full max-w-[400px]",
-  form: "w-full max-w-lg max-h-[90dvh] overflow-y-auto",
-  wide: "flex h-[min(92dvh,880px)] w-full max-w-6xl flex-col",
+  confirm: "w-full max-w-[400px] overflow-y-auto overscroll-contain",
+  form: "w-full max-w-lg overflow-y-auto overscroll-contain",
+  wide: "flex h-[min(92dvh,880px)] max-h-[calc(100dvh-1.5rem)] w-full max-w-6xl flex-col overflow-hidden sm:max-h-[calc(100dvh-3rem)]",
 };
 
 export function Dialog({ size = "form", onClose, children }) {
@@ -20,17 +20,27 @@ export function Dialog({ size = "form", onClose, children }) {
     };
   }, [onClose]);
 
+  const formLike = size !== "wide";
+
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-[#0b0f18]/78 px-3 py-3 backdrop-blur-[7px] sm:items-center sm:px-4 sm:py-6"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-[#0b0f18]/78 px-3 py-3 backdrop-blur-[7px] sm:items-center sm:px-4 sm:py-6"
+      data-lenis-prevent
       onClick={onClose}
       role="presentation"
     >
       <div
         role="dialog"
         aria-modal="true"
-        className={`${SIZE[size] || SIZE.form} overflow-hidden rounded-t-2xl border border-white/10 bg-[#1e2434] shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5 sm:rounded-2xl`}
+        data-lenis-prevent
+        className={`${SIZE[size] || SIZE.form} ${
+          formLike
+            ? "max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)]"
+            : ""
+        } rounded-t-2xl border border-white/10 bg-[#1e2434] shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5 sm:rounded-2xl`}
         onClick={(e) => e.stopPropagation()}
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
       >
         {children}
       </div>

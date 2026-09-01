@@ -184,7 +184,7 @@ export default function Sit25DefinePage() {
           return (
             <li
               key={video._id}
-              className="flex items-center gap-3 rounded-2xl border border-line bg-[#171c2a] p-2 pr-3"
+              className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-[#171c2a] p-2 pr-3 sm:flex-nowrap sm:gap-3"
             >
               <img
                 src={youtubeThumb(video.youtubeId)}

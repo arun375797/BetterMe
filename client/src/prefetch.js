@@ -6,6 +6,7 @@ import {
   getFoodItem,
   getFoodItems,
   getMealLogs,
+  getNamasteDev,
   getPersonalityItem,
   getPersonalityItems,
   getQuestion,
@@ -21,6 +22,7 @@ import {
   getTopic,
   getVitaminItems,
   getTodos,
+  getStudyPlan,
 } from "./api.js";
 
 const lastAt = new Map();
@@ -37,6 +39,9 @@ function pageLoaders(pathname) {
   if (pathname === "/learning") return () => import("./pages/LearningHome.jsx");
   if (/^\/learning\/[^/]+$/.test(pathname)) {
     return () => import("./pages/SubjectHub.jsx");
+  }
+  if (pathname === "/learning/dsa/namaste-dev") {
+    return () => import("./pages/NamasteDevPage.jsx");
   }
   if (/^\/learning\/[^/]+\/(theory|practical)$/.test(pathname)) {
     return () => import("./pages/SubjectPage.jsx");
@@ -114,10 +119,11 @@ function dataPrefetch(pathname) {
       getSleepLogs(),
       getExerciseSessions(),
       getPersonalityItems(),
+      getStudyPlan(),
     ];
   }
   if (pathname === "/learning") {
-    return [getSubjects(), getReviewQueue()];
+    return [getSubjects(), getReviewQueue(), getStudyPlan()];
   }
 
   const learning = pathname.match(
@@ -126,6 +132,7 @@ function dataPrefetch(pathname) {
   if (learning) {
     const [, slug, section, topicId, subId, questionId] = learning;
     if (!section) return [getSubjects()];
+    if (section === "namaste-dev") return [getNamasteDev()];
     if (!topicId) return [getSubject(slug, section)];
     if (!subId) return [getTopic(topicId)];
     if (!questionId) {

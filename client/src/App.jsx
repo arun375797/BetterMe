@@ -1,12 +1,15 @@
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
+import { AUTH_LOST, readSession } from "./authSession.js";
+import LoginPage from "./pages/LoginPage.jsx";
 
 const TodayPage = lazy(() => import("./pages/TodayPage.jsx"));
 const LearningHome = lazy(() => import("./pages/LearningHome.jsx"));
 const SubjectHub = lazy(() => import("./pages/SubjectHub.jsx"));
 const SubjectPage = lazy(() => import("./pages/SubjectPage.jsx"));
 const TopicDetail = lazy(() => import("./pages/TopicDetail.jsx"));
+const NamasteDevPage = lazy(() => import("./pages/NamasteDevPage.jsx"));
 const NotebookPage = lazy(() => import("./pages/NotebookPage.jsx"));
 const QuestionsPage = lazy(() => import("./pages/QuestionsPage.jsx"));
 const QuestionViewPage = lazy(() => import("./pages/QuestionViewPage.jsx"));
@@ -44,9 +47,33 @@ function NestedTopicPage() {
   return section === "practical" ? <QuestionsPage /> : <NotebookPage />;
 }
 
+function AuthGate({ children }) {
+  const [session, setSession] = useState(() => readSession());
+
+  useEffect(() => {
+    function onLost() {
+      setSession(null);
+    }
+    window.addEventListener(AUTH_LOST, onLost);
+    const id = window.setInterval(() => {
+      if (!readSession()) setSession(null);
+    }, 15_000);
+    return () => {
+      window.removeEventListener(AUTH_LOST, onLost);
+      window.clearInterval(id);
+    };
+  }, []);
+
+  if (!session) {
+    return <LoginPage onUnlocked={setSession} />;
+  }
+  return children;
+}
+
 export default function App() {
   return (
-    <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
+    <AuthGate>
+      <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
       <Routes>
         <Route path="/sit25" element={<Sit25Layout />}>
           <Route index element={<Sit25BreakPage />} />
@@ -58,6 +85,7 @@ export default function App() {
         <Route path="/today" element={<TodayPage />} />
         <Route path="/learning" element={<LearningHome />} />
         <Route path="/learning/:slug" element={<SubjectHub />} />
+        <Route path="/learning/dsa/namaste-dev" element={<NamasteDevPage />} />
         <Route path="/learning/:slug/:section" element={<SubjectPage />} />
         <Route
           path="/learning/:slug/:section/:topicId"
@@ -104,6 +132,7 @@ export default function App() {
         <Route path="/report/statistics" element={<ReportStatsPage />} />
       </Route>
       </Routes>
-    </Suspense>
+      </Suspense>
+    </AuthGate>
   );
 }
