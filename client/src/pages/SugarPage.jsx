@@ -6,6 +6,7 @@ import {
   deleteSugarReading,
   getSugarReadings,
   peek,
+  updateSugarReading,
 } from "../api.js";
 
 const statusClass = {
@@ -72,6 +73,7 @@ export default function SugarPage() {
   );
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState("twoMonths");
 
   async function load() {
@@ -90,6 +92,12 @@ export default function SugarPage() {
 
   async function handleCreate(payload) {
     await createSugarReading(payload);
+    await load();
+  }
+
+  async function handleUpdate(payload) {
+    if (!editing?._id) return;
+    await updateSugarReading(editing._id, payload);
     await load();
   }
 
@@ -144,7 +152,10 @@ export default function SugarPage() {
           </div>
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setEditing(null);
+              setOpen(true);
+            }}
             className="rounded-xl bg-coral px-4 py-2.5 text-sm font-semibold text-[#2a1410]"
           >
             Record sugar level
@@ -290,6 +301,16 @@ export default function SugarPage() {
                   </span>
                   <button
                     type="button"
+                    onClick={() => {
+                      setEditing(item);
+                      setOpen(true);
+                    }}
+                    className="shrink-0 text-[11px] text-muted hover:text-ink"
+                  >
+                    Edit
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => handleDelete(item._id)}
                     className="shrink-0 text-[11px] text-muted hover:text-coral"
                   >
@@ -355,8 +376,12 @@ export default function SugarPage() {
 
       {open ? (
         <SugarRecordModal
-          onClose={() => setOpen(false)}
-          onSubmit={handleCreate}
+          reading={editing}
+          onClose={() => {
+            setOpen(false);
+            setEditing(null);
+          }}
+          onSubmit={editing ? handleUpdate : handleCreate}
         />
       ) : null}
     </div>

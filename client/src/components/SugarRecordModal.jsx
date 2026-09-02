@@ -43,13 +43,26 @@ function nowParts() {
   };
 }
 
-export default function SugarRecordModal({ onClose, onSubmit }) {
-  const defaults = nowParts();
+function partsFromIso(iso) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return nowParts();
+  return {
+    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+  };
+}
+
+export default function SugarRecordModal({ reading, onClose, onSubmit }) {
+  const defaults = reading ? partsFromIso(reading.recordedAt) : nowParts();
   const [date, setDate] = useState(defaults.date);
   const [time, setTime] = useState(defaults.time);
-  const [level, setLevel] = useState("");
-  const [insulinDose, setInsulinDose] = useState("");
-  const [mealTiming, setMealTiming] = useState("before");
+  const [level, setLevel] = useState(
+    reading?.level != null ? String(reading.level) : ""
+  );
+  const [insulinDose, setInsulinDose] = useState(
+    reading?.insulinDose ? String(reading.insulinDose) : ""
+  );
+  const [mealTiming, setMealTiming] = useState(reading?.mealTiming || "before");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const clock = from24Hour(time);
@@ -90,7 +103,9 @@ export default function SugarRecordModal({ onClose, onSubmit }) {
             <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
               My Health · Sugar
             </p>
-            <h3 className="mt-1 text-xl font-semibold">Record sugar level</h3>
+            <h3 className="mt-1 text-xl font-semibold">
+              {reading ? "Edit reading" : "Record sugar level"}
+            </h3>
           </div>
           <button
             type="button"
@@ -237,7 +252,11 @@ export default function SugarRecordModal({ onClose, onSubmit }) {
               disabled={saving || !level}
               className="rounded-xl bg-coral px-4 py-2 text-sm font-semibold text-[#2a1410] disabled:opacity-50"
             >
-              {saving ? "Saving…" : "Save reading"}
+              {saving
+                ? "Saving…"
+                : reading
+                  ? "Save changes"
+                  : "Save reading"}
             </button>
           </div>
         </form>

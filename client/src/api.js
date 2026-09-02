@@ -312,6 +312,8 @@ export const advanceStudyTopic = (data) =>
 export const getSugarReadings = () => get(SUGAR_API, "/");
 export const createSugarReading = (data) =>
   mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SUGAR, ...REPORT]);
+export const updateSugarReading = (id, data) =>
+  mutate(SUGAR_API, `/${id}`, { method: "PATCH", body: JSON.stringify(data) }, [...SUGAR, ...REPORT]);
 export const deleteSugarReading = (id) =>
   mutate(SUGAR_API, `/${id}`, { method: "DELETE" }, [...SUGAR, ...REPORT]);
 

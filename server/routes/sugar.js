@@ -60,6 +60,40 @@ function statsFrom(readings) {
   };
 }
 
+function parseReading(body) {
+  const { date, time, level, mealTiming, insulinDose } = body || {};
+  const numeric = Number(level);
+  if (!date || !time || !Number.isFinite(numeric)) {
+    return { error: "Date, time, and sugar level are required." };
+  }
+  if (mealTiming !== "before" && mealTiming !== "after") {
+    return { error: "Choose before food or after food." };
+  }
+  if (numeric < 20 || numeric > 800) {
+    return { error: "Sugar level looks out of range." };
+  }
+
+  const insulinRaw =
+    insulinDose === "" || insulinDose == null ? 0 : Number(insulinDose);
+  if (!Number.isFinite(insulinRaw) || insulinRaw < 0 || insulinRaw > 100) {
+    return { error: "Insulin dose looks out of range." };
+  }
+
+  const recordedAt = new Date(`${date}T${time}`);
+  if (Number.isNaN(recordedAt.getTime())) {
+    return { error: "Date or time is invalid." };
+  }
+
+  return {
+    data: {
+      recordedAt,
+      level: numeric,
+      mealTiming,
+      insulinDose: insulinRaw,
+    },
+  };
+}
+
 router.get("/", async (_req, res) => {
   const readings = await SugarReading.find().sort({ recordedAt: -1 }).lean();
   const withStatus = readings.map((item) => ({
@@ -73,40 +107,32 @@ router.get("/", async (_req, res) => {
 });
 
 router.post("/", async (req, res) => {
-  const { date, time, level, mealTiming, insulinDose } = req.body || {};
-  const numeric = Number(level);
-  if (!date || !time || !Number.isFinite(numeric)) {
-    return res
-      .status(400)
-      .json({ message: "Date, time, and sugar level are required." });
-  }
-  if (mealTiming !== "before" && mealTiming !== "after") {
-    return res
-      .status(400)
-      .json({ message: "Choose before food or after food." });
-  }
-  if (numeric < 20 || numeric > 800) {
-    return res.status(400).json({ message: "Sugar level looks out of range." });
+  const parsed = parseReading(req.body);
+  if (parsed.error) {
+    return res.status(400).json({ message: parsed.error });
   }
 
-  const insulinRaw = insulinDose === "" || insulinDose == null ? 0 : Number(insulinDose);
-  if (!Number.isFinite(insulinRaw) || insulinRaw < 0 || insulinRaw > 100) {
-    return res.status(400).json({ message: "Insulin dose looks out of range." });
-  }
-
-  const recordedAt = new Date(`${date}T${time}`);
-  if (Number.isNaN(recordedAt.getTime())) {
-    return res.status(400).json({ message: "Date or time is invalid." });
-  }
-
-  const reading = await SugarReading.create({
-    recordedAt,
-    level: numeric,
-    mealTiming,
-    insulinDose: insulinRaw,
-  });
+  const reading = await SugarReading.create(parsed.data);
   const obj = reading.toObject();
   res.status(201).json({ ...obj, status: classify(obj.level, obj.mealTiming) });
+});
+
+router.patch("/:id", async (req, res) => {
+  const parsed = parseReading(req.body);
+  if (parsed.error) {
+    return res.status(400).json({ message: parsed.error });
+  }
+
+  const reading = await SugarReading.findByIdAndUpdate(
+    req.params.id,
+    parsed.data,
+    { new: true, runValidators: true }
+  );
+  if (!reading) {
+    return res.status(404).json({ message: "Reading not found." });
+  }
+  const obj = reading.toObject();
+  res.json({ ...obj, status: classify(obj.level, obj.mealTiming) });
 });
 
 router.delete("/:id", async (req, res) => {
