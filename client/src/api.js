@@ -6,15 +6,6 @@ const SESSION_KEY = "betterme-api-cache-v1";
 const MAX_SESSION_ENTRY = 180_000;
 const MAX_SESSION_TOTAL = 1_400_000;
 
-function isLoopbackUrl(value) {
-  try {
-    const host = new URL(value).hostname;
-    return host === "localhost" || host === "127.0.0.1";
-  } catch {
-    return false;
-  }
-}
-
 function isHostedBrowser() {
   if (typeof window === "undefined") return false;
   const host = window.location.hostname;
@@ -22,12 +13,9 @@ function isHostedBrowser() {
 }
 
 function apiOrigin() {
+  // Custom domains like betterme.cc already proxy /api to the backend.
+  if (isHostedBrowser()) return "";
   const fromEnv = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-  // Hosted pages must not call the machine that built the bundle.
-  if (isHostedBrowser()) {
-    if (fromEnv && !isLoopbackUrl(fromEnv)) return fromEnv;
-    return "";
-  }
   if (fromEnv) return fromEnv;
   if (import.meta.env.PROD) return RAILWAY_API;
   return "";

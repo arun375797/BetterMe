@@ -56,7 +56,12 @@ function AuthGate({ children }) {
     }
     window.addEventListener(AUTH_LOST, onLost);
     const id = window.setInterval(() => {
-      if (!readSession()) setSession(null);
+      const next = readSession();
+      setSession((prev) => {
+        if (!next) return null;
+        if (prev?.token === next.token) return prev;
+        return next;
+      });
     }, 15_000);
     return () => {
       window.removeEventListener(AUTH_LOST, onLost);

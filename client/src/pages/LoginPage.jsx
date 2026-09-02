@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { login } from "../api.js";
-import { saveSession } from "../authSession.js";
+import { readSession, saveSession } from "../authSession.js";
 import Logo from "../components/Logo.jsx";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
@@ -24,8 +24,11 @@ export default function LoginPage({ onUnlocked }) {
     setError("");
     login(digits)
       .then((session) => {
-        saveSession(session);
-        onUnlocked(session);
+        const saved = saveSession(session) || readSession();
+        if (!saved?.token) {
+          throw new Error("Could not keep you signed in. Try again.");
+        }
+        onUnlocked(saved);
       })
       .catch((err) => {
         setError(err.message || "Wrong password. Try again.");
