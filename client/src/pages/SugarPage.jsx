@@ -247,7 +247,7 @@ export default function SugarPage() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-0.5 w-4 bg-ink" />
-              Daily average
+              Line follows each reading
             </span>
           </div>
           <div className="mt-4">

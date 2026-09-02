@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog } from "./Dialog.jsx";
+import { ClockFields12 } from "./TimePicker12.jsx";
 import { wallClockPayload } from "../lib/wallClock.js";
 
 const fieldClass =
@@ -99,27 +100,19 @@ export default function ExerciseSessionModal({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4 p-6">
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="mb-1.5 block text-xs text-muted">Date</span>
-              <input
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className={fieldClass}
-                required
-              />
-            </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs text-muted">Time</span>
-              <input
-                type="time"
-                value={time}
-                onChange={(e) => setTime(e.target.value)}
-                className={fieldClass}
-                required
-              />
-            </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs text-muted">Date</span>
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={fieldClass}
+              required
+            />
+          </label>
+          <div>
+            <span className="mb-1.5 block text-xs text-muted">Time (12-hour)</span>
+            <ClockFields12 value={time} onChange={setTime} />
           </div>
 
           <label className="block">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Dialog } from "./Dialog.jsx";
-import TimePicker12, { parse12 } from "./TimePicker12.jsx";
+import { ClockFields12, parse12 } from "./TimePicker12.jsx";
 import { formatMinutes } from "../lib/sleepStats.js";
 
 const fieldClass =
@@ -118,7 +118,7 @@ export default function SleepLogModal({ log, onClose, onSubmit }) {
           <p className="text-xs font-medium text-muted uppercase tracking-wide">
             Went to bed
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 space-y-3">
             <label className="block">
               <span className="mb-1.5 block text-xs text-muted">Date</span>
               <input
@@ -129,10 +129,10 @@ export default function SleepLogModal({ log, onClose, onSubmit }) {
                 required
               />
             </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs text-muted">Time</span>
-              <TimePicker12 value={bedTime} onChange={setBedTime} />
-            </label>
+            <div>
+              <span className="mb-1.5 block text-xs text-muted">Time (12-hour)</span>
+              <ClockFields12 value={bedTime} onChange={setBedTime} />
+            </div>
           </div>
         </div>
 
@@ -140,7 +140,7 @@ export default function SleepLogModal({ log, onClose, onSubmit }) {
           <p className="text-xs font-medium text-muted uppercase tracking-wide">
             Woke up
           </p>
-          <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="mt-3 space-y-3">
             <label className="block">
               <span className="mb-1.5 block text-xs text-muted">Date</span>
               <input
@@ -151,10 +151,10 @@ export default function SleepLogModal({ log, onClose, onSubmit }) {
                 required
               />
             </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs text-muted">Time</span>
-              <TimePicker12 value={wakeTime} onChange={setWakeTime} />
-            </label>
+            <div>
+              <span className="mb-1.5 block text-xs text-muted">Time (12-hour)</span>
+              <ClockFields12 value={wakeTime} onChange={setWakeTime} />
+            </div>
           </div>
         </div>
 

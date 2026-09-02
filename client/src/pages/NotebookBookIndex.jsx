@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import { deleteBook, getBookIndex, updateBook } from "../api.js";
 import BookFormModal from "../components/BookFormModal.jsx";
@@ -23,6 +23,25 @@ export default function NotebookBookIndex() {
       })
       .catch((err) => setError(err.message));
   }, [bookId]);
+
+  const entries = useMemo(() => {
+    let line = 0;
+    return pages.flatMap((page) => {
+      const headings = page.headings?.length
+        ? page.headings
+        : [{ text: page.heading, level: 1 }];
+      return headings.map((item, headingIndex) => {
+        line += 1;
+        return {
+          key: `${page._id}-${headingIndex}`,
+          pageId: page._id,
+          text: headingIndex === 0 ? page.heading : item.text,
+          level: item.level || 1,
+          pageNumber: line,
+        };
+      });
+    });
+  }, [pages]);
 
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
@@ -77,29 +96,22 @@ export default function NotebookBookIndex() {
         ) : null}
         <div className="mx-auto mt-5 h-px w-24 bg-[#d2c6ae]" />
 
-        <ol className="mt-10 space-y-5">
-          {pages.map((page, index) => (
-            <li key={page._id}>
-              {(page.headings || [{ text: page.heading, level: 1 }]).map(
-                (item, headingIndex) => (
-                  <Link
-                    key={`${page._id}-${headingIndex}`}
-                    to={`/notebooks/${bookId}/pages/${page._id}`}
-                    className="e-index-row py-1 hover:text-[#6a4f12]"
-                    style={{
-                      paddingLeft: item.level > 1 ? (item.level - 1) * 18 : 0,
-                    }}
-                  >
-                    <span className="font-serif">
-                      {headingIndex === 0 ? page.heading : item.text}
-                    </span>
-                    <span className="e-index-dots" aria-hidden="true" />
-                    <span className="font-serif text-sm text-[#6f6758]">
-                      {index + 1}
-                    </span>
-                  </Link>
-                )
-              )}
+        <ol className="mt-10 space-y-1">
+          {entries.map((entry) => (
+            <li key={entry.key}>
+              <Link
+                to={`/notebooks/${bookId}/pages/${entry.pageId}`}
+                className="e-index-row py-1 hover:text-[#6a4f12]"
+                style={{
+                  paddingLeft: entry.level > 1 ? (entry.level - 1) * 18 : 0,
+                }}
+              >
+                <span className="font-serif">{entry.text}</span>
+                <span className="e-index-dots" aria-hidden="true" />
+                <span className="font-serif text-sm text-[#6f6758]">
+                  {entry.pageNumber}
+                </span>
+              </Link>
             </li>
           ))}
         </ol>

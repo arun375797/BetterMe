@@ -165,36 +165,29 @@ export default function SugarChart({ readings }) {
   const dangerTop = yLevel(maxY);
   const dangerBottom = yLevel(HIGH_LINE);
 
-  const avgLine = days.map((day, index) => ({
-    x: xItems(day.items, index),
-    y: yLevel(day.average),
-  }));
-  const beforeLine = days
-    .map((day, index) =>
-      day.beforeAvg != null
-        ? {
-            x: xItems(
-              day.items.filter((item) => item.mealTiming === "before"),
-              index
-            ),
-            y: yLevel(day.beforeAvg),
-          }
-        : null
-    )
-    .filter(Boolean);
-  const afterLine = days
-    .map((day, index) =>
-      day.afterAvg != null
-        ? {
-            x: xItems(
-              day.items.filter((item) => item.mealTiming === "after"),
-              index
-            ),
-            y: yLevel(day.afterAvg),
-          }
-        : null
-    )
-    .filter(Boolean);
+  const dayIndexById = new Map();
+  days.forEach((day, index) => {
+    for (const item of day.items) dayIndexById.set(item._id, index);
+  });
+
+  function pointFor(item) {
+    const index = dayIndexById.get(item._id) ?? 0;
+    return {
+      x: xReading(item, index),
+      y: yLevel(item.level),
+    };
+  }
+
+  const inOrder = [...readings].sort(
+    (a, b) => new Date(a.recordedAt) - new Date(b.recordedAt)
+  );
+  const readingLine = inOrder.map(pointFor);
+  const beforeLine = inOrder
+    .filter((item) => item.mealTiming === "before")
+    .map(pointFor);
+  const afterLine = inOrder
+    .filter((item) => item.mealTiming === "after")
+    .map(pointFor);
 
   const dayStep = days.length <= 10 ? 1 : days.length <= 21 ? 2 : 3;
   const mistakeNote =
@@ -365,7 +358,7 @@ export default function SugarChart({ readings }) {
               stroke="#3ce6d4"
               strokeWidth="1.8"
               strokeDasharray="6 5"
-              opacity="0.85"
+              opacity="0.55"
             />
           ) : null}
           {afterLine.length > 1 ? (
@@ -373,16 +366,18 @@ export default function SugarChart({ readings }) {
               d={pathFrom(afterLine)}
               fill="none"
               stroke="#e8c36a"
-              strokeWidth="2"
-              opacity="0.9"
+              strokeWidth="1.8"
+              opacity="0.55"
             />
           ) : null}
-          {avgLine.length > 1 ? (
+          {readingLine.length > 1 ? (
             <path
-              d={pathFrom(avgLine)}
+              d={pathFrom(readingLine)}
               fill="none"
               stroke="#e9edf4"
               strokeWidth="2.4"
+              strokeLinejoin="round"
+              strokeLinecap="round"
             />
           ) : null}
 

@@ -25,6 +25,87 @@ function pad(n) {
   return String(n).padStart(2, "0");
 }
 
+const selectClass =
+  "w-full min-w-[4.5rem] rounded-xl border border-line bg-[#171c2a] px-2.5 py-2.5 text-sm tabular-nums outline-none focus:border-coral/50 disabled:opacity-40";
+
+/** Always-visible 12-hour hour, minute, and AM/PM fields. */
+export function ClockFields12({ value = "", onChange, disabled = false }) {
+  const clock = parse12(value);
+
+  function patch({ hour = clock.hour, minute = clock.minute, ampm = clock.ampm }) {
+    if (disabled) return;
+    onChange?.(to24(hour, minute, ampm));
+  }
+
+  return (
+    <div>
+      <div className="grid grid-cols-3 gap-2">
+        <label className="block min-w-0">
+          <span className="mb-1.5 block text-[11px] font-medium text-ink/80">
+            Hour
+          </span>
+          <select
+            value={clock.hour}
+            disabled={disabled}
+            aria-label="Hour"
+            onChange={(e) => patch({ hour: e.target.value })}
+            className={selectClass}
+          >
+            {HOURS.map((h) => (
+              <option key={h} value={h}>
+                {h}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block min-w-0">
+          <span className="mb-1.5 block text-[11px] font-medium text-ink/80">
+            Minute
+          </span>
+          <select
+            value={clock.minute}
+            disabled={disabled}
+            aria-label="Minute"
+            onChange={(e) => patch({ minute: e.target.value })}
+            className={selectClass}
+          >
+            {MINUTES.map((m) => (
+              <option key={m} value={m}>
+                {m}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="min-w-0">
+          <span className="mb-1.5 block text-[11px] font-medium text-ink/80">
+            AM / PM
+          </span>
+          <div className="grid grid-cols-2 overflow-hidden rounded-xl border border-line">
+            {["AM", "PM"].map((part) => (
+              <button
+                key={part}
+                type="button"
+                disabled={disabled}
+                onClick={() => patch({ ampm: part })}
+                className={`py-2.5 text-xs font-semibold disabled:opacity-40 ${
+                  clock.ampm === part
+                    ? "bg-coral/18 text-ink"
+                    : "bg-[#171c2a] text-muted hover:bg-white/5"
+                }`}
+              >
+                {part}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+      <p className="mt-1.5 text-[11px] leading-4 text-muted">
+        12-hour time: first box is the hour (1–12), second is minutes.
+      </p>
+    </div>
+  );
+}
+
 /** Split an ISO / Date value into date (YYYY-MM-DD) and time (HH:mm) for form fields. */
 export function duePartsFromIso(iso) {
   if (!iso) return { date: "", time: "" };
@@ -47,31 +128,17 @@ export default function TimePicker12({
   className = "",
 }) {
   const wrapRef = useRef(null);
-  const minutePanelRef = useRef(null);
-  const initial = parse12(value);
   const [open, setOpen] = useState(false);
-  const [step, setStep] = useState("hour");
-  const [hour, setHour] = useState(initial.hour);
-  const [minute, setMinute] = useState(initial.minute);
-  const [ampm, setAmpm] = useState(initial.ampm);
-  const [draftHour, setDraftHour] = useState(null);
-
-  useEffect(() => {
-    const p = parse12(value);
-    setHour(p.hour);
-    setMinute(p.minute);
-    setAmpm(p.ampm);
-  }, [value]);
+  const clock = parse12(value);
+  const display = value ? `${clock.hour}:${clock.minute} ${clock.ampm}` : "Set time";
 
   useEffect(() => {
     if (!open) return undefined;
     function onDocClick(e) {
-      if (!wrapRef.current?.contains(e.target)) {
-        closePicker();
-      }
+      if (!wrapRef.current?.contains(e.target)) setOpen(false);
     }
     function onKey(e) {
-      if (e.key === "Escape") closePicker();
+      if (e.key === "Escape") setOpen(false);
     }
     document.addEventListener("mousedown", onDocClick);
     document.addEventListener("keydown", onKey);
@@ -81,67 +148,19 @@ export default function TimePicker12({
     };
   }, [open]);
 
-  useEffect(() => {
-    if (step !== "minute" || !minutePanelRef.current) return;
-    const active = minutePanelRef.current.querySelector("[data-active=true]");
-    active?.scrollIntoView({ block: "nearest" });
-  }, [step, minute]);
-
-  function closePicker() {
-    setOpen(false);
-    setStep("hour");
-    setDraftHour(null);
-  }
-
-  function openPicker() {
+  function toggle() {
     if (disabled) return;
-    if (open) {
-      closePicker();
-      return;
-    }
-    setOpen(true);
-    setStep("hour");
-    setDraftHour(null);
+    setOpen((prev) => !prev);
   }
-
-  function selectHour(h) {
-    setDraftHour(h);
-    setHour(h);
-    setStep("minute");
-  }
-
-  function selectMinute(m) {
-    const chosenHour = draftHour || hour;
-    setHour(chosenHour);
-    setMinute(m);
-    onChange(to24(chosenHour, m, ampm));
-    closePicker();
-  }
-
-  function selectAmpm(next) {
-    setAmpm(next);
-    if (value || draftHour) {
-      onChange(to24(draftHour || hour, minute, next));
-    }
-  }
-
-  const previewHour = draftHour || hour;
-  const display = open
-    ? step === "hour"
-      ? `Pick hour · ${ampm}`
-      : `${previewHour}:${minute} ${ampm}`
-    : value
-      ? `${hour}:${minute} ${ampm}`
-      : "Set time";
 
   return (
     <div ref={wrapRef} className={`relative inline-flex shrink-0 ${className}`}>
       <button
         type="button"
         disabled={disabled}
-        onClick={openPicker}
+        onClick={toggle}
         aria-expanded={open}
-        aria-haspopup="listbox"
+        aria-haspopup="dialog"
         className={`inline-flex min-w-[7.5rem] items-center justify-between gap-2 rounded-lg border px-3 py-1.5 text-xs tabular-nums transition-colors ${
           disabled
             ? "cursor-not-allowed border-line/40 bg-white/5 text-muted opacity-50"
@@ -173,107 +192,9 @@ export default function TimePicker12({
         <div
           role="dialog"
           aria-label="Pick a time"
-          className="absolute right-0 top-full z-[70] mt-2 w-60 overflow-hidden rounded-2xl border border-line bg-[#1e2638] shadow-2xl ring-1 ring-white/5"
+          className="absolute right-0 top-full z-[70] mt-2 w-[min(100vw-2rem,20rem)] rounded-2xl border border-line bg-[#1e2638] p-3 shadow-2xl ring-1 ring-white/5"
         >
-          {/* Step indicator */}
-          <div className="flex border-b border-line/60 bg-white/[0.03]">
-            <button
-              type="button"
-              onClick={() => setStep("hour")}
-              className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
-                step === "hour"
-                  ? "border-b-2 border-cyan text-cyan"
-                  : "text-muted hover:text-ink"
-              }`}
-            >
-              1. Hour
-            </button>
-            <button
-              type="button"
-              onClick={() => draftHour && setStep("minute")}
-              disabled={!draftHour && step === "hour"}
-              className={`flex-1 px-3 py-2 text-[11px] font-medium transition-colors ${
-                step === "minute"
-                  ? "border-b-2 border-cyan text-cyan"
-                  : draftHour
-                    ? "text-muted hover:text-ink"
-                    : "cursor-not-allowed text-muted/40"
-              }`}
-            >
-              2. Minute
-            </button>
-          </div>
-
-          <div className="p-3">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-[11px] text-muted">
-                {step === "hour" ? "Choose hour" : `${previewHour} · pick minutes`}
-              </p>
-              <div className="inline-flex rounded-full bg-white/5 p-0.5 text-[11px]">
-                {["AM", "PM"].map((part) => (
-                  <button
-                    key={part}
-                    type="button"
-                    onClick={() => selectAmpm(part)}
-                    className={`rounded-full px-2.5 py-0.5 font-medium transition-colors ${
-                      ampm === part
-                        ? "bg-cyan/25 text-cyan"
-                        : "text-muted hover:bg-white/8 hover:text-ink"
-                    }`}
-                  >
-                    {part}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {step === "hour" ? (
-              <div className="grid grid-cols-4 gap-1.5" role="listbox" aria-label="Hours">
-                {HOURS.map((h) => (
-                  <button
-                    key={h}
-                    type="button"
-                    role="option"
-                    aria-selected={h === hour}
-                    onClick={() => selectHour(h)}
-                    className={`rounded-xl px-2 py-2 text-sm font-medium tabular-nums transition-all ${
-                      h === hour || h === draftHour
-                        ? "bg-cyan/25 text-cyan ring-1 ring-cyan/40"
-                        : "bg-white/4 text-muted hover:bg-cyan/12 hover:text-ink"
-                    }`}
-                  >
-                    {h}
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div
-                ref={minutePanelRef}
-                className="grid max-h-44 grid-cols-4 gap-1 overflow-y-auto pr-0.5"
-                role="listbox"
-                aria-label="Minutes"
-                data-lenis-prevent
-              >
-                {MINUTES.map((m) => (
-                  <button
-                    key={m}
-                    type="button"
-                    role="option"
-                    aria-selected={m === minute}
-                    data-active={m === minute ? "true" : undefined}
-                    onClick={() => selectMinute(m)}
-                    className={`rounded-lg px-1.5 py-1.5 text-xs tabular-nums transition-all ${
-                      m === minute
-                        ? "bg-cyan/25 text-cyan ring-1 ring-cyan/40"
-                        : "bg-white/4 text-muted hover:bg-cyan/12 hover:text-ink"
-                    }`}
-                  >
-                    {m}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
+          <ClockFields12 value={value} onChange={onChange} />
         </div>
       ) : null}
     </div>
