@@ -38,7 +38,12 @@ const PORT = process.env.PORT || 5000;
 const clientDist = path.join(__dirname, "../client/dist");
 
 app.disable("x-powered-by");
-app.use(cors({ maxAge: 86400 }));
+app.use(
+  cors({
+    maxAge: 86400,
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 app.use((req, res, next) => {
   if (!req.path.startsWith("/api")) return next();
   const accept = String(req.headers["accept-encoding"] || "");
@@ -92,6 +97,7 @@ app.get("/api/health", (_req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api", (req, res, next) => {
+  if (req.method === "OPTIONS") return next();
   if (req.path === "/health" || req.path.startsWith("/auth")) return next();
   return requireAuth(req, res, next);
 });

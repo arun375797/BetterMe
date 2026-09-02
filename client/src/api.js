@@ -6,14 +6,32 @@ const SESSION_KEY = "betterme-api-cache-v1";
 const MAX_SESSION_ENTRY = 180_000;
 const MAX_SESSION_TOTAL = 1_400_000;
 
+function isLoopbackUrl(value) {
+  try {
+    const host = new URL(value).hostname;
+    return host === "localhost" || host === "127.0.0.1";
+  } catch {
+    return false;
+  }
+}
+
+function isHostedBrowser() {
+  if (typeof window === "undefined") return false;
+  const host = window.location.hostname;
+  return host !== "localhost" && host !== "127.0.0.1";
+}
+
 function apiOrigin() {
   const fromEnv = String(import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  // Hosted pages must not call the machine that built the bundle.
+  if (isHostedBrowser()) {
+    if (fromEnv && !isLoopbackUrl(fromEnv)) return fromEnv;
+    return "";
+  }
   if (fromEnv) return fromEnv;
   if (import.meta.env.PROD) return RAILWAY_API;
   return "";
 }
-
-const API_ORIGIN = apiOrigin();
 
 const mem = new Map();
 const inflight = new Map();
@@ -97,12 +115,13 @@ async function request(base, path, options = {}) {
   ) {
     headers["Content-Type"] = "application/json";
   }
-  const token = getAuthToken();
+  const isLogin = base === "/api/auth" && path === "/login";
+  const token = isLogin ? "" : getAuthToken();
   if (token && !headers.Authorization && !headers.authorization) {
     headers.Authorization = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_ORIGIN}${base}${path}`, {
+  const res = await fetch(`${apiOrigin()}${base}${path}`, {
     ...options,
     headers,
     cache: "no-store",
@@ -119,7 +138,13 @@ async function request(base, path, options = {}) {
     throw new Error(`API did not return JSON. ${hint}`);
   }
   if (!res.ok) {
-    if (res.status === 401) authLost();
+    if (
+      res.status === 401 &&
+      token &&
+      token === getAuthToken()
+    ) {
+      authLost();
+    }
     throw new Error(body.message || "Request failed");
   }
   return body;

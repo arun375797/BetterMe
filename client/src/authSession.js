@@ -18,11 +18,12 @@ export function readSession() {
 }
 
 export function saveSession(data) {
+  const expiresAt = Number(data.expiresAt);
   localStorage.setItem(
     KEY,
     JSON.stringify({
       token: data.token,
-      expiresAt: data.expiresAt,
+      expiresAt,
     })
   );
 }
