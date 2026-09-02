@@ -7,6 +7,7 @@ import {
   peekTopic,
   updateTopic,
 } from "../api.js";
+import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
@@ -312,7 +313,7 @@ export default function TopicDetail() {
         </ul>
       </section>
 
-      <aside className="page-aside">
+      <aside className="page-aside xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           Topic
         </p>
@@ -346,6 +347,7 @@ export default function TopicDetail() {
             </span>
           </div>
         </div>
+        <StudyGoalsPanel slug={slug} section={section} />
       </aside>
 
       {editMain ? (

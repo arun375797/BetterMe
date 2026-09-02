@@ -253,6 +253,32 @@ export const deleteNamasteDevVideo = (id) =>
     { method: "DELETE" },
     LEARNING
   );
+
+function goalsCache(slug) {
+  return [`${API}/subjects/${slug}/goals`];
+}
+
+export const peekStudyGoals = (slug, section) =>
+  peek(API, `/subjects/${slug}/goals?section=${section}`);
+export const getStudyGoals = (slug, section) =>
+  get(API, `/subjects/${slug}/goals?section=${section}`);
+export const createStudyGoal = (slug, data) =>
+  mutate(
+    API,
+    `/subjects/${slug}/goals`,
+    { method: "POST", body: JSON.stringify(data) },
+    goalsCache(slug)
+  );
+export const updateStudyGoal = (id, data, slug) =>
+  mutate(
+    API,
+    `/goals/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    goalsCache(slug)
+  );
+export const deleteStudyGoal = (id, slug) =>
+  mutate(API, `/goals/${id}`, { method: "DELETE" }, goalsCache(slug));
+
 export const getTopic = (id) => get(API, `/topics/${id}`);
 export const createTopic = (data) =>
   mutate(API, "/topics", { method: "POST", body: JSON.stringify(data) }, LEARNING);

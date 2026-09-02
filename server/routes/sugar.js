@@ -1,5 +1,6 @@
 import { Router } from "express";
 import SugarReading from "../models/SugarReading.js";
+import { parseWallClock } from "../lib/wallClock.js";
 
 const router = Router();
 
@@ -79,8 +80,8 @@ function parseReading(body) {
     return { error: "Insulin dose looks out of range." };
   }
 
-  const recordedAt = new Date(`${date}T${time}`);
-  if (Number.isNaN(recordedAt.getTime())) {
+  const recordedAt = parseWallClock(body);
+  if (!recordedAt) {
     return { error: "Date or time is invalid." };
   }
 

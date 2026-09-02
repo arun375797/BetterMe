@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
 import { createTopic, getSubject, peekSubject, updateTopic } from "../api.js";
+import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { accentMap } from "../theme.jsx";
 
@@ -347,7 +348,7 @@ export default function SubjectPage() {
         </ul>
       </section>
 
-      <aside className="page-aside">
+      <aside className="page-aside xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           This section
         </p>
@@ -380,6 +381,7 @@ export default function SubjectPage() {
         >
           Switch to {isPractical ? "Theory" : "Practical"}
         </Link>
+        <StudyGoalsPanel slug={slug} section={section} />
       </aside>
 
       {modalOpen ? (

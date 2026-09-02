@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Dialog } from "./Dialog.jsx";
+import { wallClockPayload } from "../lib/wallClock.js";
 
 const fieldClass =
   "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
@@ -67,8 +68,7 @@ export default function ExerciseSessionModal({
         why: why.trim(),
         durationMinutes: minutes,
         felt: felt === "" ? null : Number(felt),
-        date,
-        time,
+        ...wallClockPayload(date, time),
       });
       onClose();
     } catch (err) {

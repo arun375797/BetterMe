@@ -1,13 +1,8 @@
 import { Router } from "express";
 import ExerciseSession, { KINDS } from "../models/ExerciseSession.js";
+import { parseWallClock } from "../lib/wallClock.js";
 
 const router = Router();
-
-function parseWhen(date, time) {
-  if (!date || !time) return null;
-  const parsed = new Date(`${date}T${time}`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
 
 function cleanPayload(body) {
   const kind = body?.kind;
@@ -17,7 +12,7 @@ function cleanPayload(body) {
   const feltRaw = body?.felt;
   const felt =
     feltRaw === "" || feltRaw == null ? null : Number(feltRaw);
-  const recordedAt = parseWhen(body?.date, body?.time);
+  const recordedAt = parseWallClock(body);
 
   if (!KINDS.includes(kind)) {
     return { error: "Choose yoga, badminton, or weight training." };

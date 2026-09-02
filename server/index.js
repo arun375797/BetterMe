@@ -7,6 +7,7 @@ import path from "path";
 import zlib from "node:zlib";
 import { fileURLToPath } from "url";
 import learningRoutes from "./routes/learning.js";
+import studyGoalRoutes from "./routes/studyGoals.js";
 import sugarRoutes from "./routes/sugar.js";
 import vitaminRoutes from "./routes/vitamins.js";
 import foodRoutes from "./routes/food.js";
@@ -137,6 +138,7 @@ app.use("/api", (req, res, next) => {
   return requireAuth(req, res, next);
 });
 
+app.use("/api/learning", studyGoalRoutes);
 app.use("/api/learning", learningRoutes);
 app.use("/api/study", studyRoutes);
 app.use("/api/sugar", sugarRoutes);

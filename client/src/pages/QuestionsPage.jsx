@@ -12,6 +12,7 @@ import {
   updateTopic,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
+import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import { accentMap } from "../theme.jsx";
@@ -118,7 +119,7 @@ export default function QuestionsPage() {
   const siblingSections = parent?.subtopics || [];
 
   return (
-    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_260px]">
+    <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
       <section className="page-pad">
         <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
           <Link to={`/learning/${slug}`} className="hover:underline">
@@ -237,7 +238,7 @@ export default function QuestionsPage() {
         </ul>
       </section>
 
-      <aside className="page-aside">
+      <aside className="page-aside xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           Subtopic
         </p>
@@ -246,6 +247,7 @@ export default function QuestionsPage() {
           <span className="text-muted">Questions</span>
           <span className="text-teal">{questions.length}</span>
         </div>
+        <StudyGoalsPanel slug={slug} section={section} />
       </aside>
 
       {addOpen ? (
