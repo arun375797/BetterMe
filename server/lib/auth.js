@@ -7,6 +7,7 @@ const PIN_XOR = 0x5a;
 const PIN_ENC = [0x6b, 0x6b, 0x6f, 0x6f];
 
 const SECRET_ENC = "YmV0dGVybWUtc2Vzc2lvbi1zaWduLWtleQ==";
+const COOKIE = "betterme_session";
 
 function decodePin() {
   return Buffer.from(PIN_ENC.map((b) => b ^ PIN_XOR)).toString("utf8");
@@ -67,9 +68,46 @@ export function verifySession(token) {
   return data;
 }
 
-export function requireAuth(req, res, next) {
+export function setSessionCookie(res, token) {
+  res.append(
+    "Set-Cookie",
+    [
+      `${COOKIE}=${encodeURIComponent(token)}`,
+      "Path=/",
+      "HttpOnly",
+      "Secure",
+      "SameSite=Lax",
+      `Max-Age=${Math.floor(SESSION_MS / 1000)}`,
+    ].join("; ")
+  );
+}
+
+export function clearSessionCookie(res) {
+  res.append(
+    "Set-Cookie",
+    `${COOKIE}=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`
+  );
+}
+
+function tokenFromRequest(req) {
   const header = String(req.headers.authorization || "");
-  const token = header.startsWith("Bearer ") ? header.slice(7).trim() : "";
+  if (header.startsWith("Bearer ")) return header.slice(7).trim();
+  const custom = String(
+    req.headers["x-auth-token"] || req.headers["x-betterme-token"] || ""
+  ).trim();
+  if (custom) return custom;
+  const cookie = String(req.headers.cookie || "");
+  const match = cookie.match(/(?:^|; )betterme_session=([^;]*)/);
+  if (!match) return "";
+  try {
+    return decodeURIComponent(match[1].trim());
+  } catch {
+    return match[1].trim();
+  }
+}
+
+export function requireAuth(req, res, next) {
+  const token = tokenFromRequest(req);
   const session = verifySession(token);
   if (!session) {
     return res.status(401).json({ message: "Session expired. Sign in again." });

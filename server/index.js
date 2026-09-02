@@ -37,11 +37,46 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const clientDist = path.join(__dirname, "../client/dist");
 
+function allowedCorsOrigins() {
+  return [process.env.CLIENT_ORIGIN, process.env.CORS_ORIGINS]
+    .flatMap((value) => String(value || "").split(","))
+    .map((value) => value.trim().replace(/\/$/, ""))
+    .filter(Boolean);
+}
+
+function isDevBrowserOrigin(origin) {
+  try {
+    const url = new URL(origin);
+    return (
+      (url.protocol === "http:" || url.protocol === "https:") &&
+      (url.hostname === "localhost" || url.hostname === "127.0.0.1")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function corsOrigin(origin, callback) {
+  if (!origin) {
+    callback(null, false);
+    return;
+  }
+  const allowed = allowedCorsOrigins();
+  if (allowed.includes(origin) || isDevBrowserOrigin(origin)) {
+    callback(null, origin);
+    return;
+  }
+  callback(null, false);
+}
+
 app.disable("x-powered-by");
+app.set("trust proxy", 1);
 app.use(
   cors({
     maxAge: 86400,
-    allowedHeaders: ["Content-Type", "Authorization"],
+    origin: corsOrigin,
+    credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization", "X-Auth-Token"],
   })
 );
 app.use((req, res, next) => {

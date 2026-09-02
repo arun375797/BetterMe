@@ -1,5 +1,11 @@
 import { Router } from "express";
-import { createSession, pinMatches, requireAuth } from "../lib/auth.js";
+import {
+  clearSessionCookie,
+  createSession,
+  pinMatches,
+  requireAuth,
+  setSessionCookie,
+} from "../lib/auth.js";
 
 const router = Router();
 
@@ -8,7 +14,14 @@ router.post("/login", (req, res) => {
   if (!pinMatches(pin)) {
     return res.status(403).json({ message: "Wrong password. Try again." });
   }
-  res.json(createSession());
+  const session = createSession();
+  setSessionCookie(res, session.token);
+  res.json(session);
+});
+
+router.post("/logout", requireAuth, (_req, res) => {
+  clearSessionCookie(res);
+  res.json({ ok: true });
 });
 
 router.get("/me", requireAuth, (req, res) => {

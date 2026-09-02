@@ -107,12 +107,14 @@ async function request(base, path, options = {}) {
   const token = isLogin ? "" : getAuthToken();
   if (token && !headers.Authorization && !headers.authorization) {
     headers.Authorization = `Bearer ${token}`;
+    headers["X-Auth-Token"] = token;
   }
 
   const res = await fetch(`${apiOrigin()}${base}${path}`, {
     ...options,
     headers,
     cache: "no-store",
+    credentials: "include",
   });
   const text = await res.text();
   let body = {};
@@ -143,6 +145,10 @@ export function login(pin) {
     method: "POST",
     body: JSON.stringify({ pin }),
   });
+}
+
+export function logout() {
+  return request("/api/auth", "/logout", { method: "POST" }).catch(() => {});
 }
 
 function get(base, path, ttl = CACHE_TTL_MS) {

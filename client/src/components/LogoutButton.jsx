@@ -1,13 +1,18 @@
 import { authLost } from "../authSession.js";
+import { logout as logoutRequest } from "../api.js";
 
 export default function LogoutButton({
   className = "",
   compact = false,
   onClick,
 }) {
-  function logout() {
+  async function logout() {
     onClick?.();
-    authLost();
+    try {
+      await logoutRequest();
+    } finally {
+      authLost();
+    }
   }
 
   if (compact) {
