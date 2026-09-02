@@ -19,9 +19,11 @@ export default function QuestionViewPage() {
   const { slug, section, topicId, subId, questionId } = useParams();
   const { refreshSubjects } = useOutletContext();
   const navigate = useNavigate();
-  const [sub, setSub] = useState(() => peekTopic(subId) || null);
+  const hostId = subId && subId !== "answer" ? subId : topicId;
+  const onMainTopic = hostId === topicId;
+  const [sub, setSub] = useState(() => peekTopic(hostId) || null);
   const [parent, setParent] = useState(
-    () => peekTopic(subId)?.parentTopic || null
+    () => peekTopic(hostId)?.parentTopic || null
   );
   const [question, setQuestion] = useState(null);
   const [error, setError] = useState("");
@@ -29,12 +31,14 @@ export default function QuestionViewPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [status, setStatus] = useState("");
 
-  const listPath = `/learning/${slug}/${section}/${topicId}/${subId}`;
+  const listPath = onMainTopic
+    ? `/learning/${slug}/${section}/${topicId}/answer`
+    : `/learning/${slug}/${section}/${topicId}/${subId}`;
 
   async function load() {
     try {
       const [topic, item] = await Promise.all([
-        getTopic(subId),
+        getTopic(hostId),
         getQuestion(questionId),
       ]);
       setSub(topic);
@@ -54,13 +58,13 @@ export default function QuestionViewPage() {
   }
 
   useEffect(() => {
-    const cached = peekTopic(subId);
+    const cached = peekTopic(hostId);
     if (cached) {
       setSub(cached);
       if (cached.parentTopic) setParent(cached.parentTopic);
     }
     load();
-  }, [questionId, subId]);
+  }, [questionId, hostId]);
 
   async function saveQuestion(values) {
     await updateQuestion(question._id, values);
@@ -79,7 +83,7 @@ export default function QuestionViewPage() {
     const next = !sub.inReview;
     setSub((prev) => (prev ? { ...prev, inReview: next } : prev));
     try {
-      await updateTopic(subId, { inReview: next });
+      await updateTopic(hostId, { inReview: next });
       await refreshSubjects();
       setStatus(next ? "Marked for review" : "Removed from review");
       setTimeout(() => setStatus(""), 1800);
@@ -112,16 +116,24 @@ export default function QuestionViewPage() {
           Practical
         </Link>
         {" · "}
-        <Link
-          to={`/learning/${slug}/${section}/${topicId}`}
-          className="hover:underline"
-        >
-          {parentTitle}
-        </Link>
-        {" · "}
-        <Link to={listPath} className="hover:underline">
-          {sub.title}
-        </Link>
+        {onMainTopic ? (
+          <Link to={listPath} className="hover:underline">
+            {sub.title}
+          </Link>
+        ) : (
+          <>
+            <Link
+              to={`/learning/${slug}/${section}/${topicId}`}
+              className="hover:underline"
+            >
+              {parentTitle}
+            </Link>
+            {" · "}
+            <Link to={listPath} className="hover:underline">
+              {sub.title}
+            </Link>
+          </>
+        )}
       </p>
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">

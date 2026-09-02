@@ -470,11 +470,12 @@ router.get("/topics/:id", async (req, res) => {
       }));
     }
 
+    const ownQuestions = await Question.countDocuments({ topic: topic._id });
     res.json({
       ...topic,
-      notebook: undefined,
       subject,
       subtopics: nested,
+      questionCount: ownQuestions,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -571,11 +572,6 @@ router.post("/topics/:id/questions", async (req, res) => {
     const topic = await Topic.findById(req.params.id);
     if (!topic) {
       return res.status(404).json({ message: "Topic not found" });
-    }
-    if (!topic.parent) {
-      return res.status(400).json({
-        message: "Questions belong on a section under a practical topic",
-      });
     }
     const title = req.body.title?.trim();
     if (!title) {

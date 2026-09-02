@@ -97,6 +97,14 @@ export default function App() {
           element={<TopicDetail />}
         />
         <Route
+          path="/learning/:slug/:section/:topicId/answer/:questionId"
+          element={<QuestionViewPage />}
+        />
+        <Route
+          path="/learning/:slug/:section/:topicId/answer"
+          element={<NestedTopicPage />}
+        />
+        <Route
           path="/learning/:slug/:section/:topicId/:subId/:questionId"
           element={<QuestionViewPage />}
         />

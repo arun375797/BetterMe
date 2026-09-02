@@ -20,11 +20,13 @@ import { accentMap } from "../theme.jsx";
 export default function QuestionsPage() {
   const { slug, section, topicId, subId } = useParams();
   const { refreshSubjects } = useOutletContext();
-  const [sub, setSub] = useState(() => peekTopic(subId) || null);
+  const hostId = subId && subId !== "answer" ? subId : topicId;
+  const onMainTopic = hostId === topicId;
+  const [sub, setSub] = useState(() => peekTopic(hostId) || null);
   const [parent, setParent] = useState(
-    () => peekTopic(subId)?.parentTopic || null
+    () => peekTopic(hostId)?.parentTopic || null
   );
-  const [questions, setQuestions] = useState(() => peekQuestions(subId) || []);
+  const [questions, setQuestions] = useState(() => peekQuestions(hostId) || []);
   const [error, setError] = useState("");
   const [status, setStatus] = useState("");
   const [addOpen, setAddOpen] = useState(false);
@@ -34,8 +36,8 @@ export default function QuestionsPage() {
   async function load() {
     try {
       const [topic, list] = await Promise.all([
-        getTopic(subId),
-        getQuestions(subId),
+        getTopic(hostId),
+        getQuestions(hostId),
       ]);
       setSub(topic);
       setQuestions(list);
@@ -54,8 +56,8 @@ export default function QuestionsPage() {
   }
 
   useEffect(() => {
-    const cached = peekTopic(subId);
-    const cachedQs = peekQuestions(subId);
+    const cached = peekTopic(hostId);
+    const cachedQs = peekQuestions(hostId);
     if (cached) {
       setSub(cached);
       if (cached.parentTopic) setParent(cached.parentTopic);
@@ -64,7 +66,7 @@ export default function QuestionsPage() {
     }
     if (cachedQs) setQuestions(cachedQs);
     load();
-  }, [subId]);
+  }, [hostId]);
 
   async function afterChange() {
     await load();
@@ -72,7 +74,7 @@ export default function QuestionsPage() {
   }
 
   async function addQuestion(values) {
-    await createQuestion(subId, values);
+    await createQuestion(hostId, values);
     await afterChange();
   }
 
@@ -91,7 +93,7 @@ export default function QuestionsPage() {
     const next = !sub.inReview;
     setSub((prev) => (prev ? { ...prev, inReview: next } : prev));
     try {
-      await updateTopic(subId, { inReview: next });
+      await updateTopic(hostId, { inReview: next });
       await refreshSubjects();
       setStatus(next ? "Marked for review" : "Removed from review");
       setTimeout(() => setStatus(""), 1800);
@@ -108,7 +110,7 @@ export default function QuestionsPage() {
     return <p className="p-8 text-muted">Loading questions…</p>;
   }
 
-  if (!sub.parent && !sub.parentTopic) {
+  if (!sub.parent && !sub.parentTopic && !onMainTopic) {
     return (
       <Navigate to={`/learning/${slug}/${section}/${sub._id}`} replace />
     );
@@ -117,6 +119,10 @@ export default function QuestionsPage() {
   const accent = accentMap[sub.subject?.accent] || accentMap.gold;
   const parentTitle = parent?.title || sub.parentTopic?.title || "Topic";
   const siblingSections = parent?.subtopics || [];
+  const questionPath = (id) =>
+    onMainTopic
+      ? `/learning/${slug}/${section}/${topicId}/answer/${id}`
+      : `/learning/${slug}/${section}/${topicId}/${subId}/${id}`;
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -130,12 +136,21 @@ export default function QuestionsPage() {
             Practical
           </Link>
           {" · "}
-          <Link
-            to={`/learning/${slug}/${section}/${topicId}`}
-            className="hover:underline"
-          >
-            {parentTitle}
-          </Link>
+          {onMainTopic ? (
+            <Link
+              to={`/learning/${slug}/${section}/${topicId}`}
+              className="hover:underline"
+            >
+              {sub.title}
+            </Link>
+          ) : (
+            <Link
+              to={`/learning/${slug}/${section}/${topicId}`}
+              className="hover:underline"
+            >
+              {parentTitle}
+            </Link>
+          )}
         </p>
         <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
           <div>
@@ -181,7 +196,7 @@ export default function QuestionsPage() {
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <Link
-                  to={`/learning/${slug}/${section}/${topicId}/${subId}/${item._id}`}
+                  to={questionPath(item._id)}
                   className="topic-row-title font-medium hover:text-teal"
                 >
                   {item.title}
@@ -195,7 +210,7 @@ export default function QuestionsPage() {
                 </span>
                 <div className="topic-row-actions">
                 <Link
-                  to={`/learning/${slug}/${section}/${topicId}/${subId}/${item._id}`}
+                  to={questionPath(item._id)}
                   className="rounded-lg border border-teal/35 bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal hover:bg-teal/15"
                 >
                   View
@@ -240,7 +255,7 @@ export default function QuestionsPage() {
 
       <aside className="page-aside xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto">
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
-          Subtopic
+          {onMainTopic ? "Topic" : "Subtopic"}
         </p>
         <h3 className="mt-2 text-lg font-semibold">{sub.title}</h3>
         <div className="mt-6 flex justify-between text-sm">

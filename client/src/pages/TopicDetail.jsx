@@ -11,6 +11,7 @@ import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
+import { notebookHasContent } from "../notebook.js";
 import { accentMap } from "../theme.jsx";
 
 const levelClass = {
@@ -96,6 +97,13 @@ export default function TopicDetail() {
   }
 
   const accent = accentMap[topic.subject?.accent] || accentMap.teal;
+  const hasSubs = Boolean(topic.subtopics?.length);
+  const answerPath = `/learning/${slug}/${section}/${topicId}/answer`;
+  const hasAnswer =
+    section === "practical"
+      ? Number(topic.questionCount) > 0
+      : notebookHasContent(topic.notebook);
+  const showAnswerCta = !hasSubs || hasAnswer;
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -127,8 +135,12 @@ export default function TopicDetail() {
         </div>
         <p className="mt-2 text-sm text-muted">
           {section === "practical"
-            ? "Click a subtopic to open its questions. Add a subtopic first if this topic is empty."
-            : "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."}
+            ? hasSubs
+              ? "Click a subtopic to open its questions. Add a subtopic first if this topic is empty."
+              : "No subtopics yet — add a question on this topic, or add a subtopic to split it up."
+            : hasSubs
+              ? "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."
+              : "No subtopics yet — write the answer on this topic, or add a subtopic if you want to split it."}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -160,6 +172,20 @@ export default function TopicDetail() {
           >
             Add subtopic
           </button>
+          {showAnswerCta ? (
+            <Link
+              to={answerPath}
+              className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
+            >
+              {hasAnswer
+                ? section === "practical"
+                  ? "Open questions"
+                  : "Open answer"
+                : section === "practical"
+                  ? "Add question"
+                  : "Add answer"}
+            </Link>
+          ) : null}
         </div>
 
         <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
@@ -306,8 +332,30 @@ export default function TopicDetail() {
               </li>
             ))
           ) : (
-            <li className="rounded-2xl border border-dashed border-line px-4 py-6 text-sm text-muted">
-              No subtopics yet. Add one to start this topic.
+            <li className="rounded-2xl border border-dashed border-line px-4 py-6">
+              <p className="text-sm text-muted">
+                No subtopics yet.
+              </p>
+              <p className="mt-1 text-sm text-muted">
+                {section === "practical"
+                  ? "Add a question here, or add a subtopic if you want a separate list."
+                  : "Write the answer on this topic, or add a subtopic if you want to split it."}
+              </p>
+              <div className="mt-4 flex flex-wrap gap-2">
+                <Link
+                  to={answerPath}
+                  className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
+                >
+                  {section === "practical" ? "Add question" : "Add answer"}
+                </Link>
+                <button
+                  type="button"
+                  onClick={() => setAddSub(true)}
+                  className="rounded-xl border border-line bg-white/5 px-4 py-2 text-sm"
+                >
+                  Add subtopic
+                </button>
+              </div>
             </li>
           )}
         </ul>
@@ -333,10 +381,11 @@ export default function TopicDetail() {
             <div className="flex justify-between">
               <span className="text-muted">Questions</span>
               <span className="text-teal">
-                {topic.subtopics?.reduce(
-                  (sum, s) => sum + (s.questionCount || 0),
-                  0
-                ) || 0}
+                {(topic.questionCount || 0) +
+                  (topic.subtopics?.reduce(
+                    (sum, s) => sum + (s.questionCount || 0),
+                    0
+                  ) || 0)}
               </span>
             </div>
           ) : null}

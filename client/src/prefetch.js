@@ -135,12 +135,13 @@ function dataPrefetch(pathname) {
     if (section === "namaste-dev") return [getNamasteDev()];
     if (!topicId) return [getSubject(slug, section)];
     if (!subId) return [getTopic(topicId)];
+    const hostId = subId === "answer" ? topicId : subId;
     if (!questionId) {
-      const jobs = [getTopic(subId)];
-      if (section === "practical") jobs.push(getQuestions(subId));
+      const jobs = [getTopic(hostId)];
+      if (section === "practical") jobs.push(getQuestions(hostId));
       return jobs;
     }
-    return [getTopic(subId), getQuestion(questionId)];
+    return [getTopic(hostId), getQuestion(questionId)];
   }
 
   if (pathname === "/health") {

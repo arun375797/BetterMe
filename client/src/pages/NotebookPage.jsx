@@ -127,6 +127,7 @@ function TextBlock({ id, html, onChange }) {
 
 export default function NotebookPage() {
   const { slug, section, topicId, subId } = useParams();
+  const noteId = subId && subId !== "answer" ? subId : topicId;
   const { refreshSubjects } = useOutletContext();
   const [sub, setSub] = useState(null);
   const [error, setError] = useState("");
@@ -154,32 +155,32 @@ export default function NotebookPage() {
   }
 
   useEffect(() => {
-    const cached = peekTopic(subId);
+    const cached = peekTopic(noteId);
     if (cached) {
       setSub(cached);
       setNested(cached.nested || []);
       setYoutubeUrlDraft(cached.youtubeUrl || "");
       const fromApi = normalizeNotebook(cached.notebook);
-      const local = readLocalNotebook(subId);
+      const local = readLocalNotebook(noteId);
       const next = notebookHasContent(fromApi) || !local ? fromApi : local;
       setNotebook(next);
     } else {
       setSub(null);
     }
-    getTopic(subId)
+    getTopic(noteId)
       .then((data) => {
         setSub(data);
         setNested(data.nested || []);
         setYoutubeUrlDraft(data.youtubeUrl || "");
         const fromApi = normalizeNotebook(data.notebook);
-        const local = readLocalNotebook(subId);
+        const local = readLocalNotebook(noteId);
         const next =
           notebookHasContent(fromApi) || !local ? fromApi : local;
         setNotebook(next);
         setError("");
       })
       .catch((err) => setError(err.message));
-  }, [subId]);
+  }, [noteId]);
 
   useEffect(() => {
     function syncSelection() {
@@ -314,7 +315,7 @@ export default function NotebookPage() {
     try {
       const result = await createTopic({
         subjectSlug: slug,
-        parentId: subId,
+        parentId: noteId,
         title,
         section: section || "theory",
         fromNote: true,
@@ -350,7 +351,7 @@ export default function NotebookPage() {
   async function patchMeta(updates) {
     setSub((prev) => (prev ? { ...prev, ...updates } : prev));
     try {
-      await updateTopic(subId, updates);
+      await updateTopic(noteId, updates);
       await refreshSubjects();
       setStatus("Saved");
       setTimeout(() => setStatus(""), 1600);
@@ -384,10 +385,10 @@ export default function NotebookPage() {
   async function save() {
     const payload = collectNotebook();
     setNotebook(payload);
-    writeLocalNotebook(subId, payload);
+    writeLocalNotebook(noteId, payload);
     setSaving(true);
     try {
-      await updateTopic(subId, { notebook: payload });
+      await updateTopic(noteId, { notebook: payload });
       setStatus("Saved");
       setTimeout(() => setStatus(""), 1600);
     } catch (err) {
@@ -406,6 +407,7 @@ export default function NotebookPage() {
   }
 
   const accent = accentMap[sub.subject?.accent] || accentMap.gold;
+  const isMainTopic = !sub.parent && !sub.parentTopic;
   const parentTitle = sub.parentTopic?.title || "Topic";
   const alreadyFromNote = nested.some(
     (item) => noteTitleKey(item.title) === noteTitleKey(selText)
@@ -422,13 +424,27 @@ export default function NotebookPage() {
           <Link to={`/learning/${slug}/${section}`} className="hover:underline">
             {section === "practical" ? "Practical" : "Theory"}
           </Link>
-        {" · "}
-        <Link
-          to={`/learning/${slug}/${section}/${topicId}`}
-          className="hover:underline"
-        >
-          {parentTitle}
-        </Link>
+        {isMainTopic ? (
+          <>
+            {" · "}
+            <Link
+              to={`/learning/${slug}/${section}/${topicId}`}
+              className="hover:underline"
+            >
+              {sub.title}
+            </Link>
+          </>
+        ) : (
+          <>
+            {" · "}
+            <Link
+              to={`/learning/${slug}/${section}/${topicId}`}
+              className="hover:underline"
+            >
+              {parentTitle}
+            </Link>
+          </>
+        )}
       </p>
       <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
@@ -630,6 +646,7 @@ export default function NotebookPage() {
           </button>
         ))}
         <span className="mx-1 h-4 w-px bg-white/15" />
+        {isMainTopic ? null : (
         <button
           type="button"
           title="Select text in the notebook, then add it as a nested subtopic. Click again to remove it."
@@ -643,6 +660,7 @@ export default function NotebookPage() {
         >
           {alreadyFromNote ? "✓ Added as subtopic" : "Add to subtopic"}
         </button>
+        )}
         <button
           type="button"
           onClick={() => patchMeta({ inReview: !sub.inReview })}
