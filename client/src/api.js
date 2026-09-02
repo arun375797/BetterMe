@@ -21,12 +21,18 @@ function apiOrigin() {
   return "";
 }
 
+function apiPath(base, path) {
+  // Vercel’s /api rewrite does not match trailing slashes, so
+  // `/api/todos/?done=false` is served as index.html instead of Railway JSON.
+  return `${base}${path || ""}`.replace(/\/+(?=\?|$)/, "");
+}
+
 const mem = new Map();
 const inflight = new Map();
 let persistTimer = 0;
 
 function cacheKey(base, path) {
-  return `${base}${path}`;
+  return apiPath(base, path);
 }
 
 function readSessionCache() {
@@ -110,7 +116,7 @@ async function request(base, path, options = {}) {
     headers["X-Auth-Token"] = token;
   }
 
-  const res = await fetch(`${apiOrigin()}${base}${path}`, {
+  const res = await fetch(`${apiOrigin()}${apiPath(base, path)}`, {
     ...options,
     headers,
     cache: "no-store",
@@ -124,7 +130,7 @@ async function request(base, path, options = {}) {
     const hint =
       import.meta.env.DEV
         ? "Backend may be offline or running old code — restart with npm run dev."
-        : "Redeploy the frontend so it calls Railway.";
+        : "Refresh after the latest deploy, then sign in again.";
     throw new Error(`API did not return JSON. ${hint}`);
   }
   if (!res.ok) {
