@@ -147,6 +147,12 @@ export default function SugarChart({ readings }) {
     return pad.left + index * colW + 9 + frac * inner;
   }
 
+  function xItems(items, index) {
+    if (!items.length) return xDay(index);
+    const sum = items.reduce((total, item) => total + xReading(item, index), 0);
+    return sum / items.length;
+  }
+
   function yLevel(level) {
     return pad.top + ((maxY - level) / ySpan) * (height - pad.top - pad.bottom);
   }
@@ -160,17 +166,33 @@ export default function SugarChart({ readings }) {
   const dangerBottom = yLevel(HIGH_LINE);
 
   const avgLine = days.map((day, index) => ({
-    x: xDay(index),
+    x: xItems(day.items, index),
     y: yLevel(day.average),
   }));
   const beforeLine = days
     .map((day, index) =>
-      day.beforeAvg != null ? { x: xDay(index), y: yLevel(day.beforeAvg) } : null
+      day.beforeAvg != null
+        ? {
+            x: xItems(
+              day.items.filter((item) => item.mealTiming === "before"),
+              index
+            ),
+            y: yLevel(day.beforeAvg),
+          }
+        : null
     )
     .filter(Boolean);
   const afterLine = days
     .map((day, index) =>
-      day.afterAvg != null ? { x: xDay(index), y: yLevel(day.afterAvg) } : null
+      day.afterAvg != null
+        ? {
+            x: xItems(
+              day.items.filter((item) => item.mealTiming === "after"),
+              index
+            ),
+            y: yLevel(day.afterAvg),
+          }
+        : null
     )
     .filter(Boolean);
 
@@ -303,7 +325,7 @@ export default function SugarChart({ readings }) {
           </text>
 
           {days.map((day, index) => {
-            const x = xDay(index);
+            const x = xItems(day.items, index);
             const y1 = yLevel(day.max);
             const y2 = yLevel(day.min);
             return (
