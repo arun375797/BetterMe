@@ -44,7 +44,8 @@ const MusicPage = lazy(() => import("./pages/MusicPage.jsx"));
 
 function NestedTopicPage() {
   const { section } = useParams();
-  return section === "practical" ? <QuestionsPage /> : <NotebookPage />;
+  if (section === "practical") return <QuestionsPage />;
+  return <NotebookPage />;
 }
 
 function AuthGate({ children }) {

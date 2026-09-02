@@ -141,6 +141,7 @@ function dataPrefetch(pathname) {
       if (section === "practical") jobs.push(getQuestions(hostId));
       return jobs;
     }
+    if (section !== "practical") return [getTopic(hostId)];
     return [getTopic(hostId), getQuestion(questionId)];
   }
 

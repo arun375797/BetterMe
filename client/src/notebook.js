@@ -127,6 +127,14 @@ export function writeLocalNotebook(subId, notebook) {
   }
 }
 
+export function clearLocalNotebook(subId) {
+  try {
+    localStorage.removeItem(storageKey(subId));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function notebookPlainText(notebook) {
   if (!notebook?.blocks?.length) return "";
   return notebook.blocks

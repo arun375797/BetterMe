@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
   createTopic,
@@ -11,7 +11,14 @@ import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
-import { notebookHasContent } from "../notebook.js";
+import {
+  clearLocalNotebook,
+  emptyNotebook,
+  notebookHasContent,
+  notebookPlainText,
+  normalizeNotebook,
+  readLocalNotebook,
+} from "../notebook.js";
 import { accentMap } from "../theme.jsx";
 
 const levelClass = {
@@ -31,11 +38,40 @@ export default function TopicDetail() {
   const [addSub, setAddSub] = useState(false);
   const [openNested, setOpenNested] = useState({});
   const [confirm, setConfirm] = useState(null);
+  const skipNotebookRestore = useRef(false);
 
   async function load() {
     try {
       const data = await getTopic(topicId);
-      setTopic(data);
+      if (section === "practical") {
+        setTopic(data);
+        setError("");
+        return;
+      }
+      if (skipNotebookRestore.current) {
+        skipNotebookRestore.current = false;
+        clearLocalNotebook(topicId);
+        setTopic({ ...data, notebook: emptyNotebook() });
+        setError("");
+        return;
+      }
+      setTopic((prev) => {
+        const incoming = normalizeNotebook(data.notebook);
+        const previous = normalizeNotebook(prev?.notebook);
+        const local = readLocalNotebook(topicId);
+        const keep =
+          notebookHasContent(incoming)
+            ? incoming
+            : notebookHasContent(previous)
+              ? previous
+              : notebookHasContent(local)
+                ? local
+                : incoming;
+        if (!notebookHasContent(incoming) && notebookHasContent(keep)) {
+          updateTopic(topicId, { notebook: keep }).catch(() => {});
+        }
+        return { ...data, notebook: keep };
+      });
       setError("");
     } catch (err) {
       setError(err.message);
@@ -47,7 +83,7 @@ export default function TopicDetail() {
     if (cached) setTopic(cached);
     else setTopic(null);
     load();
-  }, [topicId]);
+  }, [topicId, section]);
 
   async function afterChange() {
     await load();
@@ -88,6 +124,15 @@ export default function TopicDetail() {
     await afterChange();
   }
 
+  async function removeAnswer() {
+    skipNotebookRestore.current = true;
+    const empty = emptyNotebook();
+    clearLocalNotebook(topicId);
+    setTopic((prev) => (prev ? { ...prev, notebook: empty } : prev));
+    await updateTopic(topicId, { notebook: empty });
+    await afterChange();
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -97,13 +142,27 @@ export default function TopicDetail() {
   }
 
   const accent = accentMap[topic.subject?.accent] || accentMap.teal;
-  const hasSubs = Boolean(topic.subtopics?.length);
   const answerPath = `/learning/${slug}/${section}/${topicId}/answer`;
+  const answerNotebook = (() => {
+    const fromApi = normalizeNotebook(topic.notebook);
+    if (notebookHasContent(fromApi)) return fromApi;
+    const local = readLocalNotebook(topic._id);
+    return local && notebookHasContent(local) ? local : fromApi;
+  })();
+  const answerPreview = notebookPlainText(answerNotebook);
   const hasAnswer =
     section === "practical"
       ? Number(topic.questionCount) > 0
-      : notebookHasContent(topic.notebook);
-  const showAnswerCta = !hasSubs || hasAnswer;
+      : notebookHasContent(answerNotebook);
+  const isPractical = section === "practical";
+  const subReview = (topic.subtopics || []).filter((s) => s.inReview);
+  const reviewItems = [
+    ...(topic.inReview
+      ? [{ _id: topic._id, title: topic.title, isMain: true }]
+      : []),
+    ...subReview,
+  ];
+  const fromAnswer = topic.fromAnswer || [];
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -134,13 +193,9 @@ export default function TopicDetail() {
           </span>
         </div>
         <p className="mt-2 text-sm text-muted">
-          {section === "practical"
-            ? hasSubs
-              ? "Click a subtopic to open its questions. Add a subtopic first if this topic is empty."
-              : "No subtopics yet — add a question on this topic, or add a subtopic to split it up."
-            : hasSubs
-              ? "Click a subsection to open its notebook. Select text in the notebook and click Add to subtopic — those phrases show under View more. Click Add to subtopic again to remove them."
-              : "No subtopics yet — write the answer on this topic, or add a subtopic if you want to split it."}
+          {isPractical
+            ? "This topic has its own question list. Each subtopic has a separate list. Answers live inside a question — not in a theory notebook."
+            : "This topic has one answer notebook. Each subtopic has its own notebook. Highlighted phrases in a subtopic become nested notes."}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -172,20 +227,18 @@ export default function TopicDetail() {
           >
             Add subtopic
           </button>
-          {showAnswerCta ? (
-            <Link
-              to={answerPath}
-              className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
-            >
-              {hasAnswer
-                ? section === "practical"
-                  ? "Open questions"
-                  : "Open answer"
-                : section === "practical"
-                  ? "Add question"
-                  : "Add answer"}
-            </Link>
-          ) : null}
+          <Link
+            to={answerPath}
+            className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
+          >
+            {hasAnswer
+              ? isPractical
+                ? "Open questions"
+                : "Open answer"
+              : isPractical
+                ? "Add question"
+                : "Add answer"}
+          </Link>
         </div>
 
         <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
@@ -197,35 +250,133 @@ export default function TopicDetail() {
               <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
             </div>
             <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
-              {topic.subtopics?.filter((s) => s.inReview).length || 0}
+              {reviewItems.length}
             </span>
           </div>
           <ul className="mt-4 space-y-2">
-            {topic.subtopics?.filter((s) => s.inReview).length ? (
-              topic.subtopics
-                .filter((s) => s.inReview)
-                .map((sub) => (
-                  <li key={sub._id}>
-                    <Link
-                      to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
-                      className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
-                    >
-                      <span className="min-w-0 flex-1 break-words font-medium">{sub.title}</span>
-                      <span className="shrink-0 text-[11px] text-teal">
-                        {section === "practical" ? "Open questions →" : "Open notebook →"}
-                      </span>
-                    </Link>
-                  </li>
-                ))
+            {reviewItems.length ? (
+              reviewItems.map((item) => (
+                <li key={item._id}>
+                  <Link
+                    to={
+                      item.isMain
+                        ? answerPath
+                        : `/learning/${slug}/${section}/${topicId}/${item._id}`
+                    }
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                  >
+                    <span className="min-w-0 flex-1 break-words font-medium">
+                      {item.title}
+                      {item.isMain ? (
+                        <span className="ml-2 text-xs font-normal text-muted">
+                          {isPractical ? "topic questions" : "topic answer"}
+                        </span>
+                      ) : null}
+                    </span>
+                    <span className="shrink-0 text-[11px] text-teal">
+                      {isPractical ? "Open questions →" : "Open notebook →"}
+                    </span>
+                  </Link>
+                </li>
+              ))
             ) : (
               <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
-                {section === "practical"
-                  ? "No review items yet. Open a subtopic and click Add to review."
-                  : "No review items yet. Open a subsection notebook and click Add to review."}
+                {isPractical
+                  ? "No review items yet. Open the topic questions or a subtopic and click Add to review."
+                  : "No review items yet. Open the topic answer or a subtopic notebook and click Add to review."}
               </li>
             )}
           </ul>
         </div>
+
+        {section !== "practical" ? (
+          <div className="mt-6 rounded-2xl border border-teal/30 bg-teal/8 p-4 ring-1 ring-teal/20">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
+                  Answer
+                </p>
+                <h3 className="mt-1 text-lg font-semibold">On this topic</h3>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {hasAnswer ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setConfirm({
+                        title: "Delete this answer?",
+                        message:
+                          "The topic note will be cleared. Subtopics are not removed.",
+                        onConfirm: removeAnswer,
+                      })
+                    }
+                    className="rounded-xl border border-coral/35 px-4 py-2 text-sm text-coral hover:bg-coral/10"
+                  >
+                    Delete answer
+                  </button>
+                ) : null}
+                <Link
+                  to={answerPath}
+                  className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
+                >
+                  {hasAnswer ? "Open answer" : "Add answer"}
+                </Link>
+              </div>
+            </div>
+            {hasAnswer ? (
+              <p className="mt-3 line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-ink">
+                {answerPreview || "Open to see the full notebook."}
+              </p>
+            ) : (
+              <p className="mt-3 text-sm text-muted">
+                Write the topic answer here. Subtopic notebooks below stay
+                separate.
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="mt-6 rounded-2xl border border-teal/30 bg-teal/8 p-4 ring-1 ring-teal/20">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
+                  Questions
+                </p>
+                <h3 className="mt-1 text-lg font-semibold">On this topic</h3>
+              </div>
+              <Link
+                to={answerPath}
+                className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
+              >
+                {hasAnswer ? "Open questions" : "Add question"}
+              </Link>
+            </div>
+            <p className="mt-3 text-sm text-muted">
+              {hasAnswer
+                ? `${topic.questionCount || 0} question${
+                    Number(topic.questionCount) === 1 ? "" : "s"
+                  } on this topic. Subtopics have their own lists.`
+                : "Add questions here. Each subtopic has its own list — not this one."}
+            </p>
+          </div>
+        )}
+
+        {!isPractical && fromAnswer.length ? (
+          <div className="mt-6 rounded-2xl border border-gold/25 bg-gold/8 p-4">
+            <p className="text-[11px] tracking-[0.18em] text-gold uppercase">
+              From the topic answer
+            </p>
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {fromAnswer.map((note) => (
+                <li
+                  key={note._id}
+                  className="rounded-full border border-gold/35 bg-gold/10 px-2.5 py-0.5 text-[11px] text-gold"
+                >
+                  {note.title}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
 
         <ul className="mt-6 space-y-3">
           {topic.subtopics?.length ? (
@@ -244,28 +395,42 @@ export default function TopicDetail() {
                 >
                   {sub.title}
                 </Link>
-                {section === "practical" ? (
+                {isPractical ? (
                   <span className="topic-row-meta text-xs text-muted">
                     {sub.questionCount || 0} questions
                   </span>
                 ) : (
-                  <span
-                    className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
-                      difficultyMeta(sub.difficulty).className
-                    }`}
-                  >
-                    {difficultyMeta(sub.difficulty).label}
-                  </span>
+                  <>
+                    {sub.hasNotebook ? (
+                      <span className="topic-row-meta text-[10px] text-teal">
+                        notes
+                      </span>
+                    ) : null}
+                    <span
+                      className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
+                        difficultyMeta(sub.difficulty).className
+                      }`}
+                    >
+                      {difficultyMeta(sub.difficulty).label}
+                    </span>
+                  </>
                 )}
                 <div className="topic-row-actions">
-                {section === "practical" ? (
+                {isPractical ? (
                   <Link
                     to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
                     className="text-xs text-teal hover:underline"
                   >
                     Open questions →
                   </Link>
-                ) : null}
+                ) : (
+                  <Link
+                    to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
+                    className="text-xs text-teal hover:underline"
+                  >
+                    Open notebook →
+                  </Link>
+                )}
                 {sub.inReview ? (
                   <span className="rounded-full border border-teal/30 bg-teal/12 px-2 py-0.5 text-[10px] text-teal">
                     Review
@@ -298,7 +463,9 @@ export default function TopicDetail() {
                   onClick={() =>
                     setConfirm({
                       title: `Delete “${sub.title}”?`,
-                      message: "This subtopic and its notes will be removed.",
+                      message: isPractical
+                        ? "This subtopic and its questions will be removed."
+                        : "This subtopic notebook and its nested notes will be removed.",
                       onConfirm: () => removeSub(sub),
                     })
                   }
@@ -332,30 +499,10 @@ export default function TopicDetail() {
               </li>
             ))
           ) : (
-            <li className="rounded-2xl border border-dashed border-line px-4 py-6">
-              <p className="text-sm text-muted">
-                No subtopics yet.
-              </p>
-              <p className="mt-1 text-sm text-muted">
-                {section === "practical"
-                  ? "Add a question here, or add a subtopic if you want a separate list."
-                  : "Write the answer on this topic, or add a subtopic if you want to split it."}
-              </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <Link
-                  to={answerPath}
-                  className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
-                >
-                  {section === "practical" ? "Add question" : "Add answer"}
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setAddSub(true)}
-                  className="rounded-xl border border-line bg-white/5 px-4 py-2 text-sm"
-                >
-                  Add subtopic
-                </button>
-              </div>
+            <li className="rounded-2xl border border-dashed border-line px-4 py-6 text-sm text-muted">
+              {isPractical
+                ? "No subtopics yet. Questions on this topic still live under Open questions."
+                : "No subtopics yet. The topic answer above stays saved on its own."}
             </li>
           )}
         </ul>
@@ -373,10 +520,16 @@ export default function TopicDetail() {
           </div>
           <div className="flex justify-between">
             <span className="text-muted">Review topics</span>
-            <span className="text-teal">
-              {topic.subtopics?.filter((s) => s.inReview).length || 0}
-            </span>
+            <span className="text-teal">{reviewItems.length}</span>
           </div>
+          {!isPractical ? (
+            <div className="flex justify-between">
+              <span className="text-muted">Topic answer</span>
+              <span className={hasAnswer ? "text-teal" : "text-muted"}>
+                {hasAnswer ? "Saved" : "Empty"}
+              </span>
+            </div>
+          ) : null}
           {section === "practical" ? (
             <div className="flex justify-between">
               <span className="text-muted">Questions</span>

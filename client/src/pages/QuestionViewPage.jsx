@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
   deleteQuestion,
   getQuestion,
@@ -96,13 +96,24 @@ export default function QuestionViewPage() {
     return <p className="p-8 text-coral">{error}</p>;
   }
 
+  if (section !== "practical") {
+    return (
+      <Navigate
+        to={`/learning/${slug}/${section}/${topicId}/answer`}
+        replace
+      />
+    );
+  }
+
   if (!sub || !question) {
     return <p className="p-8 text-muted">Loading question…</p>;
   }
 
   const accent = accentMap[sub.subject?.accent] || accentMap.gold;
   const parentTitle = parent?.title || sub.parentTopic?.title || "Topic";
-  const siblingSections = parent?.subtopics || [];
+  const siblingSections = onMainTopic
+    ? sub.subtopics || []
+    : parent?.subtopics || [];
   const ways = solutionsOf(question);
 
   return (

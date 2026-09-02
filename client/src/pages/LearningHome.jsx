@@ -12,6 +12,7 @@ import {
 import StudyPlanChart, { StudySubjectBars } from "../components/StudyPlanChart.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import { todayKey } from "../food.js";
+import { notebookPath, reviewItemHint } from "../lib/today.js";
 import { accentMap } from "../theme.jsx";
 
 const WEEKDAY_EDIT = [1, 2, 3, 4, 5, 6, 0];
@@ -24,14 +25,6 @@ const WEEKDAY_NAMES = {
   5: "Friday",
   6: "Saturday",
 };
-
-function notebookPath(item) {
-  const slug = item.subject?.slug;
-  const section = item.section || "theory";
-  const parentId = item.parentTopic?._id || item.parent;
-  if (!slug || !parentId) return "/learning";
-  return `/learning/${slug}/${section}/${parentId}/${item._id}`;
-}
 
 function subjectId(value) {
   return String(value?._id || value || "");
@@ -660,7 +653,7 @@ export default function LearningHome() {
                       </span>
                       <span className="text-xs text-muted">
                         {item.subject?.shortName || item.subject?.name} ·{" "}
-                        {item.parentTopic?.title || "Topic"}
+                        {reviewItemHint(item)}
                       </span>
                     </span>
                     <span

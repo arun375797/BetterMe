@@ -12,6 +12,71 @@ const router = Router();
 const SECTIONS = ["theory", "practical"];
 const LIST_SELECT = "-notebook";
 
+function notebookHasContent(notebook) {
+  if (!notebook?.blocks?.length) return false;
+  return notebook.blocks.some((block) => {
+    if (block.type === "code") return Boolean(String(block.code || "").trim());
+    const html = String(block.html || "")
+      .replace(/<br\s*\/?>/gi, "")
+      .replace(/&nbsp;/gi, "")
+      .replace(/<[^>]+>/g, "")
+      .trim();
+    return html.length > 0;
+  });
+}
+
+function listTopic(doc) {
+  if (!doc) return doc;
+  const { notebook, ...rest } = doc;
+  return { ...rest, hasNotebook: notebookHasContent(notebook) };
+}
+
+function stripTopicTree(topics) {
+  return (topics || []).map((topic) => ({
+    ...listTopic(topic),
+    subtopics: (topic.subtopics || []).map((sub) => ({
+      ...listTopic(sub),
+      nested: (sub.nested || []).map(listTopic),
+    })),
+  }));
+}
+
+async function questionCountMap(ids) {
+  const clean = ids.filter(Boolean);
+  if (!clean.length) return {};
+  const counts = await Question.aggregate([
+    { $match: { topic: { $in: clean } } },
+    { $group: { _id: "$topic", n: { $sum: 1 } } },
+  ]);
+  return Object.fromEntries(counts.map((row) => [String(row._id), row.n]));
+}
+
+async function withPracticalCounts(topics) {
+  const ids = [];
+  for (const topic of topics) {
+    ids.push(topic._id);
+    for (const sub of topic.subtopics || []) ids.push(sub._id);
+  }
+  const countMap = await questionCountMap(ids);
+  return topics.map((topic) => {
+    const subtopics = (topic.subtopics || []).map((sub) => ({
+      ...sub,
+      questionCount: countMap[String(sub._id)] || 0,
+    }));
+    const own = countMap[String(topic._id)] || 0;
+    const nestedSum = subtopics.reduce(
+      (sum, sub) => sum + (sub.questionCount || 0),
+      0
+    );
+    return {
+      ...topic,
+      subtopics,
+      questionCount: own,
+      totalQuestions: own + nestedSum,
+    };
+  });
+}
+
 function cleanUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return { url: "" };
@@ -156,7 +221,7 @@ function statsFromTopics(topics, questionCount = 0) {
     };
   }
   bySection.practical.items = questionCount;
-  const inReview = topics.filter((t) => t.parent && t.inReview).length;
+  const inReview = topics.filter((t) => t.inReview && !t.fromNote).length;
   return {
     theory: bySection.theory,
     practical: bySection.practical,
@@ -173,7 +238,7 @@ router.get("/review", async (_req, res) => {
     const payload = await memoGet("learning:review", 20_000, async () => {
       const items = await Topic.find({
         inReview: true,
-        parent: { $ne: null },
+        fromNote: { $ne: true },
       })
         .select(LIST_SELECT)
         .populate("subject", "name slug shortName accent")
@@ -264,10 +329,13 @@ router.get("/subjects/:slug", async (req, res) => {
         const subject = await Subject.findOne({ slug }).lean();
         if (!subject) return null;
 
-        const all = await Topic.find({ subject: subject._id })
-          .select(LIST_SELECT)
-          .sort({ slNo: 1, order: 1, createdAt: 1 })
-          .lean();
+        let listQuery = Topic.find({ subject: subject._id }).sort({
+          slNo: 1,
+          order: 1,
+          createdAt: 1,
+        });
+        if (section !== "theory") listQuery = listQuery.select(LIST_SELECT);
+        const all = await listQuery.lean();
         const questionCount = await Question.countDocuments({
           topic: { $in: all.map((topic) => topic._id) },
         });
@@ -277,31 +345,11 @@ router.get("/subjects/:slug", async (req, res) => {
           : [];
 
         let topics = section ? nestTopics(scoped) : [];
+        if (section === "theory" && topics.length) {
+          topics = stripTopicTree(topics);
+        }
         if (section === "practical" && topics.length) {
-          const childIds = topics.flatMap((topic) =>
-            (topic.subtopics || []).map((sub) => sub._id)
-          );
-          let countMap = {};
-          if (childIds.length) {
-            const counts = await Question.aggregate([
-              { $match: { topic: { $in: childIds } } },
-              { $group: { _id: "$topic", n: { $sum: 1 } } },
-            ]);
-            countMap = Object.fromEntries(
-              counts.map((row) => [String(row._id), row.n])
-            );
-          }
-          topics = topics.map((topic) => ({
-            ...topic,
-            subtopics: (topic.subtopics || []).map((sub) => ({
-              ...sub,
-              questionCount: countMap[String(sub._id)] || 0,
-            })),
-            questionCount: (topic.subtopics || []).reduce(
-              (sum, sub) => sum + (countMap[String(sub._id)] || 0),
-              0
-            ),
-          }));
+          topics = await withPracticalCounts(topics);
         }
 
         return {
@@ -407,41 +455,48 @@ router.get("/topics/:id", async (req, res) => {
     const subject = await Subject.findById(topic.subject).lean();
 
     if (topic.parent) {
-      const [parentTopic, nested, siblings] = await Promise.all([
-        Topic.findById(topic.parent).select(LIST_SELECT).lean(),
+      const [parentTopic, nested, siblings, ownQuestions] = await Promise.all([
+        Topic.findById(topic.parent).lean(),
         Topic.find({ parent: topic._id })
-          .select(LIST_SELECT)
           .sort({ order: 1, createdAt: 1 })
           .lean(),
         Topic.find({
           parent: topic.parent,
           fromNote: { $ne: true },
         })
-          .select(LIST_SELECT)
           .sort({ slNo: 1, order: 1, createdAt: 1 })
           .lean(),
+        Question.countDocuments({ topic: topic._id }),
       ]);
       return res.json({
         ...topic,
+        hasNotebook: notebookHasContent(topic.notebook),
+        questionCount: ownQuestions,
         subject,
         parentTopic: parentTopic
-          ? { ...parentTopic, subtopics: siblings }
+          ? { ...listTopic(parentTopic), subtopics: siblings.map(listTopic) }
           : null,
-        nested: uniqueByTitle(nested),
+        nested: uniqueByTitle(nested).map(listTopic),
       });
     }
 
-    const subtopics = await Topic.find({
-      parent: topic._id,
-      fromNote: { $ne: true },
-    })
-      .select(LIST_SELECT)
-      .sort({ slNo: 1, order: 1, createdAt: 1 })
-      .lean();
+    const [subtopics, fromAnswer] = await Promise.all([
+      Topic.find({
+        parent: topic._id,
+        fromNote: { $ne: true },
+      })
+        .sort({ slNo: 1, order: 1, createdAt: 1 })
+        .lean(),
+      Topic.find({
+        parent: topic._id,
+        fromNote: true,
+      })
+        .sort({ order: 1, createdAt: 1 })
+        .lean(),
+    ]);
     const subIds = subtopics.map((item) => item._id);
     const fromNotes = subIds.length
       ? await Topic.find({ parent: { $in: subIds } })
-          .select(LIST_SELECT)
           .sort({ order: 1, createdAt: 1 })
           .lean()
       : [];
@@ -453,29 +508,36 @@ router.get("/topics/:id", async (req, res) => {
     }
 
     let nested = subtopics.map((item) => ({
-      ...item,
-      nested: uniqueByTitle(notesByParent.get(idKey(item._id)) || []),
+      ...listTopic(item),
+      nested: uniqueByTitle(notesByParent.get(idKey(item._id)) || []).map(
+        listTopic
+      ),
     }));
-    if (topic.section === "practical" && nested.length) {
-      const counts = await Question.aggregate([
-        { $match: { topic: { $in: nested.map((sub) => sub._id) } } },
-        { $group: { _id: "$topic", n: { $sum: 1 } } },
-      ]);
-      const countMap = Object.fromEntries(
-        counts.map((row) => [String(row._id), row.n])
-      );
+
+    const countMap = await questionCountMap([
+      topic._id,
+      ...nested.map((sub) => sub._id),
+    ]);
+    if (topic.section === "practical") {
       nested = nested.map((sub) => ({
         ...sub,
         questionCount: countMap[String(sub._id)] || 0,
       }));
     }
 
-    const ownQuestions = await Question.countDocuments({ topic: topic._id });
+    const ownQuestions = countMap[String(topic._id)] || 0;
+    const nestedSum = nested.reduce(
+      (sum, sub) => sum + (sub.questionCount || 0),
+      0
+    );
     res.json({
       ...topic,
+      hasNotebook: notebookHasContent(topic.notebook),
       subject,
       subtopics: nested,
+      fromAnswer: uniqueByTitle(fromAnswer).map(listTopic),
       questionCount: ownQuestions,
+      totalQuestions: ownQuestions + nestedSum,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -518,6 +580,11 @@ router.patch("/topics/:id", async (req, res) => {
     const topic = await Topic.findById(req.params.id);
     if (!topic) {
       return res.status(404).json({ message: "Topic not found" });
+    }
+    if (updates.notebook !== undefined && topic.section === "practical") {
+      return res.status(400).json({
+        message: "Practical topics use questions, not a theory notebook.",
+      });
     }
 
     for (const [key, value] of Object.entries(updates)) {
@@ -573,6 +640,11 @@ router.post("/topics/:id/questions", async (req, res) => {
     if (!topic) {
       return res.status(404).json({ message: "Topic not found" });
     }
+    if ((topic.section || "theory") !== "practical") {
+      return res.status(400).json({
+        message: "Questions belong on practical topics.",
+      });
+    }
     const title = req.body.title?.trim();
     if (!title) {
       return res.status(400).json({ message: "Question title is required" });
@@ -581,9 +653,12 @@ router.post("/topics/:id/questions", async (req, res) => {
     let relatedSection = null;
     if (req.body.relatedSectionId) {
       const related = await Topic.findById(req.body.relatedSectionId);
+      const sameFamily = topic.parent
+        ? String(related?.parent) === String(topic.parent)
+        : String(related?.parent) === String(topic._id);
       if (
         related &&
-        String(related.parent) === String(topic.parent) &&
+        sameFamily &&
         String(related._id) !== String(topic._id)
       ) {
         relatedSection = related._id;

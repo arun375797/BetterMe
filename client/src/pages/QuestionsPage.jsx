@@ -106,6 +106,14 @@ export default function QuestionsPage() {
     return <p className="p-8 text-coral">{error}</p>;
   }
 
+  if (section !== "practical") {
+    const dest =
+      subId && subId !== "answer"
+        ? `/learning/${slug}/${section}/${topicId}/${subId}`
+        : `/learning/${slug}/${section}/${topicId}/answer`;
+    return <Navigate to={dest} replace />;
+  }
+
   if (!sub) {
     return <p className="p-8 text-muted">Loading questions…</p>;
   }
@@ -118,7 +126,9 @@ export default function QuestionsPage() {
 
   const accent = accentMap[sub.subject?.accent] || accentMap.gold;
   const parentTitle = parent?.title || sub.parentTopic?.title || "Topic";
-  const siblingSections = parent?.subtopics || [];
+  const siblingSections = onMainTopic
+    ? sub.subtopics || []
+    : parent?.subtopics || [];
   const questionPath = (id) =>
     onMainTopic
       ? `/learning/${slug}/${section}/${topicId}/answer/${id}`
@@ -156,8 +166,9 @@ export default function QuestionsPage() {
           <div>
             <h2 className="text-2xl font-semibold break-words sm:text-3xl">{sub.title}</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              Only the questions are listed here. Use View to open the
-              answers.
+              {onMainTopic
+                ? "Questions for this topic only. Each subtopic has a separate list. Open View to write the answer."
+                : "Questions for this subtopic only. The parent topic has its own list."}
             </p>
             {status ? (
               <p className="mt-1 text-xs text-teal">{status}</p>

@@ -6,13 +6,13 @@ const tracks = [
   {
     id: "theory",
     title: "Theory",
-    copy: "Main topics and the concepts under each one.",
+    copy: "Each topic has one answer notebook. Subtopics have their own notebooks.",
     accent: "teal",
   },
   {
     id: "practical",
     title: "Practical",
-    copy: "Topics, then subtopics, then questions — same subjects, hands-on.",
+    copy: "Each topic has a question list. Subtopics have their own questions — not a theory notebook.",
     accent: "gold",
   },
 ];
@@ -35,9 +35,8 @@ export default function SubjectHub() {
         </p>
         <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">{subject.name}</h2>
         <p className="mt-2 max-w-xl text-sm text-muted">
-          Same tools as JavaScript on Mongo, Node, React, and DSA. Theory:
-          topics, star, view more, notebooks, review, add-from-note.
-          Practical: topic → subtopic → questions.
+          Same subjects in two tracks. Theory is notebooks (topic answer +
+          subtopic notes). Practical is questions (topic list + subtopic lists).
         </p>
 
         <div

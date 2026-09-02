@@ -177,9 +177,20 @@ export function pickPersonality(items, now = new Date()) {
 export function notebookPath(item) {
   const slug = item.subject?.slug;
   const section = item.section || "theory";
-  const parentId = item.parentTopic?._id || item.parent;
-  if (!slug || !parentId) return "/learning";
+  if (!slug || !item?._id) return "/learning";
+  const rawParent = item.parentTopic?._id || item.parent;
+  const parentId =
+    rawParent && typeof rawParent === "object" ? rawParent._id : rawParent;
+  if (!parentId) {
+    return `/learning/${slug}/${section}/${item._id}/answer`;
+  }
   return `/learning/${slug}/${section}/${parentId}/${item._id}`;
+}
+
+export function reviewItemHint(item) {
+  if (item.parentTopic?.title) return item.parentTopic.title;
+  if ((item.section || "theory") === "practical") return "Topic questions";
+  return "Topic answer";
 }
 
 export function sessionIsToday(iso, now = new Date()) {

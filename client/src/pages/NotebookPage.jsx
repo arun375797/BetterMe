@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useOutletContext, useParams } from "react-router-dom";
+import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
 import { getTopic, peekTopic, updateTopic, createTopic } from "../api.js";
 import { DIFFICULTIES, difficultyMeta } from "../difficulty.js";
 import {
@@ -389,6 +389,7 @@ export default function NotebookPage() {
     setSaving(true);
     try {
       await updateTopic(noteId, { notebook: payload });
+      await refreshSubjects();
       setStatus("Saved");
       setTimeout(() => setStatus(""), 1600);
     } catch (err) {
@@ -400,6 +401,14 @@ export default function NotebookPage() {
 
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
+  }
+
+  if (section === "practical") {
+    const dest =
+      subId && subId !== "answer"
+        ? `/learning/${slug}/${section}/${topicId}/${subId}`
+        : `/learning/${slug}/${section}/${topicId}/answer`;
+    return <Navigate to={dest} replace />;
   }
 
   if (!sub) {
@@ -476,6 +485,11 @@ export default function NotebookPage() {
           </button>
         </div>
       </div>
+      <p className="mt-2 max-w-2xl text-sm text-muted">
+        {isMainTopic
+          ? "This is the answer for the whole topic. Subtopics have their own notebooks. Saving here does not change them."
+          : "This notebook is only for this subtopic. Select a phrase and click Add to subtopic to nest it under here."}
+      </p>
 
       <div className="mt-4 max-w-4xl rounded-2xl border border-line bg-[#222838]/80 px-4 py-3">
         <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
@@ -520,6 +534,8 @@ export default function NotebookPage() {
         </div>
       </div>
 
+      {!isMainTopic ? (
+        <>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-muted">From this note:</span>
         <span className="text-[11px] text-gold">{nested.length}</span>
@@ -548,6 +564,8 @@ export default function NotebookPage() {
             </span>
           )}
         </div>
+      ) : null}
+        </>
       ) : null}
 
       <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[#1c2133] px-3 py-2.5">
@@ -722,7 +740,9 @@ export default function NotebookPage() {
           }
         }}
       >
-        <div className="notebook-head">Notebook</div>
+        <div className="notebook-head">
+          {isMainTopic ? "Topic answer" : "Subtopic notebook"}
+        </div>
         <div>
           {notebook.blocks.map((block) =>
             block.type === "code" ? (

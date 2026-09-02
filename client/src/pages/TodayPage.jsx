@@ -11,6 +11,7 @@ import {
   notebookPath,
   periodLabel,
   pickPersonality,
+  reviewItemHint,
   sessionIsToday,
   splitDueTodos,
 } from "../lib/today.js";
@@ -359,7 +360,7 @@ export default function TodayPage() {
                     </span>
                     <span className="text-xs text-muted">
                       {item.subject?.shortName || item.subject?.name} ·{" "}
-                      {item.parentTopic?.title || "Topic"}
+                      {reviewItemHint(item)}
                     </span>
                   </span>
                   <span

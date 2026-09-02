@@ -25,7 +25,6 @@ export default function SubjectPage() {
   const [openIds, setOpenIds] = useState({});
 
   const isPractical = section === "practical";
-  const isTheory = section === "theory";
   const childLabel = "subtopics";
 
   async function load() {
@@ -90,11 +89,25 @@ export default function SubjectPage() {
 
   const reviewItems = useMemo(() => {
     if (!subject?.topics) return [];
-    return subject.topics.flatMap((topic) =>
+    const mains = subject.topics
+      .filter((topic) => topic.inReview)
+      .map((topic) => ({
+        ...topic,
+        parentTitle: null,
+        parentId: null,
+        isMain: true,
+      }));
+    const subs = subject.topics.flatMap((topic) =>
       (topic.subtopics || [])
         .filter((sub) => sub.inReview)
-        .map((sub) => ({ ...sub, parentTitle: topic.title, parentId: topic._id }))
+        .map((sub) => ({
+          ...sub,
+          parentTitle: topic.title,
+          parentId: topic._id,
+          isMain: false,
+        }))
     );
+    return [...mains, ...subs];
   }, [subject]);
 
   async function saveMainTopic(values) {
@@ -142,8 +155,8 @@ export default function SubjectPage() {
         </h2>
         <p className="mt-2 max-w-2xl text-sm text-muted">
           {isPractical
-            ? "Same as theory: star topics, filter, add, and View more. Click a topic for subtopics and questions."
-            : "Starred topics stay at the top. Click a topic to open its subsections. Same notebook tools on every subject."}
+            ? "Click a topic for questions on the topic itself and in each subtopic. Starred topics stay at the top."
+            : "Click a topic for its answer notebook and subtopic notebooks. Starred topics stay at the top."}
         </p>
 
         <div className="mt-5 rounded-2xl border border-line bg-[#222838]/70 p-4 ring-1 ring-teal/15">
@@ -192,13 +205,21 @@ export default function SubjectPage() {
               reviewItems.map((item) => (
                 <li key={item._id}>
                   <Link
-                    to={`/learning/${slug}/${section}/${item.parentId}/${item._id}`}
+                    to={
+                      item.isMain
+                        ? `/learning/${slug}/${section}/${item._id}/answer`
+                        : `/learning/${slug}/${section}/${item.parentId}/${item._id}`
+                    }
                     className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="break-words font-medium">{item.title}</span>
                       <span className="ml-2 text-xs text-muted">
-                        in {item.parentTitle}
+                        {item.isMain
+                          ? isPractical
+                            ? "topic questions"
+                            : "topic answer"
+                          : `in ${item.parentTitle}`}
                       </span>
                     </span>
                     <span className="shrink-0 text-[11px] text-teal">Open →</span>
@@ -208,8 +229,8 @@ export default function SubjectPage() {
             ) : (
               <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
                 {isPractical
-                  ? "Subtopics you mark Add to review on a question page will land here."
-                  : "Subtopics you mark Add to review in a notebook will land here."}
+                  ? "Mark Add to review on a question page — the topic itself or a subtopic — and it lands here."
+                  : "Mark Add to review on the topic answer or a subtopic notebook and it lands here."}
               </li>
             )}
           </ul>
@@ -257,8 +278,10 @@ export default function SubjectPage() {
                   <span className="text-xs text-muted">
                     {topic.subtopics?.length || 0} {childLabel}
                     {isPractical
-                      ? ` · ${topic.questionCount || 0} questions`
-                      : ""}
+                      ? ` · ${topic.totalQuestions ?? topic.questionCount ?? 0} questions`
+                      : topic.hasNotebook
+                        ? " · answer"
+                        : ""}
                   </span>
                   <button
                     type="button"
@@ -304,7 +327,12 @@ export default function SubjectPage() {
                                 {String(sub.slNo ?? index + 1).padStart(2, "0")}
                               </span>
                               <span className="min-w-0 flex-1 break-words">{sub.title}</span>
-                              {sub.nested?.length ? (
+                              {!isPractical && sub.hasNotebook ? (
+                                <span className="shrink-0 text-[10px] text-teal">
+                                  notes
+                                </span>
+                              ) : null}
+                              {!isPractical && sub.nested?.length ? (
                                 <span className="shrink-0 text-[10px] text-gold">
                                   {sub.nested.length} in note
                                 </span>
@@ -318,7 +346,7 @@ export default function SubjectPage() {
                                 </span>
                               ) : null}
                             </Link>
-                            {sub.nested?.length ? (
+                            {!isPractical && sub.nested?.length ? (
                               <ul className="mt-1 ml-9 space-y-1">
                                 {sub.nested.map((note) => (
                                   <li key={note._id}>
@@ -337,7 +365,9 @@ export default function SubjectPage() {
                       </ul>
                     ) : (
                       <p className="px-1 text-sm text-muted">
-                        No {childLabel} under this topic yet.
+                        {isPractical
+                          ? "No subtopics yet. This topic can still have its own questions."
+                          : "No subtopics yet. This topic can still have an answer notebook."}
                       </p>
                     )}
                   </div>
@@ -373,7 +403,12 @@ export default function SubjectPage() {
               <span className="text-muted">Questions</span>
               <span>{sectionStats.items || 0}</span>
             </div>
-          ) : null}
+          ) : (
+            <p className="text-xs leading-5 text-muted">
+              Topic answers and subtopic notebooks are separate. Saving one
+              does not clear the other.
+            </p>
+          )}
         </div>
         <Link
           to={`/learning/${slug}/${isPractical ? "theory" : "practical"}`}

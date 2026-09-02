@@ -283,12 +283,17 @@ export const getTopic = (id) => get(API, `/topics/${id}`);
 export const createTopic = (data) =>
   mutate(API, "/topics", { method: "POST", body: JSON.stringify(data) }, LEARNING);
 export const updateTopic = (id, data) =>
-  mutate(
-    API,
-    `/topics/${id}`,
-    { method: "PATCH", body: JSON.stringify(data) },
-    LEARNING
-  );
+  request(API, `/topics/${id}`, {
+    method: "PATCH",
+    body: JSON.stringify(data),
+  }).then((topic) => {
+    const key = cacheKey(API, `/topics/${id}`);
+    const prev = mem.get(key)?.data;
+    invalidateCache(LEARNING);
+    const next = prev ? { ...prev, ...topic } : topic;
+    remember(key, next);
+    return next;
+  });
 export const deleteTopic = (id) =>
   mutate(API, `/topics/${id}`, { method: "DELETE" }, LEARNING);
 export const getQuestions = (topicId) =>
