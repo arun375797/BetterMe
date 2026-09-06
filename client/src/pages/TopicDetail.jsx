@@ -1,14 +1,21 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
+  createQuestion,
   createTopic,
+  deleteQuestion,
   deleteTopic,
+  getQuestion,
+  getQuestions,
   getTopic,
+  peekQuestions,
   peekTopic,
+  updateQuestion,
   updateTopic,
 } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
+import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import {
@@ -20,6 +27,7 @@ import {
   readLocalNotebook,
 } from "../notebook.js";
 import { accentMap } from "../theme.jsx";
+import { questionHasAnswer } from "../questions.js";
 
 const levelClass = {
   low: "text-teal bg-teal/12",
@@ -38,16 +46,26 @@ export default function TopicDetail() {
   const [addSub, setAddSub] = useState(false);
   const [openNested, setOpenNested] = useState({});
   const [confirm, setConfirm] = useState(null);
+  const [questions, setQuestions] = useState(
+    () => peekQuestions(topicId) || []
+  );
+  const [addQuestionOpen, setAddQuestionOpen] = useState(false);
+  const [editQuestion, setEditQuestion] = useState(null);
   const skipNotebookRestore = useRef(false);
 
   async function load() {
     try {
-      const data = await getTopic(topicId);
       if (section === "practical") {
+        const [data, list] = await Promise.all([
+          getTopic(topicId),
+          getQuestions(topicId),
+        ]);
         setTopic(data);
+        setQuestions(Array.isArray(list) ? list : []);
         setError("");
         return;
       }
+      const data = await getTopic(topicId);
       if (skipNotebookRestore.current) {
         skipNotebookRestore.current = false;
         clearLocalNotebook(topicId);
@@ -82,6 +100,7 @@ export default function TopicDetail() {
     const cached = peekTopic(topicId);
     if (cached) setTopic(cached);
     else setTopic(null);
+    setQuestions(section === "practical" ? peekQuestions(topicId) || [] : []);
     load();
   }, [topicId, section]);
 
@@ -133,6 +152,21 @@ export default function TopicDetail() {
     await afterChange();
   }
 
+  async function addQuestion(values) {
+    await createQuestion(topicId, values);
+    await afterChange();
+  }
+
+  async function saveQuestion(values) {
+    await updateQuestion(editQuestion._id, values);
+    await afterChange();
+  }
+
+  async function removeQuestion(item) {
+    await deleteQuestion(item._id);
+    await afterChange();
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -152,7 +186,7 @@ export default function TopicDetail() {
   const answerPreview = notebookPlainText(answerNotebook);
   const hasAnswer =
     section === "practical"
-      ? Number(topic.questionCount) > 0
+      ? questions.length > 0
       : notebookHasContent(answerNotebook);
   const isPractical = section === "practical";
   const subReview = (topic.subtopics || []).filter((s) => s.inReview);
@@ -194,7 +228,7 @@ export default function TopicDetail() {
         </div>
         <p className="mt-2 text-sm text-muted">
           {isPractical
-            ? "This topic has its own question list. Each subtopic has a separate list. Answers live inside a question — not in a theory notebook."
+            ? "Questions for this topic show below. Open View answer to write the solution. Subtopics have their own lists."
             : "This topic has one answer notebook. Each subtopic has its own notebook. Highlighted phrases in a subtopic become nested notes."}
         </p>
 
@@ -227,18 +261,22 @@ export default function TopicDetail() {
           >
             Add subtopic
           </button>
-          <Link
-            to={answerPath}
-            className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
-          >
-            {hasAnswer
-              ? isPractical
-                ? "Open questions"
-                : "Open answer"
-              : isPractical
-                ? "Add question"
-                : "Add answer"}
-          </Link>
+          {isPractical ? (
+            <button
+              type="button"
+              onClick={() => setAddQuestionOpen(true)}
+              className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
+            >
+              Add question
+            </button>
+          ) : (
+            <Link
+              to={answerPath}
+              className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
+            >
+              {hasAnswer ? "Open answer" : "Add answer"}
+            </Link>
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
@@ -343,20 +381,88 @@ export default function TopicDetail() {
                 </p>
                 <h3 className="mt-1 text-lg font-semibold">On this topic</h3>
               </div>
-              <Link
-                to={answerPath}
+              <button
+                type="button"
+                onClick={() => setAddQuestionOpen(true)}
                 className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
               >
-                {hasAnswer ? "Open questions" : "Add question"}
-              </Link>
+                Add question
+              </button>
             </div>
-            <p className="mt-3 text-sm text-muted">
-              {hasAnswer
-                ? `${topic.questionCount || 0} question${
-                    Number(topic.questionCount) === 1 ? "" : "s"
-                  } on this topic. Subtopics have their own lists.`
-                : "Add questions here. Each subtopic has its own list — not this one."}
-            </p>
+            <ul className="mt-4 space-y-2">
+              {questions.length ? (
+                questions.map((item, index) => (
+                  <li
+                    key={item._id}
+                    className="topic-row rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5"
+                  >
+                    <span className="topic-row-meta w-8 text-xs text-muted">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <Link
+                      to={`${answerPath}/${item._id}`}
+                      className="topic-row-title inline-flex items-center gap-2 text-sm font-medium hover:text-teal"
+                    >
+                      {!questionHasAnswer(item) ? (
+                        <span
+                          className="missing-answer-dot"
+                          title="No answer yet"
+                          aria-label="No answer yet"
+                        />
+                      ) : null}
+                      <span className="min-w-0 break-words">{item.title}</span>
+                    </Link>
+                    <span
+                      className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
+                        difficultyMeta(item.difficulty).className
+                      }`}
+                    >
+                      {difficultyMeta(item.difficulty).label}
+                    </span>
+                    <div className="topic-row-actions">
+                      <Link
+                        to={`${answerPath}/${item._id}`}
+                        className="rounded-lg border border-teal/35 bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal hover:bg-teal/15"
+                      >
+                        View answer
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            setEditQuestion(await getQuestion(item._id));
+                          } catch (err) {
+                            setError(err.message);
+                          }
+                        }}
+                        className="rounded-lg border border-cyan/30 px-2.5 py-1 text-xs text-cyan hover:bg-cyan/10"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirm({
+                            title: `Delete “${item.title}”?`,
+                            message:
+                              "This question will be removed from this topic.",
+                            onConfirm: () => removeQuestion(item),
+                          })
+                        }
+                        className="rounded-lg border border-coral/30 px-2.5 py-1 text-xs text-coral hover:bg-coral/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
+                  No questions on this topic yet. Add one here — you do not need
+                  a subtopic first.
+                </li>
+              )}
+            </ul>
           </div>
         )}
 
@@ -501,7 +607,7 @@ export default function TopicDetail() {
           ) : (
             <li className="rounded-2xl border border-dashed border-line px-4 py-6 text-sm text-muted">
               {isPractical
-                ? "No subtopics yet. Questions on this topic still live under Open questions."
+                ? "No subtopics yet. Questions for this topic are listed above."
                 : "No subtopics yet. The topic answer above stays saved on its own."}
             </li>
           )}
@@ -533,13 +639,7 @@ export default function TopicDetail() {
           {section === "practical" ? (
             <div className="flex justify-between">
               <span className="text-muted">Questions</span>
-              <span className="text-teal">
-                {(topic.questionCount || 0) +
-                  (topic.subtopics?.reduce(
-                    (sum, s) => sum + (s.questionCount || 0),
-                    0
-                  ) || 0)}
-              </span>
+              <span className="text-teal">{questions.length}</span>
             </div>
           ) : null}
           <div className="flex justify-between">
@@ -587,6 +687,29 @@ export default function TopicDetail() {
           initial={editSub}
           onClose={() => setEditSub(null)}
           onSubmit={saveSub}
+        />
+      ) : null}
+
+      {addQuestionOpen ? (
+        <QuestionFormModal
+          heading="New question"
+          submitLabel="Add question"
+          sections={topic.subtopics || []}
+          currentSectionId={topic._id}
+          onClose={() => setAddQuestionOpen(false)}
+          onSubmit={addQuestion}
+        />
+      ) : null}
+
+      {editQuestion ? (
+        <QuestionFormModal
+          heading="Edit question"
+          submitLabel="Save changes"
+          initial={editQuestion}
+          sections={topic.subtopics || []}
+          currentSectionId={topic._id}
+          onClose={() => setEditQuestion(null)}
+          onSubmit={saveQuestion}
         />
       ) : null}
 

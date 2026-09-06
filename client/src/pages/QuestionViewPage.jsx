@@ -12,7 +12,7 @@ import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import { highlightCode } from "../notebook.js";
-import { solutionsOf } from "../questions.js";
+import { questionHasAnswer, solutionsOf } from "../questions.js";
 import { accentMap } from "../theme.jsx";
 
 export default function QuestionViewPage() {
@@ -149,7 +149,16 @@ export default function QuestionViewPage() {
 
       <div className="mt-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h2 className="text-2xl font-semibold break-words sm:text-3xl">{question.title}</h2>
+          <h2 className="inline-flex max-w-full items-start gap-2 text-2xl font-semibold sm:text-3xl">
+            {!questionHasAnswer(question) ? (
+              <span
+                className="missing-answer-dot mt-2.5"
+                title="No answer yet"
+                aria-label="No answer yet"
+              />
+            ) : null}
+            <span className="min-w-0 break-words">{question.title}</span>
+          </h2>
           {question.prompt ? (
             <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-muted">
               {question.prompt}

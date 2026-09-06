@@ -124,10 +124,35 @@ function normalizeSolutions(raw, fallback = {}) {
   ];
 }
 
+function questionHasAnswer(question) {
+  const solutions = Array.isArray(question?.solutions)
+    ? question.solutions
+    : [];
+  if (
+    solutions.some(
+      (item) =>
+        Boolean(String(item?.code || "").trim()) ||
+        Boolean(String(item?.logic || "").trim())
+    )
+  ) {
+    return true;
+  }
+  return Boolean(
+    String(question?.code || "").trim() ||
+      String(question?.notes || "").trim()
+  );
+}
+
 function withSolutions(question) {
   const obj = question.toObject ? question.toObject() : { ...question };
   obj.solutions = normalizeSolutions(obj.solutions, obj);
+  obj.hasAnswer = questionHasAnswer(obj);
   return obj;
+}
+
+function listQuestion(doc) {
+  const { solutions, code, notes, prompt, ...rest } = doc;
+  return { ...rest, hasAnswer: questionHasAnswer(doc) };
 }
 
 function idKey(value) {
@@ -624,11 +649,11 @@ router.get("/topics/:id/questions", async (req, res) => {
       return res.status(404).json({ message: "Topic not found" });
     }
     const questions = await Question.find({ topic: topic._id })
-      .select("title difficulty order relatedSection createdAt")
+      .select("title difficulty order relatedSection createdAt code notes solutions")
       .populate("relatedSection", "title")
       .sort({ order: 1, createdAt: 1 })
       .lean();
-    res.json(questions);
+    res.json(questions.map(listQuestion));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

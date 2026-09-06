@@ -14,3 +14,19 @@ export function solutionsOf(item) {
   }
   return [];
 }
+
+export function questionHasAnswer(item) {
+  if (typeof item?.hasAnswer === "boolean") return item.hasAnswer;
+  if (
+    solutionsOf(item).some(
+      (way) =>
+        Boolean(String(way.code || "").trim()) ||
+        Boolean(String(way.logic || "").trim())
+    )
+  ) {
+    return true;
+  }
+  return Boolean(
+    String(item?.code || "").trim() || String(item?.notes || "").trim()
+  );
+}

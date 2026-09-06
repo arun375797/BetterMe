@@ -15,6 +15,7 @@ import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
+import { questionHasAnswer } from "../questions.js";
 import { accentMap } from "../theme.jsx";
 
 export default function QuestionsPage() {
@@ -129,6 +130,8 @@ export default function QuestionsPage() {
   const siblingSections = onMainTopic
     ? sub.subtopics || []
     : parent?.subtopics || [];
+  const missingAnswers = questions.filter((item) => !questionHasAnswer(item))
+    .length;
   const questionPath = (id) =>
     onMainTopic
       ? `/learning/${slug}/${section}/${topicId}/answer/${id}`
@@ -168,7 +171,8 @@ export default function QuestionsPage() {
             <p className="mt-2 max-w-2xl text-sm text-muted">
               {onMainTopic
                 ? "Questions for this topic only. Each subtopic has a separate list. Open View to write the answer."
-                : "Questions for this subtopic only. The parent topic has its own list."}
+                : "Questions for this subtopic only. The parent topic has its own list."}{" "}
+              A red dot means the answer is still missing.
             </p>
             {status ? (
               <p className="mt-1 text-xs text-teal">{status}</p>
@@ -208,9 +212,16 @@ export default function QuestionsPage() {
                 </span>
                 <Link
                   to={questionPath(item._id)}
-                  className="topic-row-title font-medium hover:text-teal"
+                  className="topic-row-title inline-flex items-start gap-2 font-medium hover:text-teal"
                 >
-                  {item.title}
+                  {!questionHasAnswer(item) ? (
+                    <span
+                      className="missing-answer-dot mt-1.5"
+                      title="No answer yet"
+                      aria-label="No answer yet"
+                    />
+                  ) : null}
+                  <span className="min-w-0 break-words">{item.title}</span>
                 </Link>
                 <span
                   className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
@@ -269,9 +280,17 @@ export default function QuestionsPage() {
           {onMainTopic ? "Topic" : "Subtopic"}
         </p>
         <h3 className="mt-2 text-lg font-semibold">{sub.title}</h3>
-        <div className="mt-6 flex justify-between text-sm">
-          <span className="text-muted">Questions</span>
-          <span className="text-teal">{questions.length}</span>
+        <div className="mt-6 space-y-3 text-sm">
+          <div className="flex justify-between">
+            <span className="text-muted">Questions</span>
+            <span className="text-teal">{questions.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-muted">Missing answers</span>
+            <span className={missingAnswers ? "text-coral" : "text-teal"}>
+              {missingAnswers}
+            </span>
+          </div>
         </div>
         <StudyGoalsPanel slug={slug} section={section} />
       </aside>

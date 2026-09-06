@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { createTopic, getSubject, peekSubject, updateTopic } from "../api.js";
+import { createTopic, deleteTopic, getSubject, peekSubject, updateTopic } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
+import { ConfirmDialog } from "../components/Dialog.jsx";
 import { accentMap } from "../theme.jsx";
 
 const levelClass = {
@@ -21,6 +22,7 @@ export default function SubjectPage() {
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [editTopic, setEditTopic] = useState(null);
+  const [confirm, setConfirm] = useState(null);
   const [showTree, setShowTree] = useState(false);
   const [openIds, setOpenIds] = useState({});
 
@@ -44,6 +46,7 @@ export default function SubjectPage() {
     setQuery("");
     setModalOpen(false);
     setEditTopic(null);
+    setConfirm(null);
     setShowTree(false);
     setOpenIds({});
     let live = true;
@@ -117,6 +120,12 @@ export default function SubjectPage() {
       slNo: values.slNo,
       highlighted: values.highlighted,
     });
+    await load();
+    await refreshSubjects();
+  }
+
+  async function removeMainTopic(topic) {
+    await deleteTopic(topic._id);
     await load();
     await refreshSubjects();
   }
@@ -310,6 +319,31 @@ export default function SubjectPage() {
                   >
                     Edit
                   </button>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setConfirm({
+                        title: `Delete “${topic.title}”?`,
+                        message:
+                          "This removes the topic and everything under it. You cannot undo this.",
+                        onConfirm: () => removeMainTopic(topic),
+                      })
+                    }
+                    className="inline-flex items-center justify-center rounded-lg border border-coral/30 p-1.5 text-coral/80 hover:bg-coral/10 hover:text-coral"
+                    aria-label={`Delete ${topic.title}`}
+                    title="Delete topic"
+                  >
+                    <svg
+                      viewBox="0 0 24 24"
+                      className="h-3.5 w-3.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      aria-hidden="true"
+                    >
+                      <path d="M4.5 7h15M9.5 7V5.5A1.5 1.5 0 0 1 11 4h2a1.5 1.5 0 0 1 1.5 1.5V7m-8 0 .7 12.2A1.5 1.5 0 0 0 8.7 20.5h6.6a1.5 1.5 0 0 0 1.5-1.3L17.5 7" />
+                    </svg>
+                  </button>
                   </div>
                 </div>
 
@@ -438,6 +472,17 @@ export default function SubjectPage() {
           nextSlNo={editTopic.slNo || nextSlNo}
           onClose={() => setEditTopic(null)}
           onSubmit={saveMainTopic}
+        />
+      ) : null}
+
+      {confirm ? (
+        <ConfirmDialog
+          kicker="Delete"
+          title={confirm.title}
+          message={confirm.message}
+          confirmLabel="Delete"
+          onClose={() => setConfirm(null)}
+          onConfirm={confirm.onConfirm}
         />
       ) : null}
     </div>

@@ -134,7 +134,11 @@ function dataPrefetch(pathname) {
     if (!section) return [getSubjects()];
     if (section === "namaste-dev") return [getNamasteDev()];
     if (!topicId) return [getSubject(slug, section)];
-    if (!subId) return [getTopic(topicId)];
+    if (!subId) {
+      const jobs = [getTopic(topicId)];
+      if (section === "practical") jobs.push(getQuestions(topicId));
+      return jobs;
+    }
     const hostId = subId === "answer" ? topicId : subId;
     if (!questionId) {
       const jobs = [getTopic(hostId)];
