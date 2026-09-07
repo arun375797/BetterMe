@@ -412,6 +412,14 @@ export default function TopicDetail() {
                       ) : null}
                       <span className="min-w-0 break-words">{item.title}</span>
                     </Link>
+                    {item.collectionName ? (
+                      <span
+                        className="topic-row-meta rounded-full border border-cyan/25 bg-cyan/10 px-2 py-0.5 font-mono text-[10px] text-cyan"
+                        title={`Collection: ${item.collectionName}`}
+                      >
+                        {item.collectionName}
+                      </span>
+                    ) : null}
                     <span
                       className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
                         difficultyMeta(item.difficulty).className

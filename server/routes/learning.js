@@ -649,7 +649,9 @@ router.get("/topics/:id/questions", async (req, res) => {
       return res.status(404).json({ message: "Topic not found" });
     }
     const questions = await Question.find({ topic: topic._id })
-      .select("title difficulty order relatedSection createdAt code notes solutions")
+      .select(
+        "title collectionName difficulty order relatedSection createdAt code notes solutions"
+      )
       .populate("relatedSection", "title")
       .sort({ order: 1, createdAt: 1 })
       .lean();
@@ -696,6 +698,8 @@ router.post("/topics/:id/questions", async (req, res) => {
       topic: topic._id,
       title,
       prompt: req.body.prompt || "",
+      collectionName: req.body.collectionName || "",
+      approach: req.body.approach || "",
       notes: solutions[0]?.logic || "",
       code: solutions[0]?.code || "",
       language: solutions[0]?.language || "javascript",
@@ -743,6 +747,10 @@ router.patch("/questions/:id", async (req, res) => {
       question.title = title;
     }
     if (req.body.prompt !== undefined) question.prompt = req.body.prompt;
+    if (req.body.collectionName !== undefined) {
+      question.collectionName = req.body.collectionName;
+    }
+    if (req.body.approach !== undefined) question.approach = req.body.approach;
     if (req.body.difficulty !== undefined) {
       question.difficulty = req.body.difficulty;
     }

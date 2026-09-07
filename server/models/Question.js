@@ -9,6 +9,12 @@ const questionSchema = new mongoose.Schema(
     },
     title: { type: String, required: true },
     prompt: { type: String, default: "" },
+    // Which sample collection the question runs against, e.g. "employees"
+    // or "users + orders" for a join.
+    collectionName: { type: String, default: "", trim: true },
+    // How to think about the problem, written without code. Kept apart from
+    // solutions[].logic so a seeded hint never mixes with your own answer.
+    approach: { type: String, default: "" },
     notes: { type: String, default: "" },
     code: { type: String, default: "" },
     language: { type: String, default: "javascript" },

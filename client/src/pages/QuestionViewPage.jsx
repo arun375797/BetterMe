@@ -30,6 +30,7 @@ export default function QuestionViewPage() {
   const [editOpen, setEditOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const [approachOpen, setApproachOpen] = useState(false);
 
   const listPath = onMainTopic
     ? `/learning/${slug}/${section}/${topicId}/answer`
@@ -63,6 +64,7 @@ export default function QuestionViewPage() {
       setSub(cached);
       if (cached.parentTopic) setParent(cached.parentTopic);
     }
+    setApproachOpen(false);
     load();
   }, [questionId, hostId]);
 
@@ -159,6 +161,20 @@ export default function QuestionViewPage() {
             ) : null}
             <span className="min-w-0 break-words">{question.title}</span>
           </h2>
+          {question.collectionName ? (
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">
+              <span>Collection</span>
+              <span className="rounded-full border border-cyan/25 bg-cyan/10 px-2.5 py-0.5 font-mono text-[11px] text-cyan">
+                {question.collectionName}
+              </span>
+              <Link
+                to={`/learning/${slug}/${section}`}
+                className="text-cyan hover:underline"
+              >
+                sample data →
+              </Link>
+            </p>
+          ) : null}
           {question.prompt ? (
             <p className="mt-3 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-muted">
               {question.prompt}
@@ -208,6 +224,28 @@ export default function QuestionViewPage() {
           </button>
         </div>
       </div>
+
+      {question.approach ? (
+        <div className="mt-6 max-w-3xl rounded-2xl border border-gold/20 bg-gold/5">
+          <button
+            type="button"
+            onClick={() => setApproachOpen((open) => !open)}
+            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
+          >
+            <span className="text-[11px] tracking-[0.14em] text-gold uppercase">
+              How to approach it
+            </span>
+            <span className="text-xs text-muted">
+              {approachOpen ? "Hide" : "Show"}
+            </span>
+          </button>
+          {approachOpen ? (
+            <p className="border-t border-gold/15 px-4 py-4 text-sm leading-6 whitespace-pre-wrap text-[#d7dbe6]">
+              {question.approach}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <div className="mt-8 space-y-6">
         {ways.length ? (

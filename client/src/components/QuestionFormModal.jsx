@@ -50,6 +50,10 @@ export default function QuestionFormModal({
 }) {
   const [title, setTitle] = useState(initial?.title || "");
   const [prompt, setPrompt] = useState(initial?.prompt || "");
+  const [collectionName, setCollectionName] = useState(
+    initial?.collectionName || ""
+  );
+  const [approach, setApproach] = useState(initial?.approach || "");
   const [difficulty, setDifficulty] = useState(initial?.difficulty || "medium");
   const [solutions, setSolutions] = useState(() => initialSolutions(initial));
   const relatedId =
@@ -75,6 +79,8 @@ export default function QuestionFormModal({
       await onSubmit({
         title: title.trim(),
         prompt,
+        collectionName: collectionName.trim(),
+        approach,
         difficulty,
         solutions,
         relatedSectionId: relatedSectionId || null,
@@ -114,6 +120,27 @@ export default function QuestionFormModal({
               onChange={(e) => setPrompt(e.target.value)}
               rows={4}
               placeholder="The question only — constraints or expected output."
+              className={`${fieldClass} resize-y leading-6`}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs text-muted">Collection</span>
+            <input
+              value={collectionName}
+              onChange={(e) => setCollectionName(e.target.value)}
+              placeholder="e.g. employees, or users + orders for a join"
+              className={fieldClass}
+            />
+          </label>
+          <label className="block">
+            <span className="mb-1.5 block text-xs text-muted">
+              How to approach it
+            </span>
+            <textarea
+              value={approach}
+              onChange={(e) => setApproach(e.target.value)}
+              rows={4}
+              placeholder="The steps to reach the answer, in words. Stays hidden until you open it."
               className={`${fieldClass} resize-y leading-6`}
             />
           </label>
