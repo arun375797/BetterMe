@@ -189,13 +189,16 @@ export default function Sidebar({
                 <NavLink
                   to="/learning"
                   end
-                  className={({ isActive }) =>
-                    `flex items-center rounded-lg px-2.5 py-1.5 text-[13px] ${
-                      isActive
+                  className={({ isActive }) => {
+                    const onPlan =
+                      isActive ||
+                      location.pathname.startsWith("/learning/plan");
+                    return `flex items-center rounded-lg px-2.5 py-1.5 text-[13px] ${
+                      onPlan
                         ? "bg-white/8 text-ink"
                         : "text-muted hover:bg-white/5 hover:text-ink"
-                    }`
-                  }
+                    }`;
+                  }}
                 >
                   Plan
                 </NavLink>

@@ -22,14 +22,14 @@ import {
   getPersonalityItems,
   getReviewQueue,
   getSleepLogs,
-  getStudyPlan,
+  getLearningPlan,
   getSugarReadings,
   getTodos,
   getVitaminItems,
-  logStudyBlock,
   peek,
   peekReviewQueue,
-  peekStudyPlan,
+  peekLearningPlan,
+  updatePlanItem,
   updateTodo,
 } from "../api.js";
 
@@ -100,7 +100,7 @@ export default function TodayPage() {
   const [personalityItems, setPersonalityItems] = useState(
     () => peek("/api/personality", "/")?.items || []
   );
-  const [studyPlan, setStudyPlan] = useState(() => peekStudyPlan() || null);
+  const [studyPlan, setStudyPlan] = useState(() => peekLearningPlan() || null);
   const [error, setError] = useState("");
   const now = new Date();
 
@@ -127,7 +127,7 @@ export default function TodayPage() {
           getSleepLogs(),
           getExerciseSessions(),
           getPersonalityItems(),
-          getStudyPlan(),
+          getLearningPlan(),
         ]);
         if (cancelled) return;
         setTodos(todoData.todos || []);
@@ -178,24 +178,29 @@ export default function TodayPage() {
   const sleepIsLastNight =
     lastNight &&
     (lastNight.day === todayKey() || lastNight.wakeDate === todayKey());
-  const studyToday = studyPlan?.today;
-  const studyTitle = studyToday?.lineup?.length
-    ? studyToday.lineup.map((item) => item.name).join(" + ")
-    : "Pick today's subjects";
+  const duePlan = studyPlan?.today || [];
+  const studyTitle = duePlan.length
+    ? `${duePlan.length} topic${duePlan.length === 1 ? "" : "s"} on the plan`
+    : "Study plan";
 
-  async function markStudy(block, status) {
-    if (!studyToday) return;
+  async function markPlanItem(item, learned) {
+    setStudyPlan((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        today: (prev.today || []).filter((row) =>
+          learned ? String(row._id) !== String(item._id) : true
+        ),
+      };
+    });
     try {
-      const next = await logStudyBlock({
-        day: studyToday.key,
-        kind: block.kind,
-        status,
-        subject: block.subject?._id || null,
-        topic: block.topic?._id || null,
-      });
+      await updatePlanItem(item._id, { learned });
+      const next = await getLearningPlan();
       setStudyPlan(next);
     } catch (err) {
       setError(err.message);
+      const next = await getLearningPlan().catch(() => null);
+      if (next) setStudyPlan(next);
     }
   }
 
@@ -272,78 +277,49 @@ export default function TodayPage() {
         to="/learning"
         linkLabel="Study plan"
       >
-        {studyToday?.blocks?.length ? (
+        {duePlan.length ? (
           <ul className="space-y-2">
-            {studyToday.blocks.map((block) => (
-              <li
-                key={block.id}
-                className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
-              >
-                <span className="min-w-0 flex-1">
-                  <span className="block text-xs text-muted">
-                    {block.label}
-                    {block.subject?.shortName
-                      ? ` · ${block.subject.shortName}`
-                      : ""}
-                  </span>
-                  <span className="block break-words font-medium">
-                    {block.topic?.title || "Open the library to add a topic"}
-                  </span>
-                </span>
-                <span
-                  className={`shrink-0 text-[11px] ${
-                    block.status === "done"
-                      ? "text-teal"
-                      : block.status === "skipped"
-                        ? "text-gold"
-                        : "text-muted"
-                  }`}
+            {duePlan.map((item) => {
+              const subject = item.subject;
+              const slug = subject?.slug;
+              return (
+                <li
+                  key={item._id}
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
                 >
-                  {block.status === "done"
-                    ? "Done"
-                    : block.status === "skipped"
-                      ? "Skipped"
-                      : "Not yet"}
-                </span>
-                <Link
-                  to={block.href}
-                  className="shrink-0 text-sm text-teal hover:underline"
-                >
-                  Study
-                </Link>
-                {block.status === "open" ? (
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-xs text-muted">
+                      {subject?.shortName || subject?.name || "Plan"}
+                      {item.date ? ` · ${fmtDue(item.date)}` : ""}
+                    </span>
+                    <span className="block break-words font-medium">
+                      {item.title}
+                    </span>
+                  </span>
+                  {slug ? (
+                    <Link
+                      to={`/learning/plan/${slug}`}
+                      className="shrink-0 text-sm text-teal hover:underline"
+                    >
+                      Open
+                    </Link>
+                  ) : null}
                   <button
                     type="button"
-                    onClick={() => markStudy(block, "done")}
+                    onClick={() => markPlanItem(item, true)}
                     className="shrink-0 text-sm text-muted hover:text-ink"
                   >
-                    Done
+                    Learned
                   </button>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => markStudy(block, "open")}
-                    className="shrink-0 text-sm text-muted hover:text-ink"
-                  >
-                    Undo
-                  </button>
-                )}
-              </li>
-            ))}
+                </li>
+              );
+            })}
           </ul>
         ) : (
           <p className="text-sm text-muted">
-            Open the study plan and pick 2 or 3 subjects for today.
+            Nothing due on the plan today. Add a topic with a date.
           </p>
         )}
-        {studyPlan?.tomorrow?.lineup?.length ? (
-          <p className="mt-3 text-xs text-muted">
-            Tomorrow: {studyPlan.tomorrow.weekdayLabel} ·{" "}
-            {studyPlan.tomorrow.lineup
-              .map((item) => item.shortName)
-              .join(" · ")}
-          </p>
-        ) : null}
 
         {reviewTop.length ? (
           <ul className="mt-4 space-y-2">

@@ -6,6 +6,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 
 const TodayPage = lazy(() => import("./pages/TodayPage.jsx"));
 const LearningHome = lazy(() => import("./pages/LearningHome.jsx"));
+const PlanSubjectPage = lazy(() => import("./pages/PlanSubjectPage.jsx"));
 const SubjectHub = lazy(() => import("./pages/SubjectHub.jsx"));
 const SubjectPage = lazy(() => import("./pages/SubjectPage.jsx"));
 const TopicDetail = lazy(() => import("./pages/TopicDetail.jsx"));
@@ -90,6 +91,7 @@ export default function App() {
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<TodayPage />} />
         <Route path="/learning" element={<LearningHome />} />
+        <Route path="/learning/plan/:slug" element={<PlanSubjectPage />} />
         <Route path="/learning/:slug" element={<SubjectHub />} />
         <Route path="/learning/dsa/namaste-dev" element={<NamasteDevPage />} />
         <Route path="/learning/:slug/:section" element={<SubjectPage />} />

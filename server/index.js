@@ -20,6 +20,7 @@ import reportRoutes from "./routes/report.js";
 import sitBreakRoutes from "./routes/sitBreak.js";
 import musicRoutes from "./routes/music.js";
 import studyRoutes from "./routes/study.js";
+import planRoutes from "./routes/plan.js";
 import authRoutes from "./routes/auth.js";
 import { requireAuth } from "./lib/auth.js";
 import { memoClear } from "./memo.js";
@@ -141,6 +142,7 @@ app.use("/api", (req, res, next) => {
 app.use("/api/learning", studyGoalRoutes);
 app.use("/api/learning", learningRoutes);
 app.use("/api/study", studyRoutes);
+app.use("/api/plan", planRoutes);
 app.use("/api/sugar", sugarRoutes);
 app.use("/api/vitamins", vitaminRoutes);
 app.use("/api/food", foodRoutes);

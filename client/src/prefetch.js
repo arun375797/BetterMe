@@ -22,7 +22,8 @@ import {
   getTopic,
   getVitaminItems,
   getTodos,
-  getStudyPlan,
+  getLearningPlan,
+  getPlanSubject,
 } from "./api.js";
 
 const lastAt = new Map();
@@ -37,6 +38,9 @@ function pageLoaders(pathname) {
     return () => import("./pages/TodayPage.jsx");
   }
   if (pathname === "/learning") return () => import("./pages/LearningHome.jsx");
+  if (/^\/learning\/plan\/[^/]+$/.test(pathname)) {
+    return () => import("./pages/PlanSubjectPage.jsx");
+  }
   if (/^\/learning\/[^/]+$/.test(pathname)) {
     return () => import("./pages/SubjectHub.jsx");
   }
@@ -119,11 +123,15 @@ function dataPrefetch(pathname) {
       getSleepLogs(),
       getExerciseSessions(),
       getPersonalityItems(),
-      getStudyPlan(),
+      getLearningPlan(),
     ];
   }
   if (pathname === "/learning") {
-    return [getSubjects(), getReviewQueue(), getStudyPlan()];
+    return [getSubjects(), getLearningPlan()];
+  }
+  const planSubject = pathname.match(/^\/learning\/plan\/([^/]+)$/);
+  if (planSubject) {
+    return [getSubjects(), getPlanSubject(planSubject[1])];
   }
 
   const learning = pathname.match(

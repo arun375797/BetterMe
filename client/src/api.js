@@ -198,6 +198,7 @@ const REPORT_API = "/api/report";
 const SIT_BREAK_API = "/api/sit-break";
 const MUSIC_API = "/api/music";
 const STUDY_API = "/api/study";
+const PLAN_API = "/api/plan";
 
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
@@ -212,6 +213,7 @@ const REPORT = [REPORT_API];
 const SIT_BREAK = [SIT_BREAK_API];
 const MUSIC = [MUSIC_API];
 const STUDY = [STUDY_API];
+const PLAN = [PLAN_API];
 
 export const peekSubjects = () => peek(API, "/subjects");
 export const peekReviewQueue = () => peek(API, "/review");
@@ -318,6 +320,21 @@ export const deleteQuestion = (id) =>
 
 export const peekStudyPlan = () => peek(STUDY_API, "/plan");
 export const getStudyPlan = () => get(STUDY_API, "/plan");
+export const peekLearningPlan = () => peek(PLAN_API, "/");
+export const getLearningPlan = () => get(PLAN_API, "/");
+export const peekPlanSubject = (slug) => peek(PLAN_API, `/subject/${slug}`);
+export const getPlanSubject = (slug) => get(PLAN_API, `/subject/${slug}`);
+export const createPlanItem = (data) =>
+  mutate(PLAN_API, "/", { method: "POST", body: JSON.stringify(data) }, PLAN);
+export const updatePlanItem = (id, data) =>
+  mutate(
+    PLAN_API,
+    `/${id}`,
+    { method: "PATCH", body: JSON.stringify(data) },
+    PLAN
+  );
+export const deletePlanItem = (id) =>
+  mutate(PLAN_API, `/${id}`, { method: "DELETE" }, PLAN);
 export const updateStudySettings = (data) =>
   mutate(
     STUDY_API,
