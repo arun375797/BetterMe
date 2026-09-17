@@ -1,16 +1,26 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { getTopic, peekTopic, updateTopic, createTopic } from "../api.js";
+import {
+  getQuestion,
+  getTopic,
+  peekQuestion,
+  peekTopic,
+  updateQuestion,
+  updateTopic,
+  createTopic,
+} from "../api.js";
 import { DIFFICULTIES, difficultyMeta } from "../difficulty.js";
 import {
   emptyNotebook,
-  highlightCode,
+  isWriteBlock,
   newBlock,
   notebookHasContent,
+  notebookPlainText,
   normalizeNotebook,
   readLocalNotebook,
   writeLocalNotebook,
 } from "../notebook.js";
+import IdeEditor from "../components/IdeEditor.jsx";
 import { accentMap } from "../theme.jsx";
 
 const FONT_SIZES = [14, 16, 18, 22, 26];
@@ -126,13 +136,20 @@ function TextBlock({ id, html, onChange }) {
 }
 
 export default function NotebookPage() {
-  const { slug, section, topicId, subId } = useParams();
-  const noteId = subId && subId !== "answer" ? subId : topicId;
+  const { slug, section, topicId, subId, questionId } = useParams();
+  const isQuestionBook = Boolean(questionId);
+  const noteId = isQuestionBook
+    ? questionId
+    : subId && subId !== "answer"
+      ? subId
+      : topicId;
+  const hostId =
+    subId && subId !== "answer" ? subId : topicId;
   const { refreshSubjects } = useOutletContext();
   const [sub, setSub] = useState(null);
+  const [question, setQuestion] = useState(null);
   const [error, setError] = useState("");
   const [notebook, setNotebook] = useState(emptyNotebook());
-  const [editingCode, setEditingCode] = useState(null);
   const [status, setStatus] = useState("");
   const [saving, setSaving] = useState(false);
   const [nested, setNested] = useState([]);
@@ -155,9 +172,39 @@ export default function NotebookPage() {
   }
 
   useEffect(() => {
+    let live = true;
+    setError("");
+    if (isQuestionBook) {
+      const cachedQ = peekQuestion(questionId);
+      const cachedHost = peekTopic(hostId);
+      if (cachedQ) {
+        setQuestion(cachedQ);
+        setNotebook(normalizeNotebook(cachedQ.notebook));
+      }
+      if (cachedHost) setSub(cachedHost);
+      Promise.all([getQuestion(questionId), getTopic(hostId)])
+        .then(([q, topic]) => {
+          if (!live) return;
+          setQuestion(q);
+          setSub(topic);
+          const fromApi = normalizeNotebook(q.notebook);
+          const local = readLocalNotebook(`q:${questionId}`);
+          const next =
+            notebookHasContent(fromApi) || !local ? fromApi : local;
+          setNotebook(next);
+        })
+        .catch((err) => {
+          if (live) setError(err.message);
+        });
+      return () => {
+        live = false;
+      };
+    }
+
     const cached = peekTopic(noteId);
     if (cached) {
       setSub(cached);
+      setQuestion(null);
       setNested(cached.nested || []);
       setYoutubeUrlDraft(cached.youtubeUrl || "");
       const fromApi = normalizeNotebook(cached.notebook);
@@ -169,7 +216,9 @@ export default function NotebookPage() {
     }
     getTopic(noteId)
       .then((data) => {
+        if (!live) return;
         setSub(data);
+        setQuestion(null);
         setNested(data.nested || []);
         setYoutubeUrlDraft(data.youtubeUrl || "");
         const fromApi = normalizeNotebook(data.notebook);
@@ -179,8 +228,13 @@ export default function NotebookPage() {
         setNotebook(next);
         setError("");
       })
-      .catch((err) => setError(err.message));
-  }, [noteId]);
+      .catch((err) => {
+        if (live) setError(err.message);
+      });
+    return () => {
+      live = false;
+    };
+  }, [noteId, isQuestionBook, questionId, hostId]);
 
   useEffect(() => {
     function syncSelection() {
@@ -360,6 +414,31 @@ export default function NotebookPage() {
     }
   }
 
+  async function toggleReview() {
+    if (isQuestionBook) {
+      if (!question) return;
+      const next = !question.inReview;
+      setQuestion((prev) => (prev ? { ...prev, inReview: next } : prev));
+      try {
+        await updateQuestion(questionId, { inReview: next });
+        if (next && sub?.inReview) {
+          setSub((prev) => (prev ? { ...prev, inReview: false } : prev));
+          await updateTopic(hostId, { inReview: false });
+        }
+        await refreshSubjects();
+        setStatus(next ? "Marked for review" : "Removed from review");
+        setTimeout(() => setStatus(""), 1800);
+      } catch (err) {
+        setQuestion((prev) =>
+          prev ? { ...prev, inReview: !next } : prev
+        );
+        setStatus(err.message);
+      }
+      return;
+    }
+    await patchMeta({ inReview: !sub.inReview });
+  }
+
   async function saveYoutubeUrl() {
     const normalized = normalizeUrlForHref(youtubeUrlDraft);
     setYoutubeUrlDraft(normalized);
@@ -375,7 +454,7 @@ export default function NotebookPage() {
     return {
       ...notebook,
       blocks: notebook.blocks.map((block) =>
-        block.type === "text" && htmlById[block.id] !== undefined
+        block.type !== "code" && htmlById[block.id] !== undefined
           ? { ...block, html: htmlById[block.id] }
           : block
       ),
@@ -385,10 +464,22 @@ export default function NotebookPage() {
   async function save() {
     const payload = collectNotebook();
     setNotebook(payload);
-    writeLocalNotebook(noteId, payload);
+    writeLocalNotebook(isQuestionBook ? `q:${questionId}` : noteId, payload);
     setSaving(true);
     try {
-      await updateTopic(noteId, { notebook: payload });
+      if (isQuestionBook) {
+        const qBlock = payload.blocks.find((block) => block.type === "question");
+        const fromQuestion = notebookPlainText({
+          blocks: qBlock ? [qBlock] : [],
+        }).slice(0, 80);
+        const saved = await updateQuestion(questionId, {
+          notebook: payload,
+          title: fromQuestion || question?.title || "Question",
+        });
+        setQuestion(saved);
+      } else {
+        await updateTopic(noteId, { notebook: payload });
+      }
       await refreshSubjects();
       setStatus("Saved");
       setTimeout(() => setStatus(""), 1600);
@@ -411,37 +502,56 @@ export default function NotebookPage() {
     return <Navigate to={dest} replace />;
   }
 
-  if (!sub) {
+  if (!sub && !question) {
     return <p className="p-8 text-muted">Loading notebook…</p>;
   }
 
-  const accent = accentMap[sub.subject?.accent] || accentMap.gold;
-  const isMainTopic = !sub.parent && !sub.parentTopic;
-  const parentTitle = sub.parentTopic?.title || "Topic";
+  const accent = accentMap[sub?.subject?.accent] || accentMap.gold;
+  const isMainTopic = !sub?.parent && !sub?.parentTopic;
+  const parentTitle = sub?.parentTopic?.title || "Topic";
   const alreadyFromNote = nested.some(
     (item) => noteTitleKey(item.title) === noteTitleKey(selText)
   );
-  const youtubeHref = normalizeUrlForHref(sub.youtubeUrl || youtubeUrlDraft);
+  const youtubeHref = normalizeUrlForHref(sub?.youtubeUrl || youtubeUrlDraft);
+  const listHref =
+    subId && subId !== "answer"
+      ? `/learning/${slug}/${section}/${topicId}/${subId}`
+      : `/learning/${slug}/${section}/${topicId}`;
+  const headingTitle = isQuestionBook
+    ? question?.title || "Question"
+    : sub?.title || "Notebook";
 
   return (
     <div className="page-pad min-h-screen">
       <p className={`text-[12px] tracking-[0.18em] uppercase ${accent.text}`}>
         <Link to={`/learning/${slug}`} className="hover:underline">
-          {sub.subject?.shortName || slug}
+          {sub?.subject?.shortName || slug}
         </Link>
         {" · "}
           <Link to={`/learning/${slug}/${section}`} className="hover:underline">
             {section === "practical" ? "Practical" : "Theory"}
           </Link>
-        {isMainTopic ? (
+        {isQuestionBook || isMainTopic ? (
           <>
             {" · "}
             <Link
               to={`/learning/${slug}/${section}/${topicId}`}
               className="hover:underline"
             >
-              {sub.title}
+              {isQuestionBook
+                ? parentTitle !== "Topic"
+                  ? parentTitle
+                  : sub?.title
+                : sub?.title}
             </Link>
+            {isQuestionBook ? (
+              <>
+                {" · "}
+                <Link to={listHref} className="hover:underline">
+                  Questions
+                </Link>
+              </>
+            ) : null}
           </>
         ) : (
           <>
@@ -458,16 +568,16 @@ export default function NotebookPage() {
       <div className="mt-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div className="flex min-w-0 flex-1 flex-wrap items-center gap-2">
           <h2 className="min-w-0 max-w-full flex-1 text-2xl font-semibold break-words sm:text-3xl">
-            {sub.title}
+            {headingTitle}
           </h2>
           <span
             className={`shrink-0 rounded-full border px-2.5 py-0.5 text-[11px] ${
-              difficultyMeta(sub.difficulty).className
+              difficultyMeta(sub?.difficulty || "medium").className
             }`}
           >
             {difficultyMeta(sub.difficulty).label}
           </span>
-          {sub.inReview ? (
+          {(isQuestionBook ? question?.inReview : sub?.inReview) ? (
             <span className="shrink-0 rounded-full border border-teal/30 bg-teal/12 px-2.5 py-0.5 text-[11px] text-teal">
               In review
             </span>
@@ -486,11 +596,14 @@ export default function NotebookPage() {
         </div>
       </div>
       <p className="mt-2 max-w-2xl text-sm text-muted">
-        {isMainTopic
-          ? "This is the answer for the whole topic. Subtopics have their own notebooks. Saving here does not change them."
-          : "This notebook is only for this subtopic. Select a phrase and click Add to subtopic to nest it under here."}
+        {isQuestionBook
+          ? "This notebook is only this question. Save, go back, then Add question for a new one."
+          : isMainTopic
+            ? "Topic notes. Questions are added from the topic page."
+            : "This notebook is only for this subtopic. Select a phrase and click Add to subtopic to nest it under here."}
       </p>
 
+      {isQuestionBook ? null : (
       <div className="mt-4 max-w-4xl rounded-2xl border border-line bg-[#222838]/80 px-4 py-3">
         <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
           Video link (clickable)
@@ -533,8 +646,9 @@ export default function NotebookPage() {
           )}
         </div>
       </div>
+      )}
 
-      {!isMainTopic ? (
+      {!isQuestionBook && !isMainTopic ? (
         <>
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <span className="text-[11px] text-muted">From this note:</span>
@@ -664,7 +778,7 @@ export default function NotebookPage() {
           </button>
         ))}
         <span className="mx-1 h-4 w-px bg-white/15" />
-        {isMainTopic ? null : (
+        {isQuestionBook || isMainTopic ? null : (
         <button
           type="button"
           title="Select text in the notebook, then add it as a nested subtopic. Click again to remove it."
@@ -681,15 +795,21 @@ export default function NotebookPage() {
         )}
         <button
           type="button"
-          onClick={() => patchMeta({ inReview: !sub.inReview })}
+          onClick={toggleReview}
           className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
-            sub.inReview
+            (isQuestionBook ? question?.inReview : sub?.inReview)
               ? "border-teal/50 bg-teal/20 text-teal"
               : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
           }`}
         >
-          {sub.inReview ? "✓ In review" : "Add to review"}
+          {(isQuestionBook ? question?.inReview : sub?.inReview)
+            ? "✓ In review"
+            : "Add to review"}
         </button>
+        <span className="mx-1 h-4 w-px bg-white/15" />
+        <span className="ml-auto text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">
+          Sections
+        </span>
         <button
           type="button"
           onClick={() =>
@@ -698,7 +818,7 @@ export default function NotebookPage() {
               blocks: [...prev.blocks, newBlock("text")],
             }))
           }
-          className="ml-auto rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+          className="rounded-lg border border-white/15 bg-white/5 px-3 py-1 text-[11px] text-[#c8cfe0] hover:bg-white/10 hover:text-white"
         >
           Add note
         </button>
@@ -730,7 +850,14 @@ export default function NotebookPage() {
           ) {
             return;
           }
-          const editor = paperRef.current?.querySelector(".notebook-write");
+          const editors = [
+            ...(paperRef.current?.querySelectorAll(".notebook-write") || []),
+          ];
+          const editor =
+            editors.find((node) => {
+              const rect = node.getBoundingClientRect();
+              return e.clientY >= rect.top && e.clientY <= rect.bottom + 8;
+            }) || editors[editors.length - 1];
           if (!editor || editor.contains(e.target)) return;
           if (jumpToClickedLine(editor, e.clientY)) {
             e.preventDefault();
@@ -741,7 +868,7 @@ export default function NotebookPage() {
         }}
       >
         <div className="notebook-head">
-          {isMainTopic ? "Topic answer" : "Subtopic notebook"}
+          {isQuestionBook ? "Question & answer" : isMainTopic ? "Topic notes" : "Subtopic notebook"}
         </div>
         <div>
           {notebook.blocks.map((block) =>
@@ -774,47 +901,46 @@ export default function NotebookPage() {
                     remove
                   </button>
                 </div>
-                {editingCode === block.id ? (
-                  <textarea
-                    autoFocus
-                    value={block.code}
-                    onChange={(e) =>
-                      updateBlock(block.id, { code: e.target.value })
-                    }
-                    onBlur={() => setEditingCode(null)}
-                    rows={Math.max(4, (block.code || "").split("\n").length + 1)}
-                    className="code-block w-full rounded-xl bg-[#1a2030] p-4 text-sm leading-6 text-[#e9edf4] outline-none"
-                    spellCheck={false}
-                  />
-                ) : (
-                  <pre
-                    onClick={() => setEditingCode(block.id)}
-                    className="code-block cursor-text overflow-x-auto rounded-xl bg-[#1a2030] p-4 text-sm leading-6 text-[#e9edf4]"
-                    dangerouslySetInnerHTML={{
-                      __html:
-                        highlightCode(block.code) ||
-                        '<span class="code-tok-cmt">// click to write code</span>',
-                    }}
-                  />
-                )}
+                <IdeEditor
+                  compact
+                  language={block.language}
+                  value={block.code}
+                  onChange={(code) => updateBlock(block.id, { code })}
+                  placeholder="// click to write code"
+                />
               </div>
             ) : (
-              <div key={block.id} className="relative">
-                {notebook.blocks.filter((item) => item.type === "text").length >
-                1 ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setNotebook((prev) => ({
-                        ...prev,
-                        blocks: prev.blocks.filter((item) => item.id !== block.id),
-                      }))
-                    }
-                    className="nb-remove absolute top-0 right-4 z-10 text-[11px]"
-                  >
-                    remove
-                  </button>
-                ) : null}
+              <div
+                key={block.id}
+                className="relative"
+                data-nb-section={block.type}
+              >
+                <div className="notebook-head notebook-head-row">
+                  <span>
+                    {block.type === "question"
+                      ? "Question"
+                      : block.type === "answer"
+                        ? "Answer"
+                        : "Note"}
+                  </span>
+                  {notebook.blocks.filter((item) => isWriteBlock(item.type))
+                    .length > 1 ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setNotebook((prev) => ({
+                          ...prev,
+                          blocks: prev.blocks.filter(
+                            (item) => item.id !== block.id
+                          ),
+                        }))
+                      }
+                      className="nb-remove text-[11px] tracking-normal normal-case"
+                    >
+                      remove
+                    </button>
+                  ) : null}
+                </div>
                 <TextBlock
                   id={block.id}
                   html={block.html}

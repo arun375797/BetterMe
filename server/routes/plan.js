@@ -262,7 +262,11 @@ router.patch("/:id", async (req, res) => {
       item.priority = req.body.priority;
     }
     if (req.body?.subject != null && !item.parent) {
-      const subject = await Subject.findById(req.body.subject).lean();
+      const subjectId =
+        typeof req.body.subject === "object"
+          ? req.body.subject?._id
+          : req.body.subject;
+      const subject = await Subject.findById(subjectId).lean();
       if (!subject) {
         return res.status(400).json({ message: "Pick a subject." });
       }

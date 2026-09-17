@@ -139,7 +139,8 @@ function questionHasAnswer(question) {
   }
   return Boolean(
     String(question?.code || "").trim() ||
-      String(question?.notes || "").trim()
+      String(question?.notes || "").trim() ||
+      notebookHasContent(question?.notebook)
   );
 }
 
@@ -151,8 +152,12 @@ function withSolutions(question) {
 }
 
 function listQuestion(doc) {
-  const { solutions, code, notes, prompt, ...rest } = doc;
-  return { ...rest, hasAnswer: questionHasAnswer(doc) };
+  const { solutions, code, notes, prompt, notebook, ...rest } = doc;
+  return {
+    ...rest,
+    hasAnswer: questionHasAnswer(doc),
+    hasNotebook: notebookHasContent(notebook),
+  };
 }
 
 function idKey(value) {
@@ -233,7 +238,7 @@ function nestTopics(topics) {
   }));
 }
 
-function statsFromTopics(topics, questionCount = 0) {
+function statsFromTopics(topics, questionCount = 0, reviewQuestionCount = 0) {
   const bySection = {};
   for (const section of SECTIONS) {
     const inSection = topics.filter((t) => (t.section || "theory") === section);
@@ -246,7 +251,9 @@ function statsFromTopics(topics, questionCount = 0) {
     };
   }
   bySection.practical.items = questionCount;
-  const inReview = topics.filter((t) => t.inReview && !t.fromNote).length;
+  const inReview =
+    topics.filter((t) => t.inReview && !t.fromNote).length +
+    reviewQuestionCount;
   return {
     theory: bySection.theory,
     practical: bySection.practical,
@@ -261,28 +268,61 @@ function statsFromTopics(topics, questionCount = 0) {
 router.get("/review", async (_req, res) => {
   try {
     const payload = await memoGet("learning:review", 20_000, async () => {
-      const items = await Topic.find({
-        inReview: true,
-        fromNote: { $ne: true },
-      })
-        .select(LIST_SELECT)
-        .populate("subject", "name slug shortName accent")
-        .populate("parent", "title")
-        .sort({ updatedAt: -1 })
-        .lean();
+      const [topics, questions] = await Promise.all([
+        Topic.find({
+          inReview: true,
+          fromNote: { $ne: true },
+        })
+          .select(LIST_SELECT)
+          .populate("subject", "name slug shortName accent")
+          .populate("parent", "title")
+          .sort({ updatedAt: -1 })
+          .lean(),
+        Question.find({ inReview: true })
+          .populate({
+            path: "topic",
+            select: "title parent section subject",
+            populate: [
+              { path: "subject", select: "name slug shortName accent" },
+              { path: "parent", select: "title" },
+            ],
+          })
+          .sort({ updatedAt: -1 })
+          .lean(),
+      ]);
 
       const rank = { hard: 0, ec: 1, medium: 2, easy: 3 };
-      items.sort(
+      const topicItems = topics.map((item) => ({
+        ...item,
+        kind: "topic",
+        parentTopic: item.parent,
+        parent: item.parent?._id || item.parent,
+      }));
+      const questionItems = questions
+        .filter((item) => item.topic)
+        .map((item) => {
+          const topic = item.topic;
+          const parent = topic.parent;
+          return {
+            _id: item._id,
+            kind: "question",
+            title: item.title,
+            difficulty: item.difficulty,
+            section: topic.section || "practical",
+            subject: topic.subject,
+            parentTopic: { _id: topic._id, title: topic.title },
+            parent: parent?._id || parent || null,
+            hostId: topic._id,
+            inReview: true,
+            updatedAt: item.updatedAt,
+          };
+        });
+
+      return [...questionItems, ...topicItems].sort(
         (a, b) =>
           (rank[a.difficulty] ?? 2) - (rank[b.difficulty] ?? 2) ||
           new Date(b.updatedAt) - new Date(a.updatedAt)
       );
-
-      return items.map((item) => ({
-        ...item,
-        parentTopic: item.parent,
-        parent: item.parent?._id || item.parent,
-      }));
     });
     res.json(payload);
   } catch (error) {
@@ -297,7 +337,17 @@ router.get("/subjects", async (_req, res) => {
         await Promise.all([
           Subject.find().sort({ order: 1 }).lean(),
           Topic.find().select("subject parent section fromNote inReview").lean(),
-          Question.aggregate([{ $group: { _id: "$topic", n: { $sum: 1 } } }]),
+          Question.aggregate([
+            {
+              $group: {
+                _id: "$topic",
+                n: { $sum: 1 },
+                review: {
+                  $sum: { $cond: ["$inReview", 1, 0] },
+                },
+              },
+            },
+          ]),
           CourseVideo.find({ courseSlug: NAMASTE_DEV })
             .select("durationSeconds")
             .lean(),
@@ -306,11 +356,14 @@ router.get("/subjects", async (_req, res) => {
         topics.map((topic) => [String(topic._id), topic])
       );
       const questionsBySubject = {};
+      const reviewQuestionsBySubject = {};
       for (const row of questionCounts) {
         const topic = topicById[String(row._id)];
         if (!topic) continue;
         const sid = String(topic.subject);
         questionsBySubject[sid] = (questionsBySubject[sid] || 0) + row.n;
+        reviewQuestionsBySubject[sid] =
+          (reviewQuestionsBySubject[sid] || 0) + (row.review || 0);
       }
 
       const namasteDev = {
@@ -329,7 +382,8 @@ router.get("/subjects", async (_req, res) => {
           ...subject,
           stats: statsFromTopics(
             subjectTopics,
-            questionsBySubject[String(subject._id)] || 0
+            questionsBySubject[String(subject._id)] || 0,
+            reviewQuestionsBySubject[String(subject._id)] || 0
           ),
           ...(subject.slug === "dsa" ? { namasteDev } : {}),
         };
@@ -361,9 +415,14 @@ router.get("/subjects/:slug", async (req, res) => {
         });
         if (section !== "theory") listQuery = listQuery.select(LIST_SELECT);
         const all = await listQuery.lean();
-        const questionCount = await Question.countDocuments({
-          topic: { $in: all.map((topic) => topic._id) },
-        });
+        const topicIds = all.map((topic) => topic._id);
+        const [questionCount, reviewQuestionCount] = await Promise.all([
+          Question.countDocuments({ topic: { $in: topicIds } }),
+          Question.countDocuments({
+            inReview: true,
+            topic: { $in: topicIds },
+          }),
+        ]);
 
         const scoped = section
           ? all.filter((topic) => (topic.section || "theory") === section)
@@ -381,7 +440,7 @@ router.get("/subjects/:slug", async (req, res) => {
           ...subject,
           section,
           topics,
-          stats: statsFromTopics(all, questionCount),
+          stats: statsFromTopics(all, questionCount, reviewQuestionCount),
         };
       }
     );
@@ -650,7 +709,7 @@ router.get("/topics/:id/questions", async (req, res) => {
     }
     const questions = await Question.find({ topic: topic._id })
       .select(
-        "title collectionName difficulty order relatedSection createdAt code notes solutions"
+        "title collectionName difficulty order relatedSection createdAt code notes solutions notebook inReview"
       )
       .populate("relatedSection", "title")
       .sort({ order: 1, createdAt: 1 })
@@ -667,15 +726,15 @@ router.post("/topics/:id/questions", async (req, res) => {
     if (!topic) {
       return res.status(404).json({ message: "Topic not found" });
     }
-    if ((topic.section || "theory") !== "practical") {
-      return res.status(400).json({
-        message: "Questions belong on practical topics.",
-      });
+    if ((topic.section || "theory") === "practical") {
+      const title = req.body.title?.trim();
+      if (!title) {
+        return res.status(400).json({ message: "Question title is required" });
+      }
     }
-    const title = req.body.title?.trim();
-    if (!title) {
-      return res.status(400).json({ message: "Question title is required" });
-    }
+    const count = await Question.countDocuments({ topic: topic._id });
+    const title =
+      String(req.body.title || "").trim() || `Question ${count + 1}`;
 
     let relatedSection = null;
     if (req.body.relatedSectionId) {
@@ -693,7 +752,6 @@ router.post("/topics/:id/questions", async (req, res) => {
     }
 
     const solutions = normalizeSolutions(req.body.solutions, req.body);
-    const count = await Question.countDocuments({ topic: topic._id });
     const question = await Question.create({
       topic: topic._id,
       title,
@@ -707,6 +765,28 @@ router.post("/topics/:id/questions", async (req, res) => {
       relatedSection,
       difficulty: req.body.difficulty || "medium",
       order: count,
+      notebook:
+        (topic.section || "theory") === "theory"
+          ? {
+              fontSize: 18,
+              blocks: [
+                {
+                  id: `q-${Date.now().toString(16)}`,
+                  type: "question",
+                  html: "<div><br></div>",
+                  code: "",
+                  language: "javascript",
+                },
+                {
+                  id: `a-${Date.now().toString(16)}`,
+                  type: "answer",
+                  html: "<div><br></div>",
+                  code: "",
+                  language: "javascript",
+                },
+              ],
+            }
+          : undefined,
     });
     const populated = await Question.findById(question._id).populate(
       "relatedSection",
@@ -723,6 +803,7 @@ router.get("/questions/:id", async (req, res) => {
   try {
     const question = await Question.findById(req.params.id)
       .populate("relatedSection", "title")
+      .populate("topic", "title parent section")
       .lean();
     if (!question) {
       return res.status(404).json({ message: "Question not found" });
@@ -765,6 +846,13 @@ router.patch("/questions/:id", async (req, res) => {
       question.code = solutions[0]?.code || "";
       question.language = solutions[0]?.language || "javascript";
       question.notes = solutions[0]?.logic || "";
+    }
+    if (req.body.inReview !== undefined) {
+      question.inReview = Boolean(req.body.inReview);
+    }
+    if (req.body.notebook !== undefined) {
+      question.notebook = req.body.notebook;
+      question.markModified("notebook");
     }
     if (req.body.relatedSectionId !== undefined) {
       if (!req.body.relatedSectionId) {

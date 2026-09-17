@@ -178,6 +178,18 @@ export function notebookPath(item) {
   const slug = item.subject?.slug;
   const section = item.section || "theory";
   if (!slug || !item?._id) return "/learning";
+  if (item.kind === "question") {
+    const hostId = item.hostId || item.parentTopic?._id;
+    const parentId =
+      item.parent && typeof item.parent === "object"
+        ? item.parent._id
+        : item.parent;
+    if (!hostId) return "/learning";
+    if (parentId) {
+      return `/learning/${slug}/${section}/${parentId}/${hostId}/${item._id}`;
+    }
+    return `/learning/${slug}/${section}/${hostId}/answer/${item._id}`;
+  }
   const rawParent = item.parentTopic?._id || item.parent;
   const parentId =
     rawParent && typeof rawParent === "object" ? rawParent._id : rawParent;
@@ -188,6 +200,9 @@ export function notebookPath(item) {
 }
 
 export function reviewItemHint(item) {
+  if (item.kind === "question") {
+    return item.parentTopic?.title || "Question";
+  }
   if (item.parentTopic?.title) return item.parentTopic.title;
   if ((item.section || "theory") === "practical") return "Topic questions";
   return "Topic answer";

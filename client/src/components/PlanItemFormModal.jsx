@@ -11,6 +11,12 @@ const PRIORITIES = [
   { id: "low", label: "Low" },
 ];
 
+function subjectId(value) {
+  if (!value) return "";
+  if (typeof value === "object") return String(value._id || "");
+  return String(value);
+}
+
 export default function PlanItemFormModal({
   subjects = [],
   lockSubject = false,
@@ -20,7 +26,7 @@ export default function PlanItemFormModal({
   onSubmit,
 }) {
   const [subject, setSubject] = useState(
-    String(initial?.subject || subjects[0]?._id || "")
+    subjectId(initial?.subject) || subjectId(subjects[0]) || ""
   );
   const [title, setTitle] = useState(initial?.title || "");
   const [date, setDate] = useState(initial?.date || todayKey());
@@ -64,8 +70,7 @@ export default function PlanItemFormModal({
         <div className="space-y-4 px-6 py-5">
           {parentTitle ? (
             <p className="text-sm text-muted">
-              Under{" "}
-              <span className="text-ink">{parentTitle}</span>
+              Under <span className="text-ink">{parentTitle}</span>
             </p>
           ) : null}
 
@@ -102,7 +107,7 @@ export default function PlanItemFormModal({
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className={fieldClass}
+              className={`${fieldClass} [color-scheme:dark]`}
             />
           </label>
 
@@ -146,6 +151,48 @@ export default function PlanItemFormModal({
         </DialogFooter>
       </form>
     </Dialog>
+  );
+}
+
+export function PlanRowActions({
+  disabled,
+  onEdit,
+  onDelete,
+  onSubtopic,
+  compact = false,
+}) {
+  const btn = compact
+    ? "text-[11px] hover:underline"
+    : "rounded-lg border border-line px-2.5 py-1 text-xs hover:bg-white/6";
+  return (
+    <div className={`flex flex-wrap items-center gap-2 ${compact ? "gap-3" : ""}`}>
+      {onSubtopic ? (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={onSubtopic}
+          className={`${btn} text-teal`}
+        >
+          Add subtopic
+        </button>
+      ) : null}
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onEdit}
+        className={`${btn} text-ink`}
+      >
+        Edit
+      </button>
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={onDelete}
+        className={`${btn} ${compact ? "text-coral" : "border-coral/35 text-coral hover:bg-coral/10"}`}
+      >
+        Delete
+      </button>
+    </div>
   );
 }
 

@@ -27,6 +27,8 @@ export function questionHasAnswer(item) {
     return true;
   }
   return Boolean(
-    String(item?.code || "").trim() || String(item?.notes || "").trim()
+    String(item?.code || "").trim() ||
+      String(item?.notes || "").trim() ||
+      item?.hasNotebook
   );
 }

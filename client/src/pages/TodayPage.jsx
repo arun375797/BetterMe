@@ -324,7 +324,7 @@ export default function TodayPage() {
         {reviewTop.length ? (
           <ul className="mt-4 space-y-2">
             {reviewTop.map((item) => (
-              <li key={item._id}>
+              <li key={`${item.kind || "topic"}-${item._id}`}>
                 <Link
                   to={notebookPath(item)}
                   className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15 sm:items-center"

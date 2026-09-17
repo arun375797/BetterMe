@@ -26,6 +26,11 @@ const questionSchema = new mongoose.Schema(
         logic: { type: String, default: "" },
       },
     ],
+    notebook: {
+      type: mongoose.Schema.Types.Mixed,
+      default: undefined,
+    },
+    inReview: { type: Boolean, default: false },
     relatedSection: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Topic",
@@ -42,5 +47,6 @@ const questionSchema = new mongoose.Schema(
 );
 
 questionSchema.index({ topic: 1, order: 1 });
+questionSchema.index({ inReview: 1, updatedAt: -1 });
 
 export default mongoose.model("Question", questionSchema);

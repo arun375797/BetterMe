@@ -11,7 +11,7 @@ import {
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
-import { highlightCode } from "../notebook.js";
+import IdeEditor from "../components/IdeEditor.jsx";
 import { questionHasAnswer, solutionsOf } from "../questions.js";
 import { accentMap } from "../theme.jsx";
 
@@ -81,15 +81,22 @@ export default function QuestionViewPage() {
   }
 
   async function toggleReview() {
-    if (!sub) return;
-    const next = !sub.inReview;
-    setSub((prev) => (prev ? { ...prev, inReview: next } : prev));
+    if (!question) return;
+    const next = !question.inReview;
+    setQuestion((prev) => (prev ? { ...prev, inReview: next } : prev));
     try {
-      await updateTopic(hostId, { inReview: next });
+      await updateQuestion(question._id, { inReview: next });
+      if (next && sub?.inReview) {
+        setSub((prev) => (prev ? { ...prev, inReview: false } : prev));
+        await updateTopic(hostId, { inReview: false });
+      }
       await refreshSubjects();
       setStatus(next ? "Marked for review" : "Removed from review");
       setTimeout(() => setStatus(""), 1800);
     } catch (err) {
+      setQuestion((prev) =>
+        prev ? { ...prev, inReview: !next } : prev
+      );
       setStatus(err.message || "Could not update review");
     }
   }
@@ -201,12 +208,12 @@ export default function QuestionViewPage() {
             type="button"
             onClick={toggleReview}
             className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
-              sub.inReview
+              question.inReview
                 ? "border-teal/50 bg-teal/20 text-teal"
                 : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
             }`}
           >
-            {sub.inReview ? "✓ In review" : "Add to review"}
+            {question.inReview ? "✓ In review" : "Add to review"}
           </button>
           <button
             type="button"
@@ -264,12 +271,14 @@ export default function QuestionViewPage() {
                 </p>
               ) : null}
               {way.code ? (
-                <pre
-                  className="code-block mt-4 overflow-x-auto rounded-xl bg-[#0f141f] p-4 text-[13px] leading-6 text-[#e9edf4]"
-                  dangerouslySetInnerHTML={{
-                    __html: highlightCode(way.code),
-                  }}
-                />
+                <div className="mt-4">
+                  <IdeEditor
+                    readOnly
+                    compact
+                    language={way.language || "javascript"}
+                    value={way.code}
+                  />
+                </div>
               ) : (
                 <p className="mt-3 text-sm text-muted">No code for this way.</p>
               )}

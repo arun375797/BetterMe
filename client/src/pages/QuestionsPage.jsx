@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
+import { Link, Navigate, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
   createQuestion,
   deleteQuestion,
@@ -23,6 +23,8 @@ export default function QuestionsPage() {
   const { refreshSubjects } = useOutletContext();
   const hostId = subId && subId !== "answer" ? subId : topicId;
   const onMainTopic = hostId === topicId;
+  const navigate = useNavigate();
+  const isPractical = section === "practical";
   const [sub, setSub] = useState(() => peekTopic(hostId) || null);
   const [parent, setParent] = useState(
     () => peekTopic(hostId)?.parentTopic || null
@@ -79,6 +81,21 @@ export default function QuestionsPage() {
     await afterChange();
   }
 
+  async function addTheoryQuestion() {
+    try {
+      const created = await createQuestion(hostId, {
+        title: `Question ${questions.length + 1}`,
+      });
+      await afterChange();
+      const path = onMainTopic
+        ? `/learning/${slug}/${section}/${topicId}/answer/${created._id}`
+        : `/learning/${slug}/${section}/${topicId}/${subId}/${created._id}`;
+      navigate(path);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function saveQuestion(values) {
     await updateQuestion(editItem._id, values);
     await afterChange();
@@ -105,14 +122,6 @@ export default function QuestionsPage() {
 
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
-  }
-
-  if (section !== "practical") {
-    const dest =
-      subId && subId !== "answer"
-        ? `/learning/${slug}/${section}/${topicId}/${subId}`
-        : `/learning/${slug}/${section}/${topicId}/answer`;
-    return <Navigate to={dest} replace />;
   }
 
   if (!sub) {
@@ -146,7 +155,7 @@ export default function QuestionsPage() {
           </Link>
           {" · "}
           <Link to={`/learning/${slug}/${section}`} className="hover:underline">
-            Practical
+            {isPractical ? "Practical" : "Theory"}
           </Link>
           {" · "}
           {onMainTopic ? (
@@ -169,30 +178,54 @@ export default function QuestionsPage() {
           <div>
             <h2 className="text-2xl font-semibold break-words sm:text-3xl">{sub.title}</h2>
             <p className="mt-2 max-w-2xl text-sm text-muted">
-              {onMainTopic
-                ? "Questions for this topic only. Each subtopic has a separate list. Open View to write the answer."
-                : "Questions for this subtopic only. The parent topic has its own list."}{" "}
-              A red dot means the answer is still missing.
+              {isPractical
+                ? onMainTopic
+                  ? "Questions for this topic only. Each subtopic has a separate list. Open View to write the answer."
+                  : "Questions for this subtopic only. The parent topic has its own list."
+                : "Add question opens a new notebook. Go back here to add another — it will not reuse the last paper."}{" "}
+              {isPractical ? "A red dot means the answer is still missing." : ""}
             </p>
             {status ? (
               <p className="mt-1 text-xs text-teal">{status}</p>
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isPractical ? (
+              sub.inReview ? (
+                <button
+                  type="button"
+                  onClick={toggleReview}
+                  className="rounded-lg border border-teal/50 bg-teal/20 px-3 py-1.5 text-[11px] font-medium text-teal"
+                >
+                  Remove topic from review
+                </button>
+              ) : null
+            ) : (
+              <button
+                type="button"
+                onClick={toggleReview}
+                className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
+                  sub.inReview
+                    ? "border-teal/50 bg-teal/20 text-teal"
+                    : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+                }`}
+              >
+                {sub.inReview ? "✓ In review" : "Add to review"}
+              </button>
+            )}
+            {!isPractical && !onMainTopic ? (
+              <Link
+                to={`/learning/${slug}/${section}/${topicId}/${subId}/notes`}
+                className="rounded-xl border border-line px-4 py-2.5 text-sm"
+              >
+                Open notes
+              </Link>
+            ) : null}
             <button
               type="button"
-              onClick={toggleReview}
-              className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
-                sub.inReview
-                  ? "border-teal/50 bg-teal/20 text-teal"
-                  : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
-              }`}
-            >
-              {sub.inReview ? "✓ In review" : "Add to review"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setAddOpen(true)}
+              onClick={
+                isPractical ? () => setAddOpen(true) : addTheoryQuestion
+              }
               className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-[#10201e]"
             >
               Add question
@@ -222,6 +255,11 @@ export default function QuestionsPage() {
                     />
                   ) : null}
                   <span className="min-w-0 break-words">{item.title}</span>
+                  {item.inReview ? (
+                    <span className="mt-0.5 shrink-0 rounded-full border border-teal/30 bg-teal/12 px-2 py-0.5 text-[10px] font-medium text-teal">
+                      Review
+                    </span>
+                  ) : null}
                 </Link>
                 <span
                   className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
@@ -235,7 +273,7 @@ export default function QuestionsPage() {
                   to={questionPath(item._id)}
                   className="rounded-lg border border-teal/35 bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal hover:bg-teal/15"
                 >
-                  View
+                  Open
                 </Link>
                 <button
                   type="button"

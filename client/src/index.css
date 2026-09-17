@@ -212,6 +212,18 @@ body {
   cursor: text;
 }
 
+.notebook-paper [data-nb-section] [contenteditable].notebook-write {
+  min-height: calc(var(--nb-line) * 8) !important;
+}
+
+.notebook-head-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-right: 16px;
+}
+
 .notebook-paper [contenteditable] p,
 .notebook-paper [contenteditable] div {
   padding: 0 !important;
@@ -243,29 +255,99 @@ body {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
 
+.jf-editor {
+  --jf-bg: #00002c;
+  --jf-gutter: #0a0025;
+  --jf-fg: #eeffff;
+  --jf-line: #8686867c;
+  --jf-cursor: #00f7ff;
+  overflow: hidden;
+  border: 1px solid rgba(0, 247, 255, 0.18);
+  border-radius: 12px;
+  background:
+    radial-gradient(720px 280px at 8% -20%, rgba(255, 0, 128, 0.18), transparent 55%),
+    radial-gradient(640px 260px at 100% 120%, rgba(0, 247, 255, 0.16), transparent 50%),
+    radial-gradient(480px 220px at 70% 0%, rgba(255, 217, 0, 0.08), transparent 48%),
+    var(--jf-bg);
+  box-shadow:
+    0 0 0 1px rgba(255, 217, 0, 0.08) inset,
+    0 18px 50px rgba(0, 0, 40, 0.55);
+}
+
+.jf-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid rgba(0, 247, 255, 0.12);
+  background: #0f0021;
+  color: #9b9b9b;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.jf-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.jf-dots i {
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: #ff0062;
+}
+
+.jf-dots i:nth-child(2) {
+  background: #ffd900;
+}
+
+.jf-dots i:nth-child(3) {
+  background: #00ff55;
+}
+
+.jf-filename {
+  color: #eeffff;
+}
+
+.jf-theme-label {
+  margin-left: auto;
+  color: #ffd900;
+  text-shadow: 0 0 10px rgba(255, 217, 0, 0.45);
+}
+
 .code-tok-key {
-  color: #7ee0d6;
+  color: #ff0062;
+  text-shadow: 0 0 12px rgba(255, 0, 98, 0.45);
 }
 .code-tok-str {
-  color: #e8c36a;
+  color: #eeff00;
+  text-shadow: 0 0 10px rgba(238, 255, 0, 0.35);
 }
 .code-tok-cmt {
-  color: #7d889c;
+  color: #838383;
   font-style: italic;
 }
 .code-tok-num {
-  color: #e88b7a;
+  color: #ff7e34;
 }
 .code-tok-fn {
-  color: #6ec8ff;
+  color: #20dd20;
+  text-shadow: 0 0 10px rgba(32, 221, 32, 0.4);
+}
+.code-tok-type {
+  color: #ffcb6b;
 }
 
-.ide-shell.ide-compact {
-  min-height: 200px;
-  box-shadow: none;
+.ide-shell {
+  display: flex;
+  min-height: 360px;
+  background: transparent;
 }
 
-.ide-shell.ide-compact .ide-stage {
+.jf-editor.ide-compact .ide-shell {
   min-height: 200px;
 }
 
@@ -274,9 +356,9 @@ body {
   min-width: 44px;
   padding: 14px 8px 14px 10px;
   overflow: hidden;
-  background: #121826;
-  border-right: 1px solid #243044;
-  color: #5b6780;
+  background: var(--jf-gutter, #0a0025);
+  border-right: 1px solid rgba(0, 247, 255, 0.12);
+  color: var(--jf-line, #8686867c);
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-size: 13px;
   line-height: 22px;
@@ -288,7 +370,41 @@ body {
   position: relative;
   flex: 1;
   min-width: 0;
-  min-height: 360px;
+  min-height: inherit;
+}
+
+.jf-beam {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 42%;
+  background: linear-gradient(
+    to bottom,
+    transparent,
+    rgba(0, 247, 255, 0.07) 42%,
+    rgba(255, 217, 0, 0.08) 50%,
+    transparent
+  );
+  animation: jf-beam 7.5s ease-in-out infinite;
+  z-index: 2;
+}
+
+@keyframes jf-beam {
+  0% {
+    transform: translateY(-50%);
+    opacity: 0;
+  }
+  14% {
+    opacity: 1;
+  }
+  86% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(280%);
+    opacity: 0;
+  }
 }
 
 .ide-highlight,
@@ -309,14 +425,22 @@ body {
 }
 
 .ide-highlight {
-  color: #d7deea;
+  color: var(--jf-fg, #eeffff);
   pointer-events: none;
+}
+
+.jf-editor:has(.ide-input) .ide-highlight {
+  pointer-events: none;
+}
+
+.jf-editor:not(:has(.ide-input)) .ide-highlight {
+  pointer-events: auto;
 }
 
 .ide-input {
   z-index: 1;
   color: transparent;
-  caret-color: #3ce6d4;
+  caret-color: var(--jf-cursor, #00f7ff);
   background: transparent;
   resize: none;
   outline: none;

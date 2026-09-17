@@ -215,14 +215,13 @@ export default function QuestionFormModal({
                 </label>
                 <div>
                   <span className="mb-1.5 block text-xs text-muted">Code</span>
-                  <div className="overflow-hidden rounded-xl border border-line">
-                    <IdeEditor
-                      compact
-                      value={item.code}
-                      onChange={(code) => patchSolution(item.id, { code })}
-                      placeholder="// answer"
-                    />
-                  </div>
+                  <IdeEditor
+                    compact
+                    language={item.language}
+                    value={item.code}
+                    onChange={(code) => patchSolution(item.id, { code })}
+                    placeholder="// answer"
+                  />
                 </div>
               </div>
             ))}

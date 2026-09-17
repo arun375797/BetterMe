@@ -307,6 +307,7 @@ export const createQuestion = (topicId, data) =>
     { method: "POST", body: JSON.stringify(data) },
     LEARNING
   );
+export const peekQuestion = (id) => peek(API, `/questions/${id}`);
 export const getQuestion = (id) => get(API, `/questions/${id}`);
 export const updateQuestion = (id, data) =>
   mutate(

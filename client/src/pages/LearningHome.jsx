@@ -2,12 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useOutletContext } from "react-router-dom";
 import {
   createPlanItem,
+  deletePlanItem,
   getLearningPlan,
   peekLearningPlan,
+  updatePlanItem,
 } from "../api.js";
 import PlanItemFormModal, {
   PlanProgressLine,
+  PlanRowActions,
 } from "../components/PlanItemFormModal.jsx";
+import { ConfirmDialog } from "../components/Dialog.jsx";
 import { todayKey } from "../food.js";
 import {
   formatPlanDate,
@@ -21,7 +25,8 @@ export default function LearningHome() {
   const { subjects } = useOutletContext();
   const [plan, setPlan] = useState(() => peekLearningPlan() || null);
   const [error, setError] = useState("");
-  const [modalOpen, setModalOpen] = useState(false);
+  const [modal, setModal] = useState(null);
+  const [confirm, setConfirm] = useState(null);
 
   async function load() {
     const data = await getLearningPlan();
@@ -77,7 +82,7 @@ export default function LearningHome() {
           </div>
           <button
             type="button"
-            onClick={() => setModalOpen(true)}
+            onClick={() => setModal({ type: "create" })}
             className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
           >
             Add topic
@@ -167,15 +172,42 @@ export default function LearningHome() {
         <LanguagePlanList
           subjects={cards}
           items={plan?.items || []}
+          onEdit={(item) => setModal({ type: "edit", item })}
+          onDelete={(item) => setConfirm(item)}
         />
       </aside>
 
-      {modalOpen ? (
+      {modal ? (
         <PlanItemFormModal
           subjects={subjects}
-          onClose={() => setModalOpen(false)}
+          initial={
+            modal.type === "edit"
+              ? modal.item
+              : undefined
+          }
+          onClose={() => setModal(null)}
           onSubmit={async (payload) => {
-            await createPlanItem(payload);
+            if (modal.type === "edit") {
+              await updatePlanItem(modal.item._id, payload);
+            } else {
+              await createPlanItem(payload);
+            }
+            await load();
+          }}
+        />
+      ) : null}
+
+      {confirm ? (
+        <ConfirmDialog
+          title={`Delete “${confirm.title}”?`}
+          message={
+            confirm.children?.length
+              ? "This also removes its subtopics."
+              : "This topic will leave the plan."
+          }
+          onClose={() => setConfirm(null)}
+          onConfirm={async () => {
+            await deletePlanItem(confirm._id);
             await load();
           }}
         />
@@ -192,7 +224,7 @@ function dateUrgency(date, today) {
   return { label: formatPlanDate(key), className: "text-muted" };
 }
 
-function LanguagePlanList({ subjects, items }) {
+function LanguagePlanList({ subjects, items, onEdit, onDelete }) {
   const groups = useMemo(
     () => groupPlanByLanguage(items, subjects),
     [items, subjects]
@@ -276,36 +308,40 @@ function LanguagePlanList({ subjects, items }) {
                     <li key={item._id}>
                       <Link
                         to={`/learning/plan/${slug}`}
-                        className="block"
+                        className={`block text-sm leading-5 ${
+                          done ? "text-muted line-through" : "text-ink"
+                        }`}
                       >
-                        <p
-                          className={`text-sm leading-5 ${
-                            done ? "text-muted line-through" : "text-ink"
-                          }`}
+                        {item.title}
+                      </Link>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
+                        <span className={urgency.className}>
+                          {urgency.label}
+                        </span>
+                        <span
+                          className={`rounded-full px-1.5 py-px ${priority.className}`}
                         >
-                          {item.title}
-                        </p>
-                        <p className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11px]">
-                          <span className={urgency.className}>
-                            {urgency.label}
-                          </span>
-                          <span
-                            className={`rounded-full px-1.5 py-px ${priority.className}`}
-                          >
-                            {priority.label}
-                          </span>
-                        </p>
-                        {item.children?.length ? (
-                          <ul className="mt-1.5 space-y-1 border-l border-line pl-2">
-                            {item.children.map((child) => {
-                              const childDone = topicLearned(child);
-                              const childUrgency = dateUrgency(
-                                child.date,
-                                today
-                              );
-                              return (
-                                <li
-                                  key={child._id}
+                          {priority.label}
+                        </span>
+                      </p>
+                      <div className="mt-1.5">
+                        <PlanRowActions
+                          compact
+                          onEdit={() => onEdit(item)}
+                          onDelete={() => onDelete(item)}
+                        />
+                      </div>
+                      {item.children?.length ? (
+                        <ul className="mt-1.5 space-y-1.5 border-l border-line pl-2">
+                          {item.children.map((child) => {
+                            const childDone = topicLearned(child);
+                            const childUrgency = dateUrgency(
+                              child.date,
+                              today
+                            );
+                            return (
+                              <li key={child._id}>
+                                <p
                                   className={`text-[12px] ${
                                     childDone
                                       ? "text-muted line-through"
@@ -318,12 +354,17 @@ function LanguagePlanList({ subjects, items }) {
                                   >
                                     {childUrgency.label}
                                   </span>
-                                </li>
-                              );
-                            })}
-                          </ul>
-                        ) : null}
-                      </Link>
+                                </p>
+                                <PlanRowActions
+                                  compact
+                                  onEdit={() => onEdit(child)}
+                                  onDelete={() => onDelete(child)}
+                                />
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      ) : null}
                     </li>
                   );
                 })}

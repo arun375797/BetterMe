@@ -65,7 +65,11 @@ export default function TopicDetail() {
         setError("");
         return;
       }
-      const data = await getTopic(topicId);
+      const [data, list] = await Promise.all([
+        getTopic(topicId),
+        getQuestions(topicId).catch(() => []),
+      ]);
+      setQuestions(Array.isArray(list) ? list : []);
       if (skipNotebookRestore.current) {
         skipNotebookRestore.current = false;
         clearLocalNotebook(topicId);
@@ -100,7 +104,7 @@ export default function TopicDetail() {
     const cached = peekTopic(topicId);
     if (cached) setTopic(cached);
     else setTopic(null);
-    setQuestions(section === "practical" ? peekQuestions(topicId) || [] : []);
+    setQuestions(peekQuestions(topicId) || []);
     load();
   }, [topicId, section]);
 
@@ -152,6 +156,18 @@ export default function TopicDetail() {
     await afterChange();
   }
 
+  async function addTheoryQuestion() {
+    try {
+      const created = await createQuestion(topicId, {
+        title: `Question ${questions.length + 1}`,
+      });
+      await refreshSubjects();
+      navigate(`${answerPath}/${created._id}`);
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function addQuestion(values) {
     await createQuestion(topicId, values);
     await afterChange();
@@ -190,11 +206,19 @@ export default function TopicDetail() {
       : notebookHasContent(answerNotebook);
   const isPractical = section === "practical";
   const subReview = (topic.subtopics || []).filter((s) => s.inReview);
+  const questionReview = questions
+    .filter((item) => item.inReview)
+    .map((item) => ({
+      _id: item._id,
+      title: item.title,
+      isQuestion: true,
+    }));
   const reviewItems = [
     ...(topic.inReview
       ? [{ _id: topic._id, title: topic.title, isMain: true }]
       : []),
     ...subReview,
+    ...questionReview,
   ];
   const fromAnswer = topic.fromAnswer || [];
 
@@ -229,7 +253,7 @@ export default function TopicDetail() {
         <p className="mt-2 text-sm text-muted">
           {isPractical
             ? "Questions for this topic show below. Open View answer to write the solution. Subtopics have their own lists."
-            : "This topic has one answer notebook. Each subtopic has its own notebook. Highlighted phrases in a subtopic become nested notes."}
+            : "Add a question to open the notebook. Come back here to add another — each question has its own paper."}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -270,12 +294,13 @@ export default function TopicDetail() {
               Add question
             </button>
           ) : (
-            <Link
-              to={answerPath}
+            <button
+              type="button"
+              onClick={addTheoryQuestion}
               className="rounded-xl border border-teal/40 bg-teal/12 px-4 py-2 text-sm font-semibold text-teal hover:bg-teal/18"
             >
-              {hasAnswer ? "Open answer" : "Add answer"}
-            </Link>
+              Add question
+            </button>
           )}
         </div>
 
@@ -285,7 +310,7 @@ export default function TopicDetail() {
               <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
                 Special section
               </p>
-              <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
+              <h3 className="mt-1 text-lg font-semibold">Review</h3>
             </div>
             <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
               {reviewItems.length}
@@ -297,22 +322,32 @@ export default function TopicDetail() {
                 <li key={item._id}>
                   <Link
                     to={
-                      item.isMain
-                        ? answerPath
-                        : `/learning/${slug}/${section}/${topicId}/${item._id}`
+                      item.isQuestion
+                        ? `${answerPath}/${item._id}`
+                        : item.isMain
+                          ? answerPath
+                          : `/learning/${slug}/${section}/${topicId}/${item._id}`
                     }
                     className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
                   >
                     <span className="min-w-0 flex-1 break-words font-medium">
                       {item.title}
-                      {item.isMain ? (
+                      {item.isQuestion ? (
                         <span className="ml-2 text-xs font-normal text-muted">
-                          {isPractical ? "topic questions" : "topic answer"}
+                          question
+                        </span>
+                      ) : item.isMain ? (
+                        <span className="ml-2 text-xs font-normal text-muted">
+                          {isPractical ? "topic questions" : "question & answer"}
                         </span>
                       ) : null}
                     </span>
                     <span className="shrink-0 text-[11px] text-teal">
-                      {isPractical ? "Open questions →" : "Open notebook →"}
+                      {item.isQuestion
+                        ? "Open question →"
+                        : isPractical
+                          ? "Open questions →"
+                          : "Open notebook →"}
                     </span>
                   </Link>
                 </li>
@@ -320,8 +355,8 @@ export default function TopicDetail() {
             ) : (
               <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
                 {isPractical
-                  ? "No review items yet. Open the topic questions or a subtopic and click Add to review."
-                  : "No review items yet. Open the topic answer or a subtopic notebook and click Add to review."}
+                  ? "No review items yet. Open a question and click Add to review."
+                  : "No review items yet. Open the notebook or a subtopic and click Add to review."}
               </li>
             )}
           </ul>
@@ -332,45 +367,72 @@ export default function TopicDetail() {
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
                 <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
-                  Answer
+                  Questions
                 </p>
                 <h3 className="mt-1 text-lg font-semibold">On this topic</h3>
               </div>
-              <div className="flex flex-wrap items-center gap-2">
-                {hasAnswer ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setConfirm({
-                        title: "Delete this answer?",
-                        message:
-                          "The topic note will be cleared. Subtopics are not removed.",
-                        onConfirm: removeAnswer,
-                      })
-                    }
-                    className="rounded-xl border border-coral/35 px-4 py-2 text-sm text-coral hover:bg-coral/10"
-                  >
-                    Delete answer
-                  </button>
-                ) : null}
-                <Link
-                  to={answerPath}
-                  className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
-                >
-                  {hasAnswer ? "Open answer" : "Add answer"}
-                </Link>
-              </div>
+              <button
+                type="button"
+                onClick={addTheoryQuestion}
+                className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
+              >
+                Add question
+              </button>
             </div>
-            {hasAnswer ? (
-              <p className="mt-3 line-clamp-6 whitespace-pre-wrap text-sm leading-6 text-ink">
-                {answerPreview || "Open to see the full notebook."}
-              </p>
-            ) : (
-              <p className="mt-3 text-sm text-muted">
-                Write the topic answer here. Subtopic notebooks below stay
-                separate.
-              </p>
-            )}
+            <ul className="mt-4 space-y-2">
+              {questions.length ? (
+                questions.map((item, index) => (
+                  <li
+                    key={item._id}
+                    className="topic-row rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5"
+                  >
+                    <span className="topic-row-meta w-8 text-xs text-muted">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    <Link
+                      to={`${answerPath}/${item._id}`}
+                      className="topic-row-title inline-flex items-center gap-2 text-sm font-medium hover:text-teal"
+                    >
+                      {!questionHasAnswer(item) ? (
+                        <span
+                          className="missing-answer-dot"
+                          title="No answer yet"
+                          aria-label="No answer yet"
+                        />
+                      ) : null}
+                      <span className="min-w-0 break-words">{item.title}</span>
+                    </Link>
+                    <div className="topic-row-actions">
+                      <Link
+                        to={`${answerPath}/${item._id}`}
+                        className="rounded-lg border border-teal/35 bg-teal/10 px-2.5 py-1 text-xs font-medium text-teal hover:bg-teal/15"
+                      >
+                        Open notebook
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setConfirm({
+                            title: `Delete “${item.title}”?`,
+                            message:
+                              "This question and its notebook will be removed.",
+                            onConfirm: () => removeQuestion(item),
+                          })
+                        }
+                        className="rounded-lg border border-coral/30 px-2.5 py-1 text-xs text-coral hover:bg-coral/10"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </li>
+                ))
+              ) : (
+                <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
+                  No questions yet. Add question opens a new notebook. After you
+                  go back, add another from this same button.
+                </li>
+              )}
+            </ul>
           </div>
         ) : (
           <div className="mt-6 rounded-2xl border border-teal/30 bg-teal/8 p-4 ring-1 ring-teal/20">
@@ -542,7 +604,7 @@ export default function TopicDetail() {
                     to={`/learning/${slug}/${section}/${topicId}/${sub._id}`}
                     className="text-xs text-teal hover:underline"
                   >
-                    Open notebook →
+                    Open questions →
                   </Link>
                 )}
                 {sub.inReview ? (
@@ -633,7 +695,7 @@ export default function TopicDetail() {
             <span className="text-teal">{topic.subtopics?.length || 0}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted">Review topics</span>
+            <span className="text-muted">Review</span>
             <span className="text-teal">{reviewItems.length}</span>
           </div>
           {!isPractical ? (

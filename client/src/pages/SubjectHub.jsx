@@ -6,7 +6,7 @@ const tracks = [
   {
     id: "theory",
     title: "Theory",
-    copy: "Each topic has one answer notebook. Subtopics have their own notebooks.",
+    copy: "Each topic has a question section and an answer section. Subtopics have their own notebooks.",
     accent: "teal",
   },
   {
@@ -35,8 +35,8 @@ export default function SubjectHub() {
         </p>
         <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">{subject.name}</h2>
         <p className="mt-2 max-w-xl text-sm text-muted">
-          Same subjects in two tracks. Theory is notebooks (topic answer +
-          subtopic notes). Practical is questions (topic list + subtopic lists).
+          Same subjects in two tracks. Theory is notebooks (question + answer,
+          then subtopic notes). Practical is questions (topic list + subtopic lists).
         </p>
 
         <div

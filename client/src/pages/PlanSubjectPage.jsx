@@ -9,6 +9,7 @@ import {
 } from "../api.js";
 import PlanItemFormModal, {
   PlanProgressLine,
+  PlanRowActions,
 } from "../components/PlanItemFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import {
@@ -245,31 +246,13 @@ function PlanTopicCard({
             </span>
           </div>
           <p className="mt-1 text-xs text-muted">{formatPlanDate(item.date)}</p>
-          <div className="mt-3 flex flex-wrap gap-3 text-xs">
-            <button
-              type="button"
+          <div className="mt-3">
+            <PlanRowActions
               disabled={disabled}
-              onClick={() => onSubtopic(item)}
-              className="text-teal hover:underline"
-            >
-              Add subtopic
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onEdit(item)}
-              className="text-muted hover:text-ink"
-            >
-              Edit
-            </button>
-            <button
-              type="button"
-              disabled={disabled}
-              onClick={() => onDelete(item)}
-              className="text-muted hover:text-coral"
-            >
-              Delete
-            </button>
+              onSubtopic={() => onSubtopic(item)}
+              onEdit={() => onEdit(item)}
+              onDelete={() => onDelete(item)}
+            />
           </div>
         </div>
       </div>
@@ -305,23 +288,12 @@ function PlanTopicCard({
                   <p className="mt-0.5 text-[11px] text-muted">
                     {formatPlanDate(child.date)}
                   </p>
-                  <div className="mt-2 flex flex-wrap gap-3 text-xs">
-                    <button
-                      type="button"
+                  <div className="mt-2">
+                    <PlanRowActions
                       disabled={disabled}
-                      onClick={() => onEdit(child)}
-                      className="text-muted hover:text-ink"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      type="button"
-                      disabled={disabled}
-                      onClick={() => onDelete(child)}
-                      className="text-muted hover:text-coral"
-                    >
-                      Delete
-                    </button>
+                      onEdit={() => onEdit(child)}
+                      onDelete={() => onDelete(child)}
+                    />
                   </div>
                 </div>
               </li>

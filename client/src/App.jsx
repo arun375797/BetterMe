@@ -44,8 +44,19 @@ const Sit25DefinePage = lazy(() => import("./pages/Sit25DefinePage.jsx"));
 const MusicPage = lazy(() => import("./pages/MusicPage.jsx"));
 
 function NestedTopicPage() {
-  const { section } = useParams();
+  const { slug, section, topicId, subId } = useParams();
   if (section === "practical") return <QuestionsPage />;
+  if (subId === "answer") {
+    return (
+      <Navigate to={`/learning/${slug}/${section}/${topicId}`} replace />
+    );
+  }
+  return <QuestionsPage />;
+}
+
+function NestedQuestionPage() {
+  const { section } = useParams();
+  if (section === "practical") return <QuestionViewPage />;
   return <NotebookPage />;
 }
 
@@ -101,15 +112,19 @@ export default function App() {
         />
         <Route
           path="/learning/:slug/:section/:topicId/answer/:questionId"
-          element={<QuestionViewPage />}
+          element={<NestedQuestionPage />}
         />
         <Route
           path="/learning/:slug/:section/:topicId/answer"
           element={<NestedTopicPage />}
         />
         <Route
+          path="/learning/:slug/:section/:topicId/:subId/notes"
+          element={<NotebookPage />}
+        />
+        <Route
           path="/learning/:slug/:section/:topicId/:subId/:questionId"
-          element={<QuestionViewPage />}
+          element={<NestedQuestionPage />}
         />
         <Route
           path="/learning/:slug/:section/:topicId/:subId"

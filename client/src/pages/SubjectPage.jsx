@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { createTopic, deleteTopic, getSubject, peekSubject, updateTopic } from "../api.js";
+import { createTopic, deleteTopic, getReviewQueue, getSubject, peekReviewQueue, peekSubject, updateTopic } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
+import { notebookPath, reviewItemHint } from "../lib/today.js";
 import { accentMap } from "../theme.jsx";
 
 const levelClass = {
@@ -17,6 +18,9 @@ export default function SubjectPage() {
   const { refreshSubjects } = useOutletContext();
   const [subject, setSubject] = useState(
     () => peekSubject(slug, section) || null
+  );
+  const [reviewQueue, setReviewQueue] = useState(
+    () => peekReviewQueue() || []
   );
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
@@ -59,6 +63,14 @@ export default function SubjectPage() {
       .catch((err) => {
         if (live) setError(err.message);
       });
+    getReviewQueue()
+      .then((data) => {
+        if (!live) return;
+        setReviewQueue(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (live) setReviewQueue([]);
+      });
     return () => {
       live = false;
     };
@@ -91,27 +103,12 @@ export default function SubjectPage() {
   }, [subject, query]);
 
   const reviewItems = useMemo(() => {
-    if (!subject?.topics) return [];
-    const mains = subject.topics
-      .filter((topic) => topic.inReview)
-      .map((topic) => ({
-        ...topic,
-        parentTitle: null,
-        parentId: null,
-        isMain: true,
-      }));
-    const subs = subject.topics.flatMap((topic) =>
-      (topic.subtopics || [])
-        .filter((sub) => sub.inReview)
-        .map((sub) => ({
-          ...sub,
-          parentTitle: topic.title,
-          parentId: topic._id,
-          isMain: false,
-        }))
+    return (reviewQueue || []).filter(
+      (item) =>
+        item.subject?.slug === slug &&
+        (item.section || "theory") === section
     );
-    return [...mains, ...subs];
-  }, [subject]);
+  }, [reviewQueue, slug, section]);
 
   async function saveMainTopic(values) {
     await updateTopic(editTopic._id, {
@@ -203,7 +200,7 @@ export default function SubjectPage() {
               <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
                 Special section
               </p>
-              <h3 className="mt-1 text-lg font-semibold">Review topics</h3>
+              <h3 className="mt-1 text-lg font-semibold">Review</h3>
             </div>
             <span className="rounded-full bg-teal/15 px-2.5 py-1 text-xs text-teal">
               {reviewItems.length}
@@ -212,23 +209,15 @@ export default function SubjectPage() {
           <ul className="mt-4 space-y-2">
             {reviewItems.length ? (
               reviewItems.map((item) => (
-                <li key={item._id}>
+                <li key={`${item.kind || "topic"}-${item._id}`}>
                   <Link
-                    to={
-                      item.isMain
-                        ? `/learning/${slug}/${section}/${item._id}/answer`
-                        : `/learning/${slug}/${section}/${item.parentId}/${item._id}`
-                    }
+                    to={notebookPath(item)}
                     className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="break-words font-medium">{item.title}</span>
                       <span className="ml-2 text-xs text-muted">
-                        {item.isMain
-                          ? isPractical
-                            ? "topic questions"
-                            : "topic answer"
-                          : `in ${item.parentTitle}`}
+                        {reviewItemHint(item)}
                       </span>
                     </span>
                     <span className="shrink-0 text-[11px] text-teal">Open →</span>
@@ -238,8 +227,8 @@ export default function SubjectPage() {
             ) : (
               <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
                 {isPractical
-                  ? "Mark Add to review on a question page — the topic itself or a subtopic — and it lands here."
-                  : "Mark Add to review on the topic answer or a subtopic notebook and it lands here."}
+                  ? "Open a question and click Add to review. Only that question is queued."
+                  : "Mark Add to review on a question notebook, the topic answer, or a subtopic."}
               </li>
             )}
           </ul>
