@@ -16,9 +16,9 @@ import {
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 
 const PRIORITY_META = {
-  high: { label: "High", dot: "bg-[#e88b7a]", color: "#e88b7a" },
-  medium: { label: "Medium", dot: "bg-[#e8c36a]", color: "#e8c36a" },
-  low: { label: "Low", dot: "bg-[#3ce6d4]", color: "#3ce6d4" },
+  high: { label: "High", dot: "bg-coral", color: "#e88b7a" },
+  medium: { label: "Medium", dot: "bg-gold", color: "#e8c36a" },
+  low: { label: "Low", dot: "bg-teal", color: "#3ce6d4" },
 };
 
 function fmtTime(dateStr) {
@@ -82,8 +82,8 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button type="button" aria-label="Close" onClick={onClose}
-        className="absolute inset-0 bg-[#0b0f18]/72 backdrop-blur-sm" />
-      <div className="relative w-full max-w-md rounded-2xl border border-line bg-[#1e2638] p-6 shadow-2xl">
+        className="absolute inset-0 bg-overlay/72 backdrop-blur-sm" />
+      <div className="relative w-full max-w-md rounded-2xl border border-line bg-dialog p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink">Edit Todo</h2>
           <button type="button" onClick={onClose}
@@ -181,7 +181,7 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
       className={`group flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors ${
         todo.done
           ? "border-line/40 bg-white/2 opacity-60"
-          : "border-line/60 bg-[#222838]/60 hover:border-line"
+          : "border-line/60 bg-raised/60 hover:border-line"
       }`}
     >
       <button
@@ -336,7 +336,7 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg px-4 py-1.5 text-xs font-medium text-[#0b0f18] disabled:opacity-50"
+          className="rounded-lg px-4 py-1.5 text-xs font-medium text-overlay disabled:opacity-50"
           style={{ background: catColor }}
         >
           {saving ? "Adding…" : "Add Todo"}
@@ -534,7 +534,7 @@ export default function TodoCategoryPage() {
           <button
             type="button"
             onClick={() => setShowAddForm((v) => !v)}
-            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-[#0b0f18]"
+            className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-overlay"
             style={{ background: catColor }}
           >
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">

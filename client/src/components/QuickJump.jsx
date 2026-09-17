@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PERSONALITY_NAV } from "../personality.js";
+import { ThemeStrip, useUiTheme } from "../theme.jsx";
 import { appLenis } from "./SmoothScroll.jsx";
 
 const STORAGE_KEY = "quick-jump-v1";
@@ -18,91 +19,91 @@ export const JUMP_SHORTCUTS = [
     id: "today",
     label: "Today",
     path: "/today",
-    color: "#3ce6d4",
+    color: "var(--ui-teal)",
     match: (p) => p === "/today" || p === "/",
   },
   {
     id: "learning",
     label: "Learning",
     path: "/learning",
-    color: "#3ce6d4",
+    color: "var(--ui-teal)",
     match: (p) => p.startsWith("/learning"),
   },
   {
     id: "health",
     label: "Health",
     path: "/health",
-    color: "#e88b7a",
+    color: "var(--ui-coral)",
     match: (p) => p === "/health",
   },
   {
     id: "food",
     label: "Food",
     path: "/health/food",
-    color: "#e88b7a",
+    color: "var(--ui-coral)",
     match: (p) => p.startsWith("/health/food"),
   },
   {
     id: "sleep",
     label: "Sleep",
     path: "/health/sleep",
-    color: "#6ec8ff",
+    color: "var(--ui-cyan)",
     match: (p) => p.startsWith("/health/sleep"),
   },
   {
     id: "exercise",
     label: "Exercise",
     path: "/health/exercise",
-    color: "#e8c36a",
+    color: "var(--ui-gold)",
     match: (p) => p.startsWith("/health/exercise"),
   },
   {
     id: "sugar",
     label: "Sugar",
     path: "/health/sugar",
-    color: "#e88b7a",
+    color: "var(--ui-coral)",
     match: (p) => p.startsWith("/health/sugar"),
   },
   {
     id: "notebooks",
     label: "Notebooks",
     path: "/notebooks",
-    color: "#6ec8ff",
+    color: "var(--ui-cyan)",
     match: (p) => p.startsWith("/notebooks"),
   },
   {
     id: "personality",
     label: "Personality",
     path: "/personality/english",
-    color: "#b9a6ff",
+    color: "var(--ui-violet)",
     match: (p) => p.startsWith("/personality"),
   },
   {
     id: "todos",
     label: "Todos",
     path: "/todos",
-    color: "#e8c36a",
+    color: "var(--ui-gold)",
     match: (p) => p.startsWith("/todos"),
   },
   {
     id: "report",
     label: "Report",
     path: "/report/statistics",
-    color: "#e8c36a",
+    color: "var(--ui-gold)",
     match: (p) => p.startsWith("/report"),
   },
   {
     id: "sit25",
     label: "Sit break",
     path: "/sit25",
-    color: "#3ce6d4",
+    color: "var(--ui-teal)",
     match: (p) => p.startsWith("/sit25"),
   },
   {
     id: "music",
     label: "Music",
     path: "/music",
-    color: "#b9a6ff",
+    color: "var(--ui-violet)",
     match: (p) => p.startsWith("/music"),
   },
 ];
@@ -272,6 +273,7 @@ function IconGlyph({ id }) {
 export default function QuickJump({ subjects = [], todoCategories = [] }) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { theme } = useUiTheme();
   const rootRef = useRef(null);
   const dragRef = useRef(null);
   const skipClickRef = useRef(false);
@@ -462,6 +464,7 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
     pageJumps.length,
     nested.length,
     shortcuts.length,
+    theme,
   ]);
 
   function startDrag(event) {
@@ -661,9 +664,9 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
                       <span
                         className="quick-jump-dot"
                         style={{
-                          background: active ? "#3ce6d4" : "transparent",
+                          background: active ? "var(--ui-teal)" : "transparent",
                           boxShadow: active
-                            ? "0 0 10px rgba(60,230,212,0.55)"
+                            ? "0 0 10px color-mix(in oklab, var(--ui-teal) 55%, transparent)"
                             : "none",
                         }}
                       >
@@ -740,6 +743,8 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
           })}
 
           <div className="quick-jump-rule" />
+          <p className="quick-jump-kicker">Look</p>
+          <ThemeStrip compact />
           <div className="quick-jump-tools">
             <button
               type="button"
@@ -797,6 +802,17 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
           data-lenis-prevent
         >
           <p className="text-[11px] tracking-[0.18em] text-teal uppercase">
+            Look
+          </p>
+          <h3 className="mt-1 text-sm font-semibold">Whole UI theme</h3>
+          <p className="mt-1 text-[12px] leading-5 text-muted">
+            Switch the entire app — pages, menus, and code — not just the editor.
+          </p>
+          <div className="mt-3">
+            <ThemeStrip />
+          </div>
+
+          <p className="mt-5 text-[11px] tracking-[0.18em] text-teal uppercase">
             Customize
           </p>
           <h3 className="mt-1 text-sm font-semibold">Section jumper</h3>

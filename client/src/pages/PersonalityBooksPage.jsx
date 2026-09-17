@@ -52,7 +52,7 @@ export default function PersonalityBooksPage() {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="rounded-xl bg-violet px-4 py-2.5 text-sm font-semibold text-[#1b2030]"
+          className="rounded-xl bg-violet px-4 py-2.5 text-sm font-semibold text-page"
         >
           {meta.addLabel}
         </button>
@@ -103,7 +103,7 @@ function BookColumn({ heading, empty, items }) {
             <li key={item._id}>
               <Link
                 to={`/personality/books/${item._id}`}
-                className="block rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15"
+                className="block rounded-2xl border border-line bg-raised/80 px-4 py-3 transition hover:border-white/15"
               >
                 <span className="block font-medium">{item.title}</span>
                 {item.subtitle ? (

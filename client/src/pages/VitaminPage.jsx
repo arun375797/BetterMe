@@ -117,7 +117,7 @@ export default function VitaminPage() {
               className={`rounded-full border px-3 py-1.5 text-xs ${
                 filter === option.id
                   ? "border-coral/50 bg-coral/15 text-ink"
-                  : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                  : "border-line bg-surface text-muted hover:bg-white/5"
               }`}
             >
               {option.label}
@@ -191,7 +191,7 @@ export default function VitaminPage() {
 
 function ItemCard({ item, onEdit, onDelete }) {
   return (
-    <li className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3">
+    <li className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-raised/80 px-4 py-3">
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-2">
           <span className="font-semibold">{item.name}</span>
@@ -234,7 +234,7 @@ function ItemCard({ item, onEdit, onDelete }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>

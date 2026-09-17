@@ -121,7 +121,7 @@ export default function PlanSubjectPage() {
 
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
 
-      <div className="mt-6 rounded-2xl border border-line bg-[#222838]/80 p-5">
+      <div className="mt-6 rounded-2xl border border-line bg-raised/80 p-5">
         <div className="flex items-center justify-between gap-3">
           <p className={`text-xs font-medium ${accent.text}`}>Studied</p>
           <p className="text-xs text-muted">
@@ -223,7 +223,7 @@ function PlanTopicCard({
   const disabled = Boolean(busy);
 
   return (
-    <li className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <li className="rounded-2xl border border-line bg-raised/80 p-4">
       <div className="flex items-start gap-3">
         <TickBox
           checked={done}

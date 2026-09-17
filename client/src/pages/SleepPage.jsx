@@ -135,7 +135,7 @@ export default function SleepPage() {
         <SleepQualityCard log={stats?.lastNight} />
       </div>
 
-      <div className="mt-8 rounded-2xl border border-line bg-[#222838]/80 p-5">
+      <div className="mt-8 rounded-2xl border border-line bg-raised/80 p-5">
         <h3 className="text-lg font-semibold">30-day history</h3>
         <div className="mt-4">
           <SleepDurationChart logs={logs} dayCount={30} />
@@ -154,7 +154,7 @@ export default function SleepPage() {
             {recentLogs.map((log) => (
               <li
                 key={log._id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-[#222838]/60 px-4 py-3"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-line bg-raised/60 px-4 py-3"
               >
                 <div>
                   <p className="font-medium">{formatDay(log.day)}</p>
@@ -212,7 +212,7 @@ export default function SleepPage() {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>

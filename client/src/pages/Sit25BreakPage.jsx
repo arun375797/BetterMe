@@ -41,7 +41,7 @@ function Player({ video, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex flex-col bg-[#0b0f18]/92 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex flex-col bg-overlay/92 backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
       aria-label={video.title}
@@ -131,20 +131,20 @@ export default function Sit25BreakPage() {
                 key={video._id}
                 type="button"
                 onClick={() => setPlaying(video)}
-                className="group overflow-hidden rounded-2xl border border-line bg-[#171c2a] text-left ring-teal/0 transition hover:border-teal/40 hover:ring-1 hover:ring-teal/30"
+                className="group overflow-hidden rounded-2xl border border-line bg-surface text-left ring-teal/0 transition hover:border-teal/40 hover:ring-1 hover:ring-teal/30"
               >
-                <div className="relative aspect-video bg-[#0b0f18]">
+                <div className="relative aspect-video bg-overlay">
                   <Thumb id={video.youtubeId} alt="" />
                   <span className="absolute inset-0 bg-black/15 transition group-hover:bg-black/6" />
                   <span className="absolute inset-0 flex items-center justify-center">
-                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-teal/50 bg-[#171c2a]/72 text-teal backdrop-blur-sm">
+                    <span className="flex h-14 w-14 items-center justify-center rounded-full border border-teal/50 bg-surface/72 text-teal backdrop-blur-sm">
                       <svg viewBox="0 0 20 20" className="ml-0.5 h-5 w-5" fill="currentColor">
                         <path d="M7 5.5v9l8-4.5-8-4.5z" />
                       </svg>
                     </span>
                   </span>
                   {time ? (
-                    <span className="absolute right-3 bottom-3 rounded-full bg-[#0b0f18]/78 px-2.5 py-1 text-[11px] font-medium text-ink backdrop-blur-sm">
+                    <span className="absolute right-3 bottom-3 rounded-full bg-overlay/78 px-2.5 py-1 text-[11px] font-medium text-ink backdrop-blur-sm">
                       {time}
                     </span>
                   ) : null}

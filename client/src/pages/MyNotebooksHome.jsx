@@ -24,7 +24,7 @@ export default function MyNotebooksHome() {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-[#1b2030]"
+          className="rounded-xl bg-gold px-4 py-2 text-sm font-semibold text-page"
         >
           New notebook
         </button>

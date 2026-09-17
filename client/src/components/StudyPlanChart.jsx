@@ -118,7 +118,7 @@ export default function StudyPlanChart({
         Sessions marked done each day. Teal is theory, gold is practical. Coral
         is skipped or not logged against the mix.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-[#171c2a]/50">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-surface/50">
         <svg
           width={width}
           height={height}
@@ -244,7 +244,7 @@ export function StudySubjectBars({ bySubject = [] }) {
         return (
           <div
             key={item._id}
-            className="rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+            className="rounded-2xl border border-line bg-raised/80 px-4 py-3"
           >
             <div className="flex items-baseline justify-between gap-2">
               <p className={`text-sm font-medium ${accent.text}`}>
@@ -254,7 +254,7 @@ export function StudySubjectBars({ bySubject = [] }) {
                 {item.theory || 0} · {item.practical || 0}
               </p>
             </div>
-            <div className="mt-2 flex h-2 overflow-hidden rounded-sm bg-[#171c2a] ring-1 ring-white/8">
+            <div className="mt-2 flex h-2 overflow-hidden rounded-sm bg-surface ring-1 ring-white/8">
               <span
                 className="h-full bg-teal"
                 style={{ width: `${theoryPct}%` }}

@@ -113,7 +113,7 @@ export default function ExerciseMinutesChart({ sessions, dayCount = 30 }) {
         Stacked minutes per day. Empty days stay blank so streaks are easy to
         see.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-[#171c2a]/50">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-surface/50">
         <svg
           width={width}
           height={height}

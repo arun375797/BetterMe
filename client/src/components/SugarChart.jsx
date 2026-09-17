@@ -228,7 +228,7 @@ export default function SugarChart({ readings }) {
         Green band is the control zone. Scroll sideways. Hover a point for the
         exact reading.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-[#141824]">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-inset">
         <svg
           width={width}
           height={height}
@@ -475,7 +475,7 @@ export default function SugarChart({ readings }) {
             {insight.spikes.map((item) => (
               <span
                 key={item._id}
-                className="rounded-full border border-coral/30 bg-[#171c2a] px-3 py-1 text-xs"
+                className="rounded-full border border-coral/30 bg-surface px-3 py-1 text-xs"
               >
                 <span className="font-semibold text-coral">{item.level}</span>
                 <span className="text-muted">
@@ -498,7 +498,7 @@ export default function SugarChart({ readings }) {
 
 function Insight({ label, value, hint, good }) {
   return (
-    <div className="rounded-xl border border-line bg-[#171c2a]/80 px-3 py-2.5">
+    <div className="rounded-xl border border-line bg-surface/80 px-3 py-2.5">
       <p className="text-[11px] text-muted">{label}</p>
       <p className={`mt-1 text-xl font-semibold ${good ? "text-teal" : "text-coral"}`}>
         {value}

@@ -27,4 +27,4 @@ export function todayKey(now = new Date()) {
 }
 
 export const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";

@@ -40,9 +40,9 @@ const EXERCISE_LABEL = {
 };
 
 const PRIORITY_DOT = {
-  high: "bg-[#e88b7a]",
-  medium: "bg-[#e8c36a]",
-  low: "bg-[#3ce6d4]",
+  high: "bg-coral",
+  medium: "bg-gold",
+  low: "bg-teal",
 };
 
 function fmtDue(dateStr) {
@@ -285,7 +285,7 @@ export default function TodayPage() {
               return (
                 <li
                   key={item._id}
-                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+                  className="flex flex-wrap items-center gap-3 rounded-2xl border border-line bg-raised/80 px-4 py-3"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs text-muted">
@@ -327,7 +327,7 @@ export default function TodayPage() {
               <li key={`${item.kind || "topic"}-${item._id}`}>
                 <Link
                   to={notebookPath(item)}
-                  className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15 sm:items-center"
+                  className="flex flex-wrap items-start gap-3 rounded-2xl border border-line bg-raised/80 px-4 py-3 transition hover:border-white/15 sm:items-center"
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block text-xs text-muted">Review queue</span>
@@ -412,7 +412,7 @@ export default function TodayPage() {
         <div className="grid gap-2 sm:grid-cols-2">
           <Link
             to="/health/sleep"
-            className="rounded-2xl border border-line bg-[#222838]/80 p-4 transition hover:border-white/15"
+            className="rounded-2xl border border-line bg-raised/80 p-4 transition hover:border-white/15"
           >
             <p className="text-xs text-muted">Last sleep</p>
             <p className="mt-2 text-xl font-semibold">
@@ -437,7 +437,7 @@ export default function TodayPage() {
           </Link>
           <Link
             to="/health/exercise"
-            className="rounded-2xl border border-line bg-[#222838]/80 p-4 transition hover:border-white/15"
+            className="rounded-2xl border border-line bg-raised/80 p-4 transition hover:border-white/15"
           >
             <p className="text-xs text-muted">Exercise today</p>
             <p className="mt-2 text-xl font-semibold">
@@ -473,7 +473,7 @@ export default function TodayPage() {
         {personality ? (
           <Link
             to={`/personality/${personality.section}/${personality._id}`}
-            className="block rounded-2xl border border-line bg-[#222838]/80 p-4 transition hover:border-white/15"
+            className="block rounded-2xl border border-line bg-raised/80 p-4 transition hover:border-white/15"
           >
             <p className="text-xs text-violet">
               {PERSONALITY_SECTIONS[personality.section]?.label ||
@@ -529,7 +529,7 @@ function CheckRow({ to, label, value, hint }) {
   return (
     <Link
       to={to}
-      className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-line bg-[#222838]/80 px-4 py-3 transition hover:border-white/15"
+      className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-line bg-raised/80 px-4 py-3 transition hover:border-white/15"
     >
       <div className="min-w-0">
         <p className="text-xs text-muted">{label}</p>
@@ -543,7 +543,7 @@ function CheckRow({ to, label, value, hint }) {
 
 function TodoRow({ todo, category, overdue, onToggle }) {
   return (
-    <li className="flex items-start gap-3 rounded-2xl border border-line bg-[#222838]/80 px-3 py-3">
+    <li className="flex items-start gap-3 rounded-2xl border border-line bg-raised/80 px-3 py-3">
       <button
         type="button"
         onClick={onToggle}
@@ -551,7 +551,7 @@ function TodoRow({ todo, category, overdue, onToggle }) {
         className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border ${
           todo.done
             ? "border-teal/50 bg-teal/20 text-teal"
-            : "border-line bg-[#171c2a] text-transparent hover:border-teal/40"
+            : "border-line bg-surface text-transparent hover:border-teal/40"
         }`}
       >
         {todo.done ? (

@@ -328,7 +328,7 @@ export default function TopicDetail() {
                           ? answerPath
                           : `/learning/${slug}/${section}/${topicId}/${item._id}`
                     }
-                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5 text-sm hover:border-teal/40"
                   >
                     <span className="min-w-0 flex-1 break-words font-medium">
                       {item.title}
@@ -384,7 +384,7 @@ export default function TopicDetail() {
                 questions.map((item, index) => (
                   <li
                     key={item._id}
-                    className="topic-row rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5"
+                    className="topic-row rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5"
                   >
                     <span className="topic-row-meta w-8 text-xs text-muted">
                       {String(index + 1).padStart(2, "0")}
@@ -456,7 +456,7 @@ export default function TopicDetail() {
                 questions.map((item, index) => (
                   <li
                     key={item._id}
-                    className="topic-row rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5"
+                    className="topic-row rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5"
                   >
                     <span className="topic-row-meta w-8 text-xs text-muted">
                       {String(index + 1).padStart(2, "0")}
@@ -559,7 +559,7 @@ export default function TopicDetail() {
             topic.subtopics.map((sub, index) => (
               <li
                 key={sub._id}
-                className="rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+                className="rounded-2xl border border-line bg-raised/80 px-4 py-3"
               >
                 <div className="topic-row">
                 <span className="topic-row-meta w-8 text-sm text-muted">
@@ -656,7 +656,7 @@ export default function TopicDetail() {
                     {sub.nested?.length ? (
                       sub.nested.map((note) => (
                         <li key={note._id}>
-                          <span className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-[#171c2a] px-3 py-1.5 text-sm text-gold">
+                          <span className="flex min-w-0 flex-wrap items-center gap-2 rounded-lg bg-surface px-3 py-1.5 text-sm text-gold">
                             <span className="min-w-0 break-words">{note.title}</span>
                             <span className="text-[10px] text-muted">
                               from note

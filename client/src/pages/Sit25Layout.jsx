@@ -18,8 +18,8 @@ export default function Sit25Layout() {
   const tabState = from ? { from } : undefined;
 
   return (
-    <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip bg-[#1b2030]">
-      <header className="sticky top-0 z-30 border-b border-line/80 bg-[#171c2a]/96 backdrop-blur-md">
+    <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip bg-page">
+      <header className="sticky top-0 z-30 border-b border-line/80 bg-surface/96 backdrop-blur-md">
         <div className="flex min-h-14 items-center gap-2 px-3 py-2 sm:h-16 sm:gap-3 sm:px-5 sm:py-0">
           <Sit25Mark className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" title="" />
           <MusicControl className="h-8 w-8 shrink-0 sm:h-9 sm:w-9" />
@@ -46,7 +46,7 @@ export default function Sit25Layout() {
           </button>
         </div>
         <div className="flex justify-center px-3 pb-2 sm:justify-end sm:px-5 sm:pb-3">
-          <nav className="flex shrink-0 rounded-full border border-line bg-[#1b2030] p-0.5 text-xs">
+          <nav className="flex shrink-0 rounded-full border border-line bg-page p-0.5 text-xs">
             <NavLink
               to="/sit25"
               end
@@ -75,7 +75,7 @@ export default function Sit25Layout() {
       </header>
       <MusicNowPlaying
         compact
-        className="border-b border-line/80 bg-[#171c2a]/96 px-3 py-2 sm:px-5"
+        className="border-b border-line/80 bg-surface/96 px-3 py-2 sm:px-5"
       />
       <main className="min-w-0 flex-1">
         <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>

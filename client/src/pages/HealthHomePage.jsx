@@ -162,7 +162,7 @@ export default function HealthHomePage() {
         />
       </div>
 
-      <div className="mt-6 rounded-2xl border border-line bg-[#222838]/80 p-5">
+      <div className="mt-6 rounded-2xl border border-line bg-raised/80 p-5">
         <div className="mb-3 flex flex-wrap gap-3 text-xs text-muted">
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-teal" />
@@ -241,7 +241,7 @@ export default function HealthHomePage() {
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
         <SleepQualityCard log={sleepStats?.lastNight} compact />
-        <div className="rounded-2xl border border-line bg-[#222838]/80 p-5">
+        <div className="rounded-2xl border border-line bg-raised/80 p-5">
           <h4 className="text-sm font-semibold">30-day sleep</h4>
           <div className="mt-4">
             <SleepDurationChart logs={sleepLogs} dayCount={30} />
@@ -254,7 +254,7 @@ export default function HealthHomePage() {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>

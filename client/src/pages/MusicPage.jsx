@@ -15,7 +15,7 @@ import {
 import { parseYoutubeId } from "../lib/youtube.js";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
 
 const ALL = "all";
 const FAV = "fav";
@@ -172,8 +172,8 @@ export default function MusicPage() {
     }`;
 
   return (
-    <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip bg-[#1b2030]">
-      <header className="sticky top-0 z-30 border-b border-line/80 bg-[#171c2a]/96 backdrop-blur-md">
+    <div className="flex min-h-dvh min-w-0 flex-col overflow-x-clip bg-page">
+      <header className="sticky top-0 z-30 border-b border-line/80 bg-surface/96 backdrop-blur-md">
         <div className="flex min-h-14 items-center gap-2 px-3 py-2 sm:h-16 sm:gap-3 sm:px-5 sm:py-0">
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold tracking-tight">Music</p>
@@ -359,7 +359,7 @@ export default function MusicPage() {
               return (
                 <li
                   key={item._id}
-                  className={`flex min-w-0 items-center gap-1 rounded-2xl border bg-[#171c2a] p-2 sm:gap-2 sm:p-3 ${
+                  className={`flex min-w-0 items-center gap-1 rounded-2xl border bg-surface p-2 sm:gap-2 sm:p-3 ${
                     isThisPlaying
                       ? "border-teal/50 ring-1 ring-teal/30"
                       : "border-line"

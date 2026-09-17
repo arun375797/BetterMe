@@ -68,7 +68,7 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
         Teal is meals eaten. Coral is skipped or not recorded. Four teal means
         that day was complete.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-[#171c2a]/50">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-surface/50">
         <svg
           width={width}
           height={height}

@@ -604,7 +604,7 @@ export default function NotebookPage() {
       </p>
 
       {isQuestionBook ? null : (
-      <div className="mt-4 max-w-4xl rounded-2xl border border-line bg-[#222838]/80 px-4 py-3">
+      <div className="mt-4 max-w-4xl rounded-2xl border border-line bg-raised/80 px-4 py-3">
         <p className="text-[11px] tracking-[0.18em] text-muted uppercase">
           Video link (clickable)
         </p>
@@ -613,7 +613,7 @@ export default function NotebookPage() {
             value={youtubeUrlDraft}
             onChange={(e) => setYoutubeUrlDraft(e.target.value)}
             placeholder="Paste YouTube link here"
-            className="min-w-[220px] flex-1 rounded-xl border border-line bg-[#171c2a] px-4 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50"
+            className="min-w-[220px] flex-1 rounded-xl border border-line bg-surface px-4 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50"
           />
           <button
             type="button"
@@ -682,7 +682,7 @@ export default function NotebookPage() {
         </>
       ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-[#1c2133] px-3 py-2.5">
+      <div className="mt-5 flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-raised px-3 py-2.5">
         <span className="text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">Size</span>
         {FONT_SIZES.map((size) => (
           <button
@@ -953,7 +953,7 @@ export default function NotebookPage() {
       </div>
       {linkModalOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-[#1c2133] p-6 shadow-2xl">
+          <div className="w-full max-w-sm rounded-2xl border border-white/15 bg-raised p-6 shadow-2xl">
             <h3 className="mb-1 text-sm font-semibold text-ink">Insert hyperlink</h3>
             <p className="mb-4 text-xs text-muted">Select text first, then paste any URL. Clicking the link will open it in a new tab.</p>
             <input
@@ -966,7 +966,7 @@ export default function NotebookPage() {
                 if (e.key === "Enter") applyLink();
                 if (e.key === "Escape") setLinkModalOpen(false);
               }}
-              className="w-full rounded-xl border border-white/15 bg-[#222838] px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/20"
+              className="w-full rounded-xl border border-white/15 bg-raised px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50 focus:ring-2 focus:ring-cyan/20"
             />
             <div className="mt-4 flex justify-end gap-2">
               <button

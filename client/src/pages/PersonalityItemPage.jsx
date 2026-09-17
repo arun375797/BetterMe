@@ -9,7 +9,7 @@ import {
 } from "../api.js";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-violet/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-violet/50";
 
 export default function PersonalityItemPage() {
   const { refreshPersonality } = useOutletContext();
@@ -164,7 +164,7 @@ export default function PersonalityItemPage() {
               type="button"
               onClick={handleSave}
               disabled={saving}
-              className="rounded-xl bg-violet px-4 py-2 text-sm font-semibold text-[#1b2030] disabled:opacity-50"
+              className="rounded-xl bg-violet px-4 py-2 text-sm font-semibold text-page disabled:opacity-50"
             >
               {saving ? "Saving…" : "Save details"}
             </button>

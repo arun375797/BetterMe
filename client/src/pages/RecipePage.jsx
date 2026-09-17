@@ -129,7 +129,7 @@ export default function RecipePage() {
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
-        <article className="rounded-2xl border border-line bg-[#1c2230] p-5">
+        <article className="rounded-2xl border border-line bg-raised p-5">
           <h3 className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
             Method
           </h3>
@@ -138,7 +138,7 @@ export default function RecipePage() {
           </p>
         </article>
         <div className="space-y-4">
-          <article className="rounded-2xl border border-line bg-[#1c2230] p-5">
+          <article className="rounded-2xl border border-line bg-raised p-5">
             <h3 className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
               Sugar note
             </h3>
@@ -146,7 +146,7 @@ export default function RecipePage() {
               {item.sugarNote || "No sugar note yet."}
             </p>
           </article>
-          <article className="rounded-2xl border border-line bg-[#1c2230] p-5">
+          <article className="rounded-2xl border border-line bg-raised p-5">
             <h3 className="text-[11px] font-medium tracking-[0.16em] text-muted uppercase">
               Video
             </h3>
@@ -189,7 +189,7 @@ export default function RecipePage() {
 
 function Macro({ label, value }) {
   return (
-    <div className="bg-[#1c2230] px-4 py-4">
+    <div className="bg-raised px-4 py-4">
       <p className="text-[11px] tracking-wide text-muted uppercase">{label}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums">{value}</p>
     </div>

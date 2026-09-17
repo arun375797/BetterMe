@@ -108,7 +108,7 @@ export default function Layout() {
         onClose={() => setNavOpen(false)}
       />
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line/80 bg-[#171c2a]/94 px-3 backdrop-blur-md lg:hidden">
+        <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b border-line/80 bg-surface/94 px-3 backdrop-blur-md lg:hidden">
           <button
             type="button"
             onClick={() => setNavOpen(true)}
@@ -142,7 +142,7 @@ export default function Layout() {
         </header>
         <MusicNowPlaying
           compact
-          className="sticky top-14 z-20 border-b border-line/80 bg-[#171c2a]/94 px-3 py-2 backdrop-blur-md lg:hidden"
+          className="sticky top-14 z-20 border-b border-line/80 bg-surface/94 px-3 py-2 backdrop-blur-md lg:hidden"
         />
         <main className="min-w-0 flex-1 max-lg:[&_.page-pad]:pr-16">
           {error ? (

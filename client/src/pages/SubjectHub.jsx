@@ -51,7 +51,7 @@ export default function SubjectHub() {
               <Link
                 key={track.id}
                 to={`/learning/${slug}/${track.id}`}
-                className={`rounded-2xl border border-line bg-[#222838]/80 p-6 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${trackAccent.glow}`}
+                className={`rounded-2xl border border-line bg-raised/80 p-6 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${trackAccent.glow}`}
               >
                 <p className={`text-xs font-medium ${trackAccent.text}`}>
                   Section
@@ -68,7 +68,7 @@ export default function SubjectHub() {
           {slug === "dsa" ? (
             <Link
               to="/learning/dsa/namaste-dev"
-              className={`rounded-2xl border border-line bg-[#222838]/80 p-6 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accentMap.violet.glow}`}
+              className={`rounded-2xl border border-line bg-raised/80 p-6 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accentMap.violet.glow}`}
             >
               <p className={`text-xs font-medium ${accentMap.violet.text}`}>
                 Course

@@ -121,7 +121,7 @@ export default function LearningHome() {
                 <Link
                   key={subject.slug}
                   to={`/learning/plan/${subject.slug}`}
-                  className={`rounded-2xl border border-line bg-[#222838]/80 p-5 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accent.glow}`}
+                  className={`rounded-2xl border border-line bg-raised/80 p-5 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accent.glow}`}
                 >
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -263,7 +263,7 @@ function LanguagePlanList({ subjects, items, onEdit, onDelete }) {
         return (
           <div
             key={slug}
-            className="rounded-2xl border border-line bg-[#222838]/80"
+            className="rounded-2xl border border-line bg-raised/80"
           >
             <button
               type="button"
@@ -384,7 +384,7 @@ function LanguagePlanList({ subjects, items, onEdit, onDelete }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 px-4 py-4">
+    <div className="rounded-2xl border border-line bg-raised/80 px-4 py-4">
       <p className="text-[11px] tracking-[0.16em] text-muted uppercase">
         {label}
       </p>

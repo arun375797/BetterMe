@@ -166,7 +166,7 @@ export default function NotebookBookWrite() {
             type="button"
             onClick={save}
             disabled={saving}
-            className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-[#1b2030] disabled:opacity-50"
+            className="rounded-lg bg-gold px-3 py-1.5 text-sm font-semibold text-page disabled:opacity-50"
           >
             {saving ? "Saving…" : "Save"}
           </button>

@@ -81,7 +81,7 @@ export default function MusicProgress({ compact = false, showTitle = false }) {
               style={{ width: `${pct}%` }}
             />
             <span
-              className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-[#171c2a] bg-teal shadow-[0_0_0_1px_rgba(60,230,212,0.35)] ${knob}`}
+              className={`absolute top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-surface bg-teal shadow-[0_0_0_1px_color-mix(in_oklab,var(--color-teal)_35%,transparent)] ${knob}`}
               style={{ left: `${pct}%` }}
             />
           </div>

@@ -24,7 +24,7 @@ export function Dialog({ size = "form", onClose, children }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-[#0b0f18]/78 px-3 py-3 backdrop-blur-[7px] sm:items-center sm:px-4 sm:py-6"
+      className="fixed inset-0 z-50 flex items-end justify-center overflow-hidden bg-overlay/78 px-3 py-3 backdrop-blur-[7px] sm:items-center sm:px-4 sm:py-6"
       data-lenis-prevent
       onClick={onClose}
       role="presentation"
@@ -37,7 +37,7 @@ export function Dialog({ size = "form", onClose, children }) {
           formLike
             ? "max-h-[calc(100dvh-1.5rem)] sm:max-h-[calc(100dvh-3rem)]"
             : ""
-        } rounded-t-2xl border border-white/10 bg-[#1e2434] shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5 sm:rounded-2xl`}
+        } rounded-t-2xl border border-white/10 bg-dialog shadow-[0_28px_80px_rgba(0,0,0,0.55)] ring-1 ring-white/5 sm:rounded-2xl`}
         onClick={(e) => e.stopPropagation()}
         onWheel={(e) => e.stopPropagation()}
         onTouchMove={(e) => e.stopPropagation()}
@@ -74,7 +74,7 @@ export function DialogHeader({ kicker, title, onClose }) {
 
 export function DialogFooter({ children }) {
   return (
-    <div className="flex flex-wrap justify-end gap-2 border-t border-white/8 bg-[#171c2a]/40 px-4 py-4 sm:px-6">
+    <div className="flex flex-wrap justify-end gap-2 border-t border-white/8 bg-surface/40 px-4 py-4 sm:px-6">
       {children}
     </div>
   );

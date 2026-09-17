@@ -123,7 +123,7 @@ export default function ExerciseKindPage() {
           {sessions.map((item) => (
             <li
               key={item._id}
-              className="rounded-2xl border border-line bg-[#222838]/80 px-4 py-4"
+              className="rounded-2xl border border-line bg-raised/80 px-4 py-4"
             >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -182,7 +182,7 @@ export default function ExerciseKindPage() {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>

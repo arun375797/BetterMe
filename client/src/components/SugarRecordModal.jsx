@@ -4,7 +4,7 @@ import { ClockFields12 } from "./TimePicker12.jsx";
 import { wallClockPayload } from "../lib/wallClock.js";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
 
 function pad(n) {
   return String(n).padStart(2, "0");
@@ -153,7 +153,7 @@ export default function SugarRecordModal({ reading, onClose, onSubmit }) {
                 className={`rounded-xl border px-3 py-2.5 text-sm ${
                   mealTiming === item.id
                     ? "border-coral/50 bg-coral/15 text-ink"
-                    : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                    : "border-line bg-surface text-muted hover:bg-white/5"
                 }`}
               >
                 {item.label}

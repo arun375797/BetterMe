@@ -51,7 +51,7 @@ export default function PersonalitySectionPage() {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className="rounded-xl bg-violet px-4 py-2.5 text-sm font-semibold text-[#1b2030]"
+          className="rounded-xl bg-violet px-4 py-2.5 text-sm font-semibold text-page"
         >
           {meta.addLabel}
         </button>
@@ -76,7 +76,7 @@ export default function PersonalitySectionPage() {
             <Link
               key={item._id}
               to={`/personality/${section}/${item._id}`}
-              className="rounded-2xl border border-line bg-[#222838]/80 p-5 transition hover:border-white/15"
+              className="rounded-2xl border border-line bg-raised/80 p-5 transition hover:border-white/15"
             >
               <h3 className="text-xl font-semibold">{item.title}</h3>
               <p className="mt-2 text-sm text-muted">

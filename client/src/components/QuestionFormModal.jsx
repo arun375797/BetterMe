@@ -6,7 +6,7 @@ import IdeEditor from "./IdeEditor.jsx";
 const LANGS = ["javascript", "python", "html", "css", "json", "text"];
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
 
 function newSolution() {
   return {
@@ -155,7 +155,7 @@ export default function QuestionFormModal({
                   className={`rounded-xl border px-3 py-1.5 text-sm ${
                     difficulty === item.id
                       ? item.className
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {item.label}
@@ -168,7 +168,7 @@ export default function QuestionFormModal({
             {solutions.map((item, index) => (
               <div
                 key={item.id}
-                className="space-y-3 rounded-2xl border border-white/8 bg-[#171c2a]/70 p-4"
+                className="space-y-3 rounded-2xl border border-white/8 bg-surface/70 p-4"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <p className="text-sm font-medium">Way {index + 1}</p>
@@ -177,7 +177,7 @@ export default function QuestionFormModal({
                     onChange={(e) =>
                       patchSolution(item.id, { language: e.target.value })
                     }
-                    className="rounded-lg border border-line bg-[#121826] px-2 py-1 text-xs"
+                    className="rounded-lg border border-line bg-inset px-2 py-1 text-xs"
                   >
                     {LANGS.map((lang) => (
                       <option key={lang} value={lang}>
@@ -235,7 +235,7 @@ export default function QuestionFormModal({
           </div>
         </div>
 
-        <div className="flex flex-col bg-[#171c2a]/50 p-4 sm:p-6">
+        <div className="flex flex-col bg-surface/50 p-4 sm:p-6">
           <p className="text-[11px] tracking-[0.18em] text-gold uppercase">
             Related section
           </p>

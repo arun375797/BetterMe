@@ -197,7 +197,7 @@ export default function SugarPage() {
           />
         </div>
 
-        <div className="mt-6 min-w-0 rounded-2xl border border-line bg-[#222838]/80 p-5">
+        <div className="mt-6 min-w-0 rounded-2xl border border-line bg-raised/80 p-5">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
@@ -216,7 +216,7 @@ export default function SugarPage() {
                   className={`rounded-full border px-3 py-1.5 text-xs ${
                     filter === item.id
                       ? "border-coral/50 bg-coral/15 text-ink"
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {item.label}
@@ -267,7 +267,7 @@ export default function SugarPage() {
               {sortedLog.map((item) => (
                 <li
                   key={item._id}
-                  className="flex items-center gap-3 rounded-2xl border border-line bg-[#222838]/80 px-3 py-2.5"
+                  className="flex items-center gap-3 rounded-2xl border border-line bg-raised/80 px-3 py-2.5"
                 >
                   <span
                     className={`w-12 shrink-0 text-right text-[22px] leading-none font-semibold ${
@@ -390,7 +390,7 @@ export default function SugarPage() {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>

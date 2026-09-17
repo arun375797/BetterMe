@@ -259,7 +259,7 @@ export default function QuestionViewPage() {
           ways.map((way, index) => (
             <div
               key={way.id || index}
-              className="rounded-2xl border border-line bg-[#222838]/80 p-4"
+              className="rounded-2xl border border-line bg-raised/80 p-4"
             >
               <p className="text-[11px] tracking-[0.14em] text-muted uppercase">
                 Way {index + 1}

@@ -58,9 +58,9 @@ export default function CategoryFormModal({
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-[#0b0f18]/70 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay/70 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-sm rounded-2xl border border-line bg-[#1e2638] p-6 shadow-2xl">
+      <div className="relative w-full max-w-sm rounded-2xl border border-line bg-dialog p-6 shadow-2xl">
         <h2 className="mb-4 text-base font-semibold">
           {editing ? "Edit Category" : "New Category"}
         </h2>
@@ -136,7 +136,7 @@ export default function CategoryFormModal({
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-lg px-4 py-1.5 text-xs font-medium text-[#0b0f18] disabled:opacity-50"
+                className="rounded-lg px-4 py-1.5 text-xs font-medium text-overlay disabled:opacity-50"
                 style={{ background: color }}
               >
                 {saving ? "Saving…" : editing ? "Save changes" : "Create"}

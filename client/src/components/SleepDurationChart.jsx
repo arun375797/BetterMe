@@ -75,7 +75,7 @@ export default function SleepDurationChart({ logs, dayCount = 30 }) {
         Hours slept per night (by wake date). Teal band marks the 7–9 hour
         target. Bar color reflects sleep quality score.
       </p>
-      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-[#171c2a]/50">
+      <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-surface/50">
         <svg
           width={width}
           height={height}

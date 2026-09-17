@@ -26,7 +26,7 @@ function pad(n) {
 }
 
 const selectClass =
-  "w-full min-w-[4.5rem] rounded-xl border border-line bg-[#171c2a] px-2.5 py-2.5 text-sm tabular-nums outline-none focus:border-coral/50 disabled:opacity-40";
+  "w-full min-w-[4.5rem] rounded-xl border border-line bg-surface px-2.5 py-2.5 text-sm tabular-nums outline-none focus:border-coral/50 disabled:opacity-40";
 
 /** Always-visible 12-hour hour, minute, and AM/PM fields. */
 export function ClockFields12({ value = "", onChange, disabled = false }) {
@@ -90,7 +90,7 @@ export function ClockFields12({ value = "", onChange, disabled = false }) {
                 className={`py-2.5 text-xs font-semibold disabled:opacity-40 ${
                   clock.ampm === part
                     ? "bg-coral/18 text-ink"
-                    : "bg-[#171c2a] text-muted hover:bg-white/5"
+                    : "bg-surface text-muted hover:bg-white/5"
                 }`}
               >
                 {part}
@@ -192,7 +192,7 @@ export default function TimePicker12({
         <div
           role="dialog"
           aria-label="Pick a time"
-          className="absolute right-0 top-full z-[70] mt-2 w-[min(100vw-2rem,20rem)] rounded-2xl border border-line bg-[#1e2638] p-3 shadow-2xl ring-1 ring-white/5"
+          className="absolute right-0 top-full z-[70] mt-2 w-[min(100vw-2rem,20rem)] rounded-2xl border border-line bg-dialog p-3 shadow-2xl ring-1 ring-white/5"
         >
           <ClockFields12 value={value} onChange={onChange} />
         </div>

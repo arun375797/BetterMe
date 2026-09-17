@@ -97,7 +97,7 @@ export default function FoodFormModal({ item, defaultSlot, onClose, onSubmit }) 
                   className={`rounded-lg border px-2 py-2 text-left ${
                     slots.includes(slot.id)
                       ? "border-coral/50 bg-coral/12 text-ink"
-                      : "border-line bg-[#171c2a] text-muted"
+                      : "border-line bg-surface text-muted"
                   }`}
                 >
                   <span className="block text-xs font-semibold">{slot.label}</span>

@@ -6,6 +6,14 @@
     <title>BetterMe</title>
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#171c2a" />
+    <script>
+      try {
+        var t = localStorage.getItem("ui-theme");
+        if (t === "harbor" || t === "jellyfish" || t === "ember" || t === "ink") {
+          document.documentElement.setAttribute("data-ui-theme", t);
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link rel="preconnect" href="https://betterme-production.up.railway.app" />

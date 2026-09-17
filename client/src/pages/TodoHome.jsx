@@ -18,9 +18,9 @@ import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 // ── helpers ───────────────────────────────────────────────────
 
 const PRIORITY_META = {
-  high: { label: "High", color: "#e88b7a", dot: "bg-[#e88b7a]" },
-  medium: { label: "Medium", color: "#e8c36a", dot: "bg-[#e8c36a]" },
-  low: { label: "Low", color: "#3ce6d4", dot: "bg-[#3ce6d4]" },
+  high: { label: "High", color: "#e88b7a", dot: "bg-coral" },
+  medium: { label: "Medium", color: "#e8c36a", dot: "bg-gold" },
+  low: { label: "Low", color: "#3ce6d4", dot: "bg-teal" },
 };
 
 function fmtTime(dateStr) {
@@ -118,9 +118,9 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
         type="button"
         aria-label="Close"
         onClick={onClose}
-        className="absolute inset-0 bg-[#0b0f18]/72 backdrop-blur-sm"
+        className="absolute inset-0 bg-overlay/72 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-md rounded-2xl border border-line bg-[#1e2638] p-6 shadow-2xl">
+      <div className="relative w-full max-w-md rounded-2xl border border-line bg-dialog p-6 shadow-2xl">
         <div className="mb-5 flex items-center justify-between">
           <h2 className="text-base font-semibold text-ink">Edit Todo</h2>
           <button
@@ -260,7 +260,7 @@ function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
       className={`group flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors ${
         todo.done
           ? "border-line/40 bg-white/2 opacity-60"
-          : "border-line/60 bg-[#222838]/60 hover:border-line"
+          : "border-line/60 bg-raised/60 hover:border-line"
       }`}
     >
       <button
@@ -395,7 +395,7 @@ function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
   return (
     <form
       onSubmit={submit}
-      className="rounded-2xl border border-cyan/30 bg-[#1e2638] p-4 shadow-lg ring-1 ring-cyan/10"
+      className="rounded-2xl border border-cyan/30 bg-dialog p-4 shadow-lg ring-1 ring-cyan/10"
     >
       <div className="mb-3 flex items-center gap-2">
         <span className="h-2 w-2 rounded-full bg-cyan" />
@@ -481,7 +481,7 @@ function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
 
 function StatCard({ label, value, sub, color = "#6ec8ff" }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-[11px] tracking-wide text-muted uppercase">{label}</p>
       <p className="mt-2 text-2xl font-semibold" style={{ color }}>
         {value}

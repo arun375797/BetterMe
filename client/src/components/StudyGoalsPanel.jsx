@@ -136,7 +136,7 @@ export default function StudyGoalsPanel({ slug, section }) {
             onChange={(e) => setDraft(e.target.value)}
             placeholder="e.g. path & query params"
             maxLength={240}
-            className="min-w-0 flex-1 rounded-xl border border-line bg-[#171c2a] px-3 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50"
+            className="min-w-0 flex-1 rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50"
           />
           <button
             type="submit"
@@ -198,7 +198,7 @@ function GoalRow({ goal, onToggle, onRemove }) {
       className={`group flex items-start gap-2 rounded-xl border px-2.5 py-2 ${
         goal.done
           ? "border-line/40 bg-white/[0.02]"
-          : "border-line/70 bg-[#171c2a]/80"
+          : "border-line/70 bg-surface/80"
       }`}
     >
       <button

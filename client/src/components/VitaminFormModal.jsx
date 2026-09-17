@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Dialog } from "./Dialog.jsx";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-coral/50";
 
 const TIMINGS = [
   { id: "morning", label: "Morning" },
@@ -113,7 +113,7 @@ export default function VitaminFormModal({ item, onClose, onSubmit }) {
                   className={`rounded-xl border px-3 py-2.5 text-sm ${
                     kind === option.id
                       ? "border-coral/50 bg-coral/15 text-ink"
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {option.label}
@@ -147,7 +147,7 @@ export default function VitaminFormModal({ item, onClose, onSubmit }) {
                   className={`rounded-xl border px-3 py-2.5 text-sm ${
                     timings.includes(option.id)
                       ? "border-coral/50 bg-coral/15 text-ink"
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {option.label}
@@ -167,7 +167,7 @@ export default function VitaminFormModal({ item, onClose, onSubmit }) {
                   className={`rounded-xl border px-3 py-2.5 text-sm ${
                     foodTiming === option.id
                       ? "border-teal/50 bg-teal/12 text-ink"
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {option.label}

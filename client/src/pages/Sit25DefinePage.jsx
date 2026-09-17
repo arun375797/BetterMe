@@ -14,7 +14,7 @@ import {
 } from "../lib/youtube.js";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
 
 const emptyForm = {
   title: "",
@@ -184,7 +184,7 @@ export default function Sit25DefinePage() {
           return (
             <li
               key={video._id}
-              className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-[#171c2a] p-2 pr-3 sm:flex-nowrap sm:gap-3"
+              className="flex flex-wrap items-center gap-2 rounded-2xl border border-line bg-surface p-2 pr-3 sm:flex-nowrap sm:gap-3"
             >
               <img
                 src={youtubeThumb(video.youtubeId)}

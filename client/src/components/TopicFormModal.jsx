@@ -4,7 +4,7 @@ import { Dialog, DialogFooter, DialogHeader } from "./Dialog.jsx";
 const LEVELS = ["low", "medium", "hard"];
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
 
 export function StarIcon({ filled, className = "h-4 w-4" }) {
   return (
@@ -87,7 +87,7 @@ export default function TopicFormModal({
                     className={`rounded-xl border px-3 py-2 text-sm capitalize ${
                       level === item
                         ? "border-teal/50 bg-teal/15 text-ink"
-                        : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                        : "border-line bg-surface text-muted hover:bg-white/5"
                     }`}
                   >
                     {item}
@@ -115,7 +115,7 @@ export default function TopicFormModal({
               className={`flex w-full items-center gap-3 rounded-xl border px-4 py-3 text-left text-sm ${
                 highlighted
                   ? "border-gold/50 bg-gold/12 text-gold"
-                  : "border-line bg-[#171c2a] text-muted"
+                  : "border-line bg-surface text-muted"
               }`}
             >
               <StarIcon filled={highlighted} />

@@ -208,7 +208,7 @@ export default function FoodPage() {
               />
             ))}
           </div>
-          <div className="mt-6 rounded-2xl border border-line bg-[#222838]/80 p-5">
+          <div className="mt-6 rounded-2xl border border-line bg-raised/80 p-5">
             <div className="flex flex-wrap items-end justify-between gap-2">
               <div>
                 <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
@@ -270,7 +270,7 @@ export default function FoodPage() {
             />
           </div>
 
-          <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-[#222838]/80">
+          <div className="mt-4 overflow-hidden rounded-2xl border border-line bg-raised/80">
             <div className="hidden grid-cols-[minmax(0,1.6fr)_140px_minmax(0,1fr)_auto] gap-4 border-b border-line px-4 py-2.5 text-[11px] tracking-wide text-muted uppercase sm:grid">
               <span>Style</span>
               <span>Cuisine</span>
@@ -373,7 +373,7 @@ function Tab({ active, onClick, label }) {
       className={`rounded-full border px-3 py-1.5 text-xs ${
         active
           ? "border-coral/50 bg-coral/15 text-ink"
-          : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+          : "border-line bg-surface text-muted hover:bg-white/5"
       }`}
     >
       {label}
@@ -391,7 +391,7 @@ function Chip({ active, onClick, label, gold }) {
           ? gold
             ? "border-gold/50 bg-gold/15 text-ink"
             : "border-coral/50 bg-coral/15 text-ink"
-          : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+          : "border-line bg-surface text-muted hover:bg-white/5"
       }`}
     >
       {label}
@@ -401,7 +401,7 @@ function Chip({ active, onClick, label, gold }) {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold tabular-nums">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>
@@ -417,7 +417,7 @@ function MealCard({ slot, log, onLog }) {
     <button
       type="button"
       onClick={onLog}
-      className="rounded-2xl border border-line bg-[#222838]/80 p-4 text-left hover:border-coral/40"
+      className="rounded-2xl border border-line bg-raised/80 p-4 text-left hover:border-coral/40"
     >
       <div className="flex items-start justify-between gap-3">
         <div>

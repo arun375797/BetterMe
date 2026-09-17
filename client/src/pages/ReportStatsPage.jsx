@@ -196,7 +196,7 @@ function ResourceBar({ bar, color }) {
           <span className="text-muted"> / {bar.max}</span>
         </span>
       </div>
-      <div className="relative h-2 overflow-hidden rounded-sm bg-[#0a0e16] ring-1 ring-white/8">
+      <div className="relative h-2 overflow-hidden rounded-sm bg-overlay ring-1 ring-white/8">
         <div
           className="absolute inset-y-0 left-0 transition-[width] duration-700 ease-out"
           style={{
@@ -224,7 +224,7 @@ function StatRow({ stat, delay, open, onToggle }) {
   const guide = stat.guide;
 
   return (
-    <div className="rounded-xl bg-[#0c111c]/70 ring-1 ring-white/6">
+    <div className="rounded-xl bg-inset/70 ring-1 ring-white/6">
       <button
         type="button"
         onClick={onToggle}
@@ -269,7 +269,7 @@ function StatRow({ stat, delay, open, onToggle }) {
               </span>
             </span>
           </div>
-          <div className="relative h-2 overflow-hidden rounded-sm bg-[#070a10] ring-1 ring-white/5">
+          <div className="relative h-2 overflow-hidden rounded-sm bg-overlay ring-1 ring-white/5">
             <div
               className="absolute inset-y-0 left-0 transition-[width] duration-700 ease-out"
               style={{
@@ -301,7 +301,7 @@ function StatRow({ stat, delay, open, onToggle }) {
               </div>
               {guide.compare?.length ? (
                 <div className="overflow-hidden rounded-lg ring-1 ring-white/8">
-                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 bg-[#070a10] px-2.5 py-1.5 font-mono text-[10px] tracking-wider text-muted uppercase">
+                  <div className="grid grid-cols-[1fr_auto_auto] gap-x-3 bg-overlay px-2.5 py-1.5 font-mono text-[10px] tracking-wider text-muted uppercase">
                     <span>You vs target</span>
                     <span>You</span>
                     <span>Goal</span>
@@ -517,7 +517,7 @@ export default function ReportStatsPage() {
                         : `${rank.xpInto} / ${rank.xpNeed} → ${rank.nextRank}`}
                     </span>
                   </div>
-                  <div className="relative h-2.5 overflow-hidden rounded-sm bg-[#0a0e16] ring-1 ring-gold/20">
+                  <div className="relative h-2.5 overflow-hidden rounded-sm bg-overlay ring-1 ring-gold/20">
                     <div
                       className="absolute inset-y-0 left-0 bg-gradient-to-r from-gold/50 to-gold transition-[width] duration-700"
                       style={{ width: `${rank?.xpPct ?? 0}%` }}
@@ -651,7 +651,7 @@ export default function ReportStatsPage() {
                     <Link
                       key={quest.id}
                       to={quest.href}
-                      className="rounded-xl bg-[#0c111c]/80 p-3 ring-1 ring-white/8 transition hover:bg-white/5 hover:ring-gold/30"
+                      className="rounded-xl bg-inset/80 p-3 ring-1 ring-white/8 transition hover:bg-white/5 hover:ring-gold/30"
                     >
                       <p
                         className="font-mono text-[10px] tracking-[0.2em] font-bold"
@@ -694,7 +694,7 @@ export default function ReportStatsPage() {
 
 function MiniStat({ label, value }) {
   return (
-    <div className="rounded-xl bg-[#0c111c]/80 px-3 py-2 ring-1 ring-white/6">
+    <div className="rounded-xl bg-inset/80 px-3 py-2 ring-1 ring-white/6">
       <p className="text-[10px] tracking-wider text-muted uppercase">{label}</p>
       <p className="font-mono text-sm font-semibold text-ink">{value}</p>
     </div>

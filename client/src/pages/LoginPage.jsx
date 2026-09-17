@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { login } from "../api.js";
 import { readSession, saveSession } from "../authSession.js";
 import Logo from "../components/Logo.jsx";
+import { ThemeStrip } from "../theme.jsx";
 
 const KEYS = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "", "0", "del"];
 
@@ -70,14 +71,7 @@ export default function LoginPage({ onUnlocked }) {
 
   return (
     <div className="relative flex min-h-dvh items-center justify-center overflow-hidden px-4 py-10">
-      <div
-        className="pointer-events-none absolute inset-0 opacity-80"
-        aria-hidden
-        style={{
-          background:
-            "radial-gradient(900px 480px at 18% -8%, rgba(60,230,212,0.16), transparent 58%), radial-gradient(700px 420px at 92% 8%, rgba(232,195,106,0.12), transparent 52%), radial-gradient(600px 360px at 50% 110%, rgba(185,166,255,0.08), transparent 55%)",
-        }}
-      />
+      <div className="ui-login-glow pointer-events-none absolute inset-0 opacity-90" aria-hidden />
       <div className="relative w-full max-w-[400px]">
         <div className="mb-8 flex flex-col items-center text-center">
           <Logo iconClass="h-11 w-11" />
@@ -93,7 +87,7 @@ export default function LoginPage({ onUnlocked }) {
         </div>
 
         <div
-          className={`rounded-2xl border border-white/10 bg-[#1e2434]/90 p-6 shadow-[0_28px_80px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-md sm:p-7 ${
+          className={`rounded-2xl border border-white/10 bg-dialog/90 p-6 shadow-[0_28px_80px_rgba(0,0,0,0.45)] ring-1 ring-white/5 backdrop-blur-md sm:p-7 ${
             shake ? "pin-shake" : ""
           }`}
           onClick={() => hiddenRef.current?.focus()}
@@ -124,7 +118,7 @@ export default function LoginPage({ onUnlocked }) {
                       ? "border-teal/50 bg-teal/12 text-teal shadow-[0_0_20px_rgba(60,230,212,0.12)]"
                       : active
                         ? "border-gold/45 bg-white/6 text-ink"
-                        : "border-white/10 bg-[#171c2a] text-muted"
+                        : "border-white/10 bg-surface text-muted"
                   }`}
                 >
                   {filled ? "•" : ""}
@@ -179,6 +173,12 @@ export default function LoginPage({ onUnlocked }) {
               Checking…
             </p>
           ) : null}
+        </div>
+        <div className="mt-5">
+          <p className="mb-2 text-center text-[11px] tracking-[0.18em] text-muted uppercase">
+            Look
+          </p>
+          <ThemeStrip />
         </div>
       </div>
     </div>

@@ -22,7 +22,7 @@ function ScoreBar({ label, value, hint, color = "#b9a6ff" }) {
 export default function SleepQualityCard({ log, compact = false }) {
   if (!log) {
     return (
-      <div className="rounded-2xl border border-line bg-[#222838]/80 p-5">
+      <div className="rounded-2xl border border-line bg-raised/80 p-5">
         <p className="text-sm text-muted">No sleep logged yet.</p>
       </div>
     );
@@ -32,7 +32,7 @@ export default function SleepQualityCard({ log, compact = false }) {
 
   if (compact) {
     return (
-      <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+      <div className="rounded-2xl border border-line bg-raised/80 p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-xs text-muted">Last night</p>
@@ -67,7 +67,7 @@ export default function SleepQualityCard({ log, compact = false }) {
   }
 
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-5">
+    <div className="rounded-2xl border border-line bg-raised/80 p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">

@@ -165,13 +165,13 @@ export default function SubjectPage() {
             : "Click a topic for its answer notebook and subtopic notebooks. Starred topics stay at the top."}
         </p>
 
-        <div className="mt-5 rounded-2xl border border-line bg-[#222838]/70 p-4 ring-1 ring-teal/15">
+        <div className="mt-5 rounded-2xl border border-line bg-raised/70 p-4 ring-1 ring-teal/15">
           <div className="flex flex-col gap-3 md:flex-row">
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Filter topics…"
-              className="w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50 md:max-w-[240px]"
+              className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50 md:max-w-[240px]"
             />
             <button
               type="button"
@@ -212,7 +212,7 @@ export default function SubjectPage() {
                 <li key={`${item.kind || "topic"}-${item._id}`}>
                   <Link
                     to={notebookPath(item)}
-                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-[#171c2a]/80 px-3 py-2.5 text-sm hover:border-teal/40"
+                    className="flex flex-wrap items-start justify-between gap-2 rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5 text-sm hover:border-teal/40"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="break-words font-medium">{item.title}</span>
@@ -242,7 +242,7 @@ export default function SubjectPage() {
             return (
               <li
                 key={topic._id}
-                className={`rounded-2xl border bg-[#222838]/80 px-4 py-4 ${
+                className={`rounded-2xl border bg-raised/80 px-4 py-4 ${
                   topic.highlighted
                     ? "border-gold/40 shadow-[0_0_20px_rgba(232,195,106,0.12)]"
                     : "border-line"
@@ -344,7 +344,7 @@ export default function SubjectPage() {
                           <li key={sub._id}>
                             <Link
                               to={`/learning/${slug}/${section}/${topic._id}/${sub._id}`}
-                              className="flex flex-wrap items-start gap-2 rounded-xl bg-[#171c2a] px-3 py-2 text-sm hover:bg-white/5 sm:items-center"
+                              className="flex flex-wrap items-start gap-2 rounded-xl bg-surface px-3 py-2 text-sm hover:bg-white/5 sm:items-center"
                             >
                               <span className="w-6 shrink-0 text-xs text-muted">
                                 {String(sub.slNo ?? index + 1).padStart(2, "0")}

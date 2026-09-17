@@ -94,12 +94,12 @@ export default function Sidebar({
         aria-label="Close menu"
         tabIndex={open ? 0 : -1}
         onClick={onClose}
-        className={`fixed inset-0 z-40 bg-[#0b0f18]/62 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden ${
+        className={`fixed inset-0 z-40 bg-overlay/62 backdrop-blur-[2px] transition-opacity duration-200 lg:hidden ${
           open ? "opacity-100" : "pointer-events-none opacity-0"
         }`}
       />
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(280px,88vw)] shrink-0 flex-col overflow-hidden border-r border-line/80 bg-[#171c2a] px-4 py-5 shadow-[16px_0_40px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-0 lg:h-dvh lg:w-[260px] lg:translate-x-0 lg:bg-[#171c2a]/90 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-50 flex h-dvh max-h-dvh min-h-0 w-[min(280px,88vw)] shrink-0 flex-col overflow-hidden border-r border-line/80 bg-surface px-4 py-5 shadow-[16px_0_40px_rgba(0,0,0,0.38)] transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-0 lg:h-dvh lg:w-[260px] lg:translate-x-0 lg:bg-surface/90 lg:shadow-none ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >

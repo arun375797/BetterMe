@@ -238,7 +238,7 @@ export default function QuestionsPage() {
             questions.map((item, index) => (
               <li
                 key={item._id}
-                className="topic-row rounded-2xl border border-line bg-[#222838]/80 px-4 py-3"
+                className="topic-row rounded-2xl border border-line bg-raised/80 px-4 py-3"
               >
                 <span className="topic-row-meta w-8 text-sm text-muted">
                   {String(index + 1).padStart(2, "0")}

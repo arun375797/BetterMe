@@ -3,7 +3,7 @@ import { todayKey } from "../food.js";
 import { Dialog, DialogFooter, DialogHeader } from "./Dialog.jsx";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
+  "w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50";
 
 const PRIORITIES = [
   { id: "high", label: "High" },
@@ -122,7 +122,7 @@ export default function PlanItemFormModal({
                   className={`rounded-xl border px-3 py-2 text-sm ${
                     priority === item.id
                       ? "border-teal/50 bg-teal/15 text-ink"
-                      : "border-line bg-[#171c2a] text-muted hover:bg-white/5"
+                      : "border-line bg-surface text-muted hover:bg-white/5"
                   }`}
                 >
                   {item.label}

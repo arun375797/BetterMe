@@ -11,7 +11,7 @@ import { formatDuration } from "../lib/duration.js";
 import { accentMap } from "../theme.jsx";
 
 const fieldClass =
-  "w-full rounded-xl border border-line bg-[#171c2a] px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-violet/50";
+  "w-full rounded-xl border border-line bg-surface px-3 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-violet/50";
 
 function VideoRow({
   video,
@@ -33,7 +33,7 @@ function VideoRow({
 
   if (editing) {
     return (
-      <li className="rounded-xl border border-line bg-[#222838]/80 px-3 py-2">
+      <li className="rounded-xl border border-line bg-raised/80 px-3 py-2">
         <form
           className="grid gap-2 sm:grid-cols-[1fr_120px_auto]"
           onSubmit={(e) => {
@@ -64,7 +64,7 @@ function VideoRow({
   }
 
   return (
-    <li className="rounded-xl border border-line bg-[#222838]/80 px-3 py-2">
+    <li className="rounded-xl border border-line bg-raised/80 px-3 py-2">
       <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <input
           type="checkbox"
@@ -93,7 +93,7 @@ function VideoRow({
           onClick={() => onToggle(video, { favorite: !video.favorite })}
         />
       </div>
-      <div className="mt-1.5 ml-10 h-1 overflow-hidden rounded-sm bg-[#171c2a]">
+      <div className="mt-1.5 ml-10 h-1 overflow-hidden rounded-sm bg-surface">
         <span className="block h-full bg-violet" style={{ width: `${width}%` }} />
       </div>
     </li>
@@ -232,7 +232,7 @@ export default function NamasteDevPage() {
           return (
             <details
               key={group.name}
-              className="group rounded-2xl border border-line bg-[#222838]/80"
+              className="group rounded-2xl border border-line bg-raised/80"
             >
               <summary className="flex cursor-pointer list-none items-center gap-3 px-4 py-3 [&::-webkit-details-marker]:hidden">
                 <svg

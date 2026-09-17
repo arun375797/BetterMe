@@ -138,7 +138,7 @@ export default function ExercisePage() {
           <Link
             key={kind.id}
             to={`/health/exercise/${kind.id}`}
-            className="rounded-2xl border border-line bg-[#222838]/80 p-5 hover:border-coral/40"
+            className="rounded-2xl border border-line bg-raised/80 p-5 hover:border-coral/40"
           >
             <p className="text-[12px] tracking-[0.16em] text-muted uppercase">
               {kind.label}
@@ -155,7 +155,7 @@ export default function ExercisePage() {
         ))}
       </div>
 
-      <div className="mt-10 rounded-2xl border border-line bg-[#222838]/80 p-5">
+      <div className="mt-10 rounded-2xl border border-line bg-raised/80 p-5">
         <div className="mb-3 flex flex-wrap gap-3 text-xs text-muted">
           {KINDS.map((kind) => (
             <span key={kind.id} className="inline-flex items-center gap-1.5">
@@ -175,7 +175,7 @@ export default function ExercisePage() {
 
 function StatCard({ label, value, hint }) {
   return (
-    <div className="rounded-2xl border border-line bg-[#222838]/80 p-4">
+    <div className="rounded-2xl border border-line bg-raised/80 p-4">
       <p className="text-xs text-muted">{label}</p>
       <p className="mt-2 text-2xl font-semibold">{value}</p>
       <p className="mt-1 text-xs text-muted">{hint}</p>
