@@ -1,0 +1,31 @@
+{
+  "name": "BetterMe",
+  "short_name": "BetterMe",
+  "id": "/",
+  "description": "Personal learning, health, and daily planning hub.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#171c2a",
+  "theme_color": "#171c2a",
+  "icons": [
+    {
+      "src": "/icons/betterme-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/betterme-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/betterme-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ]
+}

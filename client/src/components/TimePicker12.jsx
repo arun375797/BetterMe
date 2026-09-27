@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1));
-const MINUTES = Array.from({ length: 60 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
 
 export function parse12(time24) {
   if (!time24) return { hour: "12", minute: "00", ampm: "AM" };

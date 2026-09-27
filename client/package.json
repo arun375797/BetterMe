@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "icons": "node scripts/generatePwaIcons.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

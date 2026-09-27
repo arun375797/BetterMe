@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import CategoryFormModal from "../components/CategoryFormModal.jsx";
-import TodoScheduleFields from "../components/TodoScheduleFields.jsx";
+import TodoScheduleFields, { todayScheduleDate } from "../components/TodoScheduleFields.jsx";
 import {
   buildScheduleRange,
   duePartsFromIso,
@@ -172,6 +172,7 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
           ? "border-line/40 bg-white/2 opacity-60"
           : "border-line/60 bg-raised/60 hover:border-line"
       }`}
+      style={{ borderLeftColor: catColor, borderLeftWidth: 3 }}
     >
       <button
         type="button"
@@ -242,7 +243,7 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
 function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
   const [text, setText] = useState("");
   const [priority, setPriority] = useState("medium");
-  const [dueDate, setDueDate] = useState("");
+  const [dueDate, setDueDate] = useState(() => todayScheduleDate());
   const [dueTime, setDueTime] = useState("");
   const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
@@ -266,7 +267,7 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
       const schedule = buildScheduleRange(dueDate, dueTime, endTime);
       await onAdd({ text: trimmed, priority, categoryId, ...schedule });
       setText("");
-      setDueDate("");
+      setDueDate(todayScheduleDate());
       setDueTime("");
       setEndTime("");
     } catch (err) {
