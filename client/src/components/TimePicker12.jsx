@@ -205,5 +205,22 @@ export default function TimePicker12({
 export function buildDueIso(date, time24) {
   if (!date) return null;
   if (!time24) return date;
-  return `${date}T${time24}:00`;
+  const [year, month, day] = date.split("-").map(Number);
+  const [hour, minute] = time24.split(":").map(Number);
+  return new Date(year, month - 1, day, hour, minute, 0, 0).toISOString();
+}
+
+/** Build a start/end range. An end earlier than the start means the next day. */
+export function buildScheduleRange(date, startTime, endTime) {
+  const dueDate = buildDueIso(date, startTime);
+  if (!date || !startTime || !endTime) return { dueDate, endDate: null };
+
+  const [year, month, day] = date.split("-").map(Number);
+  const [startHour, startMinute] = startTime.split(":").map(Number);
+  const [endHour, endMinute] = endTime.split(":").map(Number);
+  const start = new Date(year, month - 1, day, startHour, startMinute, 0, 0);
+  const end = new Date(year, month - 1, day, endHour, endMinute, 0, 0);
+  if (end <= start) end.setDate(end.getDate() + 1);
+
+  return { dueDate: start.toISOString(), endDate: end.toISOString() };
 }

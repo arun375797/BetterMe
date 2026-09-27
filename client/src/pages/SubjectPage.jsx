@@ -14,6 +14,37 @@ const levelClass = {
   hard: "text-coral bg-coral/12",
 };
 
+function searchableText(value) {
+  return String(value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
+function topicSearchValues(topic) {
+  const values = [topic.title];
+  for (const question of topic.searchQuestions || []) values.push(question.title);
+  for (const subtopic of topic.subtopics || []) {
+    values.push(subtopic.title);
+    for (const question of subtopic.searchQuestions || []) {
+      values.push(question.title);
+    }
+    for (const nested of subtopic.nested || []) {
+      values.push(nested.title);
+      for (const question of nested.searchQuestions || []) {
+        values.push(question.title);
+      }
+    }
+  }
+  return values.map(searchableText);
+}
+
+function matchesSearch(topic, terms) {
+  return topicSearchValues(topic).some((value) =>
+    terms.every((term) => value.includes(term))
+  );
+}
+
 export default function SubjectPage() {
   const { slug, section } = useParams();
   const { refreshSubjects } = useOutletContext();
@@ -94,15 +125,9 @@ export default function SubjectPage() {
 
   const filtered = useMemo(() => {
     if (!subject) return [];
-    const q = query.trim().toLowerCase();
-    if (!q) return subject.topics;
-    return subject.topics.filter((topic) => {
-      const inMain = topic.title.toLowerCase().includes(q);
-      const inSub = topic.subtopics?.some((s) =>
-        s.title.toLowerCase().includes(q)
-      );
-      return inMain || inSub;
-    });
+    const terms = searchableText(query).trim().split(/\s+/).filter(Boolean);
+    if (!terms.length) return subject.topics;
+    return subject.topics.filter((topic) => matchesSearch(topic, terms));
   }, [subject, query]);
 
   const reviewItems = useMemo(() => {
@@ -173,7 +198,8 @@ export default function SubjectPage() {
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Filter topics…"
+              placeholder="Search topics or questions…"
+              aria-label="Search topics or questions"
               className="w-full rounded-xl border border-line bg-surface px-4 py-2.5 text-sm outline-none placeholder:text-muted/70 focus:border-teal/50 md:max-w-[240px]"
             />
             <button
@@ -420,6 +446,11 @@ export default function SubjectPage() {
             );
           })}
         </ul>
+        {query.trim() && !filtered.length ? (
+          <p className="mt-6 rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
+            No topic or question contains “{query.trim()}”.
+          </p>
+        ) : null}
       </section>
 
       <aside className="page-aside xl:sticky xl:top-0 xl:max-h-screen xl:overflow-y-auto">

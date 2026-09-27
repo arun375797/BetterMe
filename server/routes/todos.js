@@ -86,12 +86,29 @@ router.post("/", async (req, res) => {
   const categoryId = req.body?.categoryId || null;
   const dueDate =
     req.body?.dueDate ? new Date(req.body.dueDate) : null;
+  const endDate = req.body?.endDate ? new Date(req.body.endDate) : null;
 
   if (!text) {
     return res.status(400).json({ message: "Todo text is required." });
   }
 
-  const todo = await Todo.create({ text, priority, categoryId, dueDate });
+  if (dueDate && Number.isNaN(dueDate.getTime())) {
+    return res.status(400).json({ message: "Start date is invalid." });
+  }
+  if (endDate && Number.isNaN(endDate.getTime())) {
+    return res.status(400).json({ message: "End time is invalid." });
+  }
+  if (endDate && (!dueDate || endDate <= dueDate)) {
+    return res.status(400).json({ message: "End time must be after start time." });
+  }
+
+  const todo = await Todo.create({
+    text,
+    priority,
+    categoryId,
+    dueDate,
+    endDate,
+  });
   res.status(201).json(todo);
 });
 
@@ -115,6 +132,19 @@ router.patch("/:id", async (req, res) => {
   }
   if ("dueDate" in req.body) {
     update.dueDate = req.body.dueDate ? new Date(req.body.dueDate) : null;
+  }
+  if ("endDate" in req.body) {
+    update.endDate = req.body.endDate ? new Date(req.body.endDate) : null;
+  }
+
+  if (update.dueDate && Number.isNaN(update.dueDate.getTime())) {
+    return res.status(400).json({ message: "Start date is invalid." });
+  }
+  if (update.endDate && Number.isNaN(update.endDate.getTime())) {
+    return res.status(400).json({ message: "End time is invalid." });
+  }
+  if (update.dueDate && update.endDate && update.endDate <= update.dueDate) {
+    return res.status(400).json({ message: "End time must be after start time." });
   }
 
   const todo = await Todo.findByIdAndUpdate(req.params.id, update, {

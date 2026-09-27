@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import CategoryFormModal from "../components/CategoryFormModal.jsx";
-import TimePicker12, {
-  buildDueIso,
+import TodoScheduleFields from "../components/TodoScheduleFields.jsx";
+import {
+  buildScheduleRange,
   duePartsFromIso,
 } from "../components/TimePicker12.jsx";
 import {
@@ -14,6 +15,7 @@ import {
   updateTodo,
 } from "../api.js";
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
+import { todoScheduleLabel } from "../lib/todoSchedule.js";
 
 const PRIORITY_META = {
   high: { label: "High", dot: "bg-coral", color: "#e88b7a" },
@@ -29,14 +31,6 @@ function fmtTime(dateStr) {
   });
 }
 
-function fmtDueTime(dateStr) {
-  if (/^\d{4}-\d{2}-\d{2}$/.test(String(dateStr))) return null;
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return null;
-  if (d.getHours() === 0 && d.getMinutes() === 0) return null;
-  return fmtTime(dateStr);
-}
-
 function fmtDate(dateStr) {
   return new Date(dateStr).toLocaleDateString([], {
     month: "short",
@@ -49,8 +43,10 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
   const [priority, setPriority] = useState(todo.priority || "medium");
   const [categoryId, setCategoryId] = useState(todo.categoryId || "");
   const dueInit = duePartsFromIso(todo.dueDate);
+  const endInit = duePartsFromIso(todo.endDate);
   const [dueDate, setDueDate] = useState(dueInit.date);
   const [dueTime, setDueTime] = useState(dueInit.time);
+  const [endTime, setEndTime] = useState(endInit.time);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -66,11 +62,12 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
     setSaving(true);
     setError("");
     try {
+      const schedule = buildScheduleRange(dueDate, dueTime, endTime);
       await onSave(todo._id, {
         text: trimmed,
         priority,
         categoryId: categoryId || null,
-        dueDate: buildDueIso(dueDate, dueTime),
+        ...schedule,
       });
       onClose();
     } catch (err) {
@@ -135,23 +132,15 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-xs font-medium text-muted">Due date &amp; time</label>
-            <div className="flex gap-2">
-              <input type="date" value={dueDate}
-                onChange={(e) => { setDueDate(e.target.value); if (!e.target.value) setDueTime(""); }}
-                className="flex-1 rounded-xl bg-white/5 px-3 py-2.5 text-sm text-muted ring-1 ring-line focus:outline-none" />
-              <TimePicker12
-                value={dueTime}
-                onChange={setDueTime}
-                disabled={!dueDate}
-              />
-            </div>
-            {dueDate ? (
-              <button type="button" onClick={() => { setDueDate(""); setDueTime(""); }}
-                className="mt-1.5 text-[11px] text-muted hover:text-coral">
-                Clear due date
-              </button>
-            ) : null}
+            <label className="mb-1.5 block text-xs font-medium text-muted">When will you do it?</label>
+            <TodoScheduleFields
+              date={dueDate}
+              startTime={dueTime}
+              endTime={endTime}
+              onDateChange={setDueDate}
+              onStartTimeChange={setDueTime}
+              onEndTimeChange={setEndTime}
+            />
           </div>
 
           {error ? <p className="text-xs text-coral">{error}</p> : null}
@@ -213,18 +202,22 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
           {todo.text}
         </p>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
-          <span className={`h-2 w-2 shrink-0 rounded-full ${pm.dot}`} title={pm.label} />
-          <span className="text-[11px] text-muted">
-            {createdGroup(todo.createdAt) === "Today"
-              ? fmtTime(todo.createdAt)
-              : `${fmtDate(todo.createdAt)} · ${fmtTime(todo.createdAt)}`}
+          <span className="inline-flex items-center gap-1 text-[11px] text-muted" title={`${pm.label} priority`}>
+            <span className={`h-2 w-2 shrink-0 rounded-full ${pm.dot}`} />
+            {pm.label}
           </span>
           {todo.dueDate ? (
-            <span className="text-[11px] text-gold">
-              Due {fmtDate(todo.dueDate)}
-              {fmtDueTime(todo.dueDate) ? ` · ${fmtDueTime(todo.dueDate)}` : ""}
+            <span className="inline-flex items-center gap-1 rounded-md bg-gold/10 px-2 py-1 text-[11px] font-medium text-gold ring-1 ring-gold/20">
+              <span aria-hidden="true">◷</span>
+              {todoScheduleLabel(todo)}
             </span>
-          ) : null}
+          ) : (
+            <span className="text-[11px] text-muted">
+              Added {createdGroup(todo.createdAt) === "Today"
+                ? fmtTime(todo.createdAt)
+                : `${fmtDate(todo.createdAt)} · ${fmtTime(todo.createdAt)}`}
+            </span>
+          )}
         </div>
       </div>
 
@@ -251,6 +244,7 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
   const [priority, setPriority] = useState("medium");
   const [dueDate, setDueDate] = useState("");
   const [dueTime, setDueTime] = useState("");
+  const [endTime, setEndTime] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -269,10 +263,12 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
     setSaving(true);
     setError("");
     try {
-      await onAdd({ text: trimmed, priority, categoryId, dueDate: buildDueIso(dueDate, dueTime) });
+      const schedule = buildScheduleRange(dueDate, dueTime, endTime);
+      await onAdd({ text: trimmed, priority, categoryId, ...schedule });
       setText("");
       setDueDate("");
       setDueTime("");
+      setEndTime("");
     } catch (err) {
       setError(err.message);
     } finally {
@@ -303,25 +299,29 @@ function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
         }}
       />
       <div className="mt-3 flex flex-wrap gap-2">
-        <select
-          value={priority}
-          onChange={(e) => setPriority(e.target.value)}
-          className="rounded-lg bg-white/5 px-2.5 py-1.5 text-xs text-muted ring-1 ring-line focus:outline-none"
-        >
-          <option value="high">🔴 High</option>
-          <option value="medium">🟡 Medium</option>
-          <option value="low">🟢 Low</option>
-        </select>
-        <input
-          type="date"
-          value={dueDate}
-          onChange={(e) => setDueDate(e.target.value)}
-          className="rounded-lg bg-white/5 px-2.5 py-1.5 text-xs text-muted ring-1 ring-line focus:outline-none"
-        />
-        <TimePicker12
-          value={dueTime}
-          onChange={setDueTime}
-          disabled={!dueDate}
+        <label className="block">
+          <span className="mb-1.5 block text-[11px] font-medium text-muted">Priority</span>
+          <select
+            value={priority}
+            onChange={(e) => setPriority(e.target.value)}
+            className="rounded-lg bg-white/5 px-2.5 py-2 text-xs text-muted ring-1 ring-line focus:outline-none"
+          >
+            <option value="high">🔴 High</option>
+            <option value="medium">🟡 Medium</option>
+            <option value="low">🟢 Low</option>
+          </select>
+        </label>
+      </div>
+      <div className="mt-4 rounded-xl border border-line/70 bg-white/[0.025] p-3">
+        <p className="mb-2 text-xs font-medium text-ink">Time period</p>
+        <TodoScheduleFields
+          date={dueDate}
+          startTime={dueTime}
+          endTime={endTime}
+          onDateChange={setDueDate}
+          onStartTimeChange={setDueTime}
+          onEndTimeChange={setEndTime}
+          compact
         />
       </div>
       {error ? <p className="mt-2 text-xs text-coral">{error}</p> : null}

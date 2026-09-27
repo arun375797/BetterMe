@@ -3,6 +3,7 @@ import { Link, useOutletContext } from "react-router-dom";
 import { difficultyMeta } from "../difficulty.js";
 import { todayKey } from "../food.js";
 import { formatMinutes } from "../lib/sleepStats.js";
+import { todoScheduleLabel } from "../lib/todoSchedule.js";
 import {
   currentPeriodId,
   nextMeal,
@@ -584,9 +585,13 @@ function TodoRow({ todo, category, overdue, onToggle }) {
             </span>
           ) : null}
           {todo.dueDate ? (
-            <span className={`text-[11px] ${overdue ? "text-coral" : "text-gold"}`}>
-              {overdue ? "Overdue " : "Due "}
-              {fmtDue(todo.dueDate)}
+            <span className={`rounded-md px-2 py-1 text-[11px] font-medium ${
+              overdue
+                ? "bg-coral/10 text-coral ring-1 ring-coral/20"
+                : "bg-gold/10 text-gold ring-1 ring-gold/20"
+            }`}>
+              {overdue ? "Overdue · " : "◷ "}
+              {todoScheduleLabel(todo)}
             </span>
           ) : null}
         </div>

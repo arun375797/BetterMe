@@ -14,6 +14,14 @@ function calendarDay(dateStr) {
   return startOfLocalDay(d);
 }
 
+function scheduleTimestamp(todo) {
+  if (!todo.dueDate) return Number.POSITIVE_INFINITY;
+  const date = new Date(todo.dueDate);
+  return Number.isNaN(date.getTime())
+    ? Number.POSITIVE_INFINITY
+    : date.getTime();
+}
+
 export function daysFromToday(dateStr, now = new Date()) {
   const day = calendarDay(dateStr);
   if (!day) return 0;
@@ -57,6 +65,14 @@ export function groupTodos(todos, now = new Date()) {
     const g = todoListGroup(todo, now);
     if (!map[g]) map[g] = [];
     map[g].push(todo);
+  }
+  for (const items of Object.values(map)) {
+    items.sort(
+      (a, b) =>
+        Number(a.done) - Number(b.done) ||
+        scheduleTimestamp(a) - scheduleTimestamp(b) ||
+        new Date(b.createdAt) - new Date(a.createdAt)
+    );
   }
   return TODO_GROUP_ORDER.filter((g) => map[g]).map((g) => ({
     group: g,

@@ -77,6 +77,28 @@ async function withPracticalCounts(topics) {
   });
 }
 
+function withSearchQuestions(topics, questions) {
+  const byTopic = new Map();
+  for (const question of questions || []) {
+    const key = idKey(question.topic);
+    if (!byTopic.has(key)) byTopic.set(key, []);
+    byTopic.get(key).push({ _id: question._id, title: question.title });
+  }
+
+  const addQuestions = (topic) => ({
+    ...topic,
+    searchQuestions: byTopic.get(idKey(topic._id)) || [],
+  });
+
+  return (topics || []).map((topic) => ({
+    ...addQuestions(topic),
+    subtopics: (topic.subtopics || []).map((subtopic) => ({
+      ...addQuestions(subtopic),
+      nested: (subtopic.nested || []).map(addQuestions),
+    })),
+  }));
+}
+
 function cleanUrl(value) {
   const raw = String(value || "").trim();
   if (!raw) return { url: "" };
@@ -434,6 +456,16 @@ router.get("/subjects/:slug", async (req, res) => {
         }
         if (section === "practical" && topics.length) {
           topics = await withPracticalCounts(topics);
+        }
+        if (topics.length) {
+          const scopedIds = scoped.map((topic) => topic._id);
+          const searchQuestions = await Question.find({
+            topic: { $in: scopedIds },
+          })
+            .select("topic title")
+            .sort({ order: 1, createdAt: 1 })
+            .lean();
+          topics = withSearchQuestions(topics, searchQuestions);
         }
 
         return {
