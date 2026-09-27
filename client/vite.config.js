@@ -20,6 +20,15 @@ export default defineConfig({
           if (!id.includes("node_modules")) return undefined;
           if (id.includes("lenis")) return "lenis";
           if (
+            id.includes("jspdf") ||
+            id.includes("fflate") ||
+            id.includes("fast-png") ||
+            id.includes("pako") ||
+            id.includes("iobuffer")
+          ) {
+            return "pdf";
+          }
+          if (
             id.includes("react-dom") ||
             id.includes("react-router") ||
             id.includes("/react/")

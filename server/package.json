@@ -9,7 +9,8 @@
     "seed": "node seed.js",
     "reset": "node seed.js",
     "seed:mongo-practical": "node scripts/seedMongoPractical.js",
-    "seed:dsa-practical": "node scripts/seedDsaPractical.js"
+    "seed:dsa-practical": "node scripts/seedDsaPractical.js",
+    "reorganize:js-practical": "node scripts/reorganizeJsPractical.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
 import { createTopic, deleteTopic, getReviewQueue, getSubject, peekReviewQueue, peekSubject, updateTopic } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
+import PdfExportDialog from "../components/PdfExportDialog.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { notebookPath, reviewItemHint } from "../lib/today.js";
@@ -29,6 +30,7 @@ export default function SubjectPage() {
   const [confirm, setConfirm] = useState(null);
   const [showTree, setShowTree] = useState(false);
   const [openIds, setOpenIds] = useState({});
+  const [pdfOpen, setPdfOpen] = useState(false);
 
   const isPractical = section === "practical";
   const childLabel = "subtopics";
@@ -53,6 +55,7 @@ export default function SubjectPage() {
     setConfirm(null);
     setShowTree(false);
     setOpenIds({});
+    setPdfOpen(false);
     let live = true;
     getSubject(slug, section)
       .then((data) => {
@@ -175,8 +178,26 @@ export default function SubjectPage() {
             />
             <button
               type="button"
+              onClick={() => setPdfOpen(true)}
+              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-teal/40 bg-teal/10 text-teal transition hover:bg-teal/20 focus:outline-none focus:ring-2 focus:ring-teal/40 md:ml-auto"
+              aria-label={`Download filtered ${isPractical ? "practical" : "theory"} questions as PDF`}
+              title="Download questions as PDF"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-5 w-5"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                aria-hidden="true"
+              >
+                <path d="M12 3v11m0 0 4-4m-4 4-4-4M5 17v2.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V17" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <button
+              type="button"
               onClick={() => setModalOpen(true)}
-              className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-[#10201e] md:ml-auto"
+              className="rounded-xl bg-teal px-4 py-2.5 text-sm font-semibold text-[#10201e]"
             >
               Add topic
             </button>
@@ -472,6 +493,17 @@ export default function SubjectPage() {
           confirmLabel="Delete"
           onClose={() => setConfirm(null)}
           onConfirm={confirm.onConfirm}
+        />
+      ) : null}
+
+      {pdfOpen ? (
+        <PdfExportDialog
+          subject={subject}
+          section={section}
+          visibleTopics={filtered}
+          allTopics={subject.topics || []}
+          query={query}
+          onClose={() => setPdfOpen(false)}
         />
       ) : null}
     </div>
