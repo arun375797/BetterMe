@@ -116,7 +116,8 @@ class MainActivity : AppCompatActivity() {
         binding.sleepDuration.text = formatMinutes(sleep.durationMinutes)
         binding.sleepWindow.text = "${start.format(DateTimeFormatter.ofPattern("h:mm a"))} → ${end.format(DateTimeFormatter.ofPattern("h:mm a"))}"
         binding.sleepStages.text = if (sleep.stageMinutes.isEmpty()) "No detailed stages were supplied." else
-            sleep.stageMinutes.entries.joinToString("\n") { (label, minutes) -> "$label  ·  ${formatMinutes(minutes)}" }
+            "Actual asleep  ·  ${formatMinutes(sleep.actualSleepMinutes)}\n" +
+                sleep.stageMinutes.entries.joinToString("\n") { (label, minutes) -> "$label  ·  ${formatMinutes(minutes)}" }
     }
 
     private fun showNoSleep() {
@@ -133,7 +134,7 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val syncStartedAt = Instant.now()
-        val previous = syncPreferences.getString("last_successful_sync", null)
+        val previous = syncPreferences.getString("last_successful_sync_v2", null)
             ?.let { runCatching { Instant.parse(it) }.getOrNull() }
         val since = previous?.minus(1, ChronoUnit.DAYS)
         binding.syncButton.isEnabled = false
@@ -143,6 +144,9 @@ class MainActivity : AppCompatActivity() {
         lifecycleScope.launch {
             runCatching {
                 val token = api.login(baseUrl, pin)
+                val readFrom = since ?: Instant.EPOCH
+                binding.syncMessage.text = "Preparing corrected sleep history…"
+                api.replaceSyncedSleep(baseUrl, token, readFrom, syncStartedAt.plus(1, ChronoUnit.MINUTES), previous == null)
                 health.syncHistory(
                     incrementalSince = since,
                     onBatch = { api.syncBatch(baseUrl, token, it) },
@@ -151,7 +155,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             }.onSuccess { progress ->
-                syncPreferences.edit().putString("last_successful_sync", syncStartedAt.toString()).apply()
+                syncPreferences.edit().putString("last_successful_sync_v2", syncStartedAt.toString()).apply()
                 binding.pinInput.text?.clear()
                 binding.syncMessage.setTextColor(getColor(R.color.mint_dark))
                 binding.syncMessage.text = "Complete · ${progress.totalRecords} records checked and safely upserted."

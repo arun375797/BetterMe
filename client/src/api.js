@@ -555,7 +555,8 @@ export const updateTodo = (id, data) =>
 export const deleteTodo = (id) =>
   mutate(TODOS_API, `/${id}`, { method: "DELETE" }, TODOS);
 
-export const getSleepLogs = () => get(SLEEP_API, "/");
+export const getSleepLogs = (source = "preferred") =>
+  get(SLEEP_API, `/?source=${encodeURIComponent(source)}`, 0);
 export const createSleepLog = (data) =>
   mutate(SLEEP_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SLEEP, ...REPORT]);
 export const updateSleepLog = (id, data) =>

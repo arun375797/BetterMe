@@ -24,7 +24,8 @@ The production API is prefilled as `https://betterme-production.up.railway.app`.
 - The initial import reads all history Health Connect makes available. Without Android's past-data permission, Health Connect limits other apps' older data.
 - Every record keeps its original Health Connect ID, source app, timestamps and timezone offset. Server upserts make repeated imports idempotent.
 - Later syncs start one day before the last successful cursor, safely catching late Samsung Health updates without duplicates.
-- Reads Health Connect in pages and uploads batches of at most 250 records.
+- Reads Health Connect in pages and uploads batches of at most 50 records with bounded timeouts and automatic retries.
+- Reconstructs a Samsung sleep episode from overlapping/nearby Health Connect fragments, deduplicates overlapping stage intervals, preserves separate naps, and syncs both recorded sleep time and actual non-awake sleep.
 - Sleep sessions continue to populate the existing BetterMe sleep dashboard; all wearable metrics appear on the Galaxy Fit3 dashboard.
 - Samsung's stress score is not exposed by Health Connect or the current public Samsung Health Data SDK, so the app does not invent or estimate it.
 

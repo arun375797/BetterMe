@@ -239,14 +239,18 @@ export default function HealthHomePage() {
           }
         />
         <StatCard
-          label="Quality"
+          label={sleepStats?.lastNight?.source === "health_connect" ? "Actual asleep" : "Quality"}
           value={
-            sleepStats?.lastNight?.analysis?.overall != null
+            sleepStats?.lastNight?.source === "health_connect" && sleepStats.lastNight.actualSleepMinutes != null
+              ? formatMinutes(sleepStats.lastNight.actualSleepMinutes)
+              : sleepStats?.lastNight?.analysis?.overall != null
               ? sleepStats.lastNight.analysis.overall
               : "—"
           }
           hint={
-            sleepStats?.lastNight?.analysis?.label || "Log sleep to score"
+            sleepStats?.lastNight?.source === "health_connect"
+              ? "Derived from non-awake stages"
+              : sleepStats?.lastNight?.analysis?.label || "Manual estimate"
           }
         />
         <StatCard

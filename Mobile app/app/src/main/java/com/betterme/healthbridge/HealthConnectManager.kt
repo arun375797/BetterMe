@@ -18,7 +18,21 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
+import java.security.MessageDigest
+
+private data class SleepSlice(val start: Instant, val end: Instant, val label: String)
+private data class SleepEpisode(
+    val records: List<SleepSessionRecord>,
+    val start: Instant,
+    val end: Instant,
+    val startOffset: ZoneOffset?,
+    val endOffset: ZoneOffset?,
+    val stageMinutes: Map<String, Long>,
+    val recordedSleepMinutes: Long,
+    val actualSleepMinutes: Long,
+)
 
 class HealthConnectManager(private val context: Context) {
     companion object {
@@ -66,16 +80,18 @@ class HealthConnectManager(private val context: Context) {
         var total = 0
 
         suspend fun accept(type: String, records: List<SyncRecord>) {
-            records.chunked(250).forEach { batch ->
-                if (batch.isNotEmpty()) onBatch(batch)
+            records.chunked(50).forEach { batch ->
+                if (batch.isNotEmpty()) {
+                    onBatch(batch)
+                    counts[type] = (counts[type] ?: 0) + batch.size
+                    total += batch.size
+                    onProgress(SyncProgress(total, counts.toMap()))
+                }
             }
-            counts[type] = (counts[type] ?: 0) + records.size
-            total += records.size
-            onProgress(SyncProgress(total, counts.toMap()))
         }
 
         if (HealthPermission.getReadPermission(SleepSessionRecord::class) in granted) {
-            readPaged<SleepSessionRecord>(start, end, { listOf(it.toSyncRecord()) }) { accept("sleep", it) }
+            accept("sleep", mergeSleepRecords(readAllSleepRecords(start, end)).map { it.toSyncRecord() })
         }
         if (HealthPermission.getReadPermission(StepsRecord::class) in granted) {
             readPaged<StepsRecord>(start, end, { listOf(it.toSyncRecord()) }) { accept("steps", it) }
@@ -109,15 +125,28 @@ class HealthConnectManager(private val context: Context) {
 
     suspend fun latestSleep(): SleepSummary? {
         val now = Instant.now()
-        val response = client.readRecords(
-            ReadRecordsRequest(
-                recordType = SleepSessionRecord::class,
-                timeRangeFilter = TimeRangeFilter.between(now.minus(7, ChronoUnit.DAYS), now.plusSeconds(1)),
-                ascendingOrder = false,
-                pageSize = 100,
+        return mergeSleepRecords(readAllSleepRecords(now.minus(7, ChronoUnit.DAYS), now.plusSeconds(1)))
+            .maxByOrNull { it.end }
+            ?.toSummary()
+    }
+
+    private suspend fun readAllSleepRecords(start: Instant, end: Instant): List<SleepSessionRecord> {
+        val records = mutableListOf<SleepSessionRecord>()
+        var pageToken: String? = null
+        do {
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = SleepSessionRecord::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 1000,
+                    pageToken = pageToken,
+                )
             )
-        )
-        return response.records.maxByOrNull { it.endTime }?.toSummary()
+            records += response.records.filter { it.metadata.dataOrigin.packageName == SAMSUNG_HEALTH_PACKAGE }
+            pageToken = response.pageToken
+        } while (pageToken != null)
+        return records
     }
 
     private suspend inline fun <reified T : Record> readPaged(
@@ -151,32 +180,92 @@ class HealthConnectManager(private val context: Context) {
         data = data,
     )
 
-    private fun SleepSessionRecord.toSyncRecord(): SyncRecord {
-        val summary = toSummary()
-        return base(this, "sleep", startTime, endTime, mapOf(
-            "startOffsetSeconds" to startZoneOffset?.totalSeconds,
-            "endOffsetSeconds" to endZoneOffset?.totalSeconds,
-            "stages" to summary.stageMinutes,
-            "title" to title,
-        ))
+    private fun mergeSleepRecords(records: List<SleepSessionRecord>): List<SleepEpisode> {
+        if (records.isEmpty()) return emptyList()
+        val groups = mutableListOf<MutableList<SleepSessionRecord>>()
+        records.sortedBy { it.startTime }.forEach { record ->
+            val current = groups.lastOrNull()
+            val currentStart = current?.minOfOrNull { it.startTime }
+            val currentEnd = current?.maxOfOrNull { it.endTime }
+            val joins = current != null && currentStart != null && currentEnd != null &&
+                record.startTime <= currentEnd.plus(3, ChronoUnit.HOURS) &&
+                maxOf(currentEnd, record.endTime) <= currentStart.plus(18, ChronoUnit.HOURS)
+            if (joins) current.add(record) else groups.add(mutableListOf(record))
+        }
+        return groups.map { buildSleepEpisode(it) }
     }
 
-    private fun SleepSessionRecord.toSummary(): SleepSummary {
-        val stagesByName = linkedMapOf("Awake" to 0L, "Light" to 0L, "Deep" to 0L, "REM" to 0L, "Sleeping" to 0L)
-        stages.forEach { stage ->
-            val name = when (stage.stage) {
-                SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
-                SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "Awake"
-                SleepSessionRecord.STAGE_TYPE_LIGHT -> "Light"
-                SleepSessionRecord.STAGE_TYPE_DEEP -> "Deep"
-                SleepSessionRecord.STAGE_TYPE_REM -> "REM"
-                SleepSessionRecord.STAGE_TYPE_SLEEPING -> "Sleeping"
-                else -> return@forEach
+    private fun buildSleepEpisode(records: List<SleepSessionRecord>): SleepEpisode {
+        val startRecord = records.minBy { it.startTime }
+        val endRecord = records.maxBy { it.endTime }
+        val slices = records.flatMap { record ->
+            if (record.stages.isEmpty()) {
+                listOf(SleepSlice(record.startTime, record.endTime, "Sleeping"))
+            } else {
+                record.stages.mapNotNull { stage ->
+                    stageName(stage.stage)?.let { SleepSlice(stage.startTime, stage.endTime, it) }
+                }
             }
-            stagesByName[name] = stagesByName.getValue(name) + Duration.between(stage.startTime, stage.endTime).toMinutes().coerceAtLeast(0)
+        }.filter { it.end > it.start }
+        val boundaries = slices.flatMap { listOf(it.start, it.end) }.distinct().sorted()
+        val totalSeconds = linkedMapOf("Awake" to 0L, "Light" to 0L, "Deep" to 0L, "REM" to 0L, "Sleeping" to 0L)
+        boundaries.zipWithNext().forEach { (segmentStart, segmentEnd) ->
+            val labels = slices.filter { it.start < segmentEnd && it.end > segmentStart }.map { it.label }.toSet()
+            val label = listOf("Awake", "Deep", "REM", "Light", "Sleeping").firstOrNull { it in labels }
+            if (label != null) totalSeconds[label] = totalSeconds.getValue(label) + Duration.between(segmentStart, segmentEnd).seconds.coerceAtLeast(0)
         }
-        return SleepSummary(startTime, endTime, startZoneOffset, endZoneOffset, stagesByName.filterValues { it > 0 }, metadata.dataOrigin.packageName)
+        val stageMinutes = totalSeconds.filterValues { it > 0 }.mapValues { (_, seconds) -> (seconds + 30) / 60 }
+        val recorded = stageMinutes.values.sum().takeIf { it > 0 }
+            ?: records.sumOf { Duration.between(it.startTime, it.endTime).toMinutes().coerceAtLeast(0) }
+        val actual = stageMinutes.filterKeys { it != "Awake" }.values.sum().coerceAtMost(recorded)
+        return SleepEpisode(
+            records = records,
+            start = startRecord.startTime,
+            end = endRecord.endTime,
+            startOffset = startRecord.startZoneOffset,
+            endOffset = endRecord.endZoneOffset,
+            stageMinutes = stageMinutes,
+            recordedSleepMinutes = recorded,
+            actualSleepMinutes = actual.takeIf { it > 0 } ?: recorded,
+        )
     }
+
+    private fun stageName(stage: Int): String? = when (stage) {
+        SleepSessionRecord.STAGE_TYPE_AWAKE, SleepSessionRecord.STAGE_TYPE_AWAKE_IN_BED,
+        SleepSessionRecord.STAGE_TYPE_OUT_OF_BED -> "Awake"
+        SleepSessionRecord.STAGE_TYPE_LIGHT -> "Light"
+        SleepSessionRecord.STAGE_TYPE_DEEP -> "Deep"
+        SleepSessionRecord.STAGE_TYPE_REM -> "REM"
+        SleepSessionRecord.STAGE_TYPE_SLEEPING -> "Sleeping"
+        else -> null
+    }
+
+    private fun SleepEpisode.toSyncRecord(): SyncRecord {
+        val identity = records.map { it.metadata.id }.sorted().joinToString("|")
+        val digest = MessageDigest.getInstance("SHA-256").digest(identity.toByteArray())
+            .take(16).joinToString("") { "%02x".format(it.toInt() and 0xff) }
+        return SyncRecord(
+            externalId = "hc:sleep_episode:$digest",
+            type = "sleep",
+            startTime = start,
+            endTime = end,
+            sourceApp = SAMSUNG_HEALTH_PACKAGE,
+            data = mapOf(
+                "startOffsetSeconds" to startOffset?.totalSeconds,
+                "endOffsetSeconds" to endOffset?.totalSeconds,
+                "sleepTimeMinutes" to recordedSleepMinutes,
+                "actualSleepMinutes" to actualSleepMinutes,
+                "elapsedMinutes" to Duration.between(start, end).toMinutes(),
+                "stages" to stageMinutes,
+                "fragmentCount" to records.size,
+            ),
+        )
+    }
+
+    private fun SleepEpisode.toSummary() = SleepSummary(
+        start, end, startOffset, endOffset, stageMinutes, SAMSUNG_HEALTH_PACKAGE,
+        recordedSleepMinutes, actualSleepMinutes,
+    )
 
     private fun StepsRecord.toSyncRecord() = base(this, "steps", startTime, endTime, mapOf("count" to count, "startOffsetSeconds" to startZoneOffset?.totalSeconds))
 

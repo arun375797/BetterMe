@@ -28,6 +28,17 @@ export default function SleepQualityCard({ log, compact = false }) {
     );
   }
 
+  if (log.source === "health_connect") {
+    return (
+      <div className="rounded-2xl border border-line bg-raised/80 p-5">
+        <p className="text-[12px] tracking-[0.18em] text-muted uppercase">Fit3 sleep</p>
+        <p className="mt-2 text-3xl font-semibold">{log.actualSleepMinutes != null ? `${Math.floor(log.actualSleepMinutes / 60)}h ${log.actualSleepMinutes % 60}m` : "—"}</p>
+        <p className="mt-1 text-sm text-muted">Actual asleep · recorded sleep {Math.floor(log.durationMinutes / 60)}h {log.durationMinutes % 60}m</p>
+        <p className="mt-3 text-xs text-muted">Samsung&apos;s proprietary sleep score and recovery factors are not exposed through Health Connect.</p>
+      </div>
+    );
+  }
+
   const analysis = log.analysis || analyzeSleep(log);
 
   if (compact) {

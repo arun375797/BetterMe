@@ -26,6 +26,7 @@ import authRoutes from "./routes/auth.js";
 import wearableRoutes from "./routes/wearable.js";
 import { requireAuth } from "./lib/auth.js";
 import { memoClear } from "./memo.js";
+import SleepLog from "./models/SleepLog.js";
 import {
   ensureSubjects,
   renamePracticalSolveTitles,
@@ -223,6 +224,7 @@ async function start() {
       minPoolSize: 0,
       serverSelectionTimeoutMS: 10000,
     });
+    await SleepLog.syncIndexes();
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`API running on http://localhost:${PORT}`);
     });

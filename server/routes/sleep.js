@@ -63,16 +63,31 @@ function cleanPayload(body) {
       wakeDate,
       wakeTime,
       durationMinutes,
+      actualSleepMinutes: null,
+      elapsedMinutes: durationMinutes,
+      source: "manual",
+      stageMinutes: {},
+      episodes: [],
       quality,
       notes,
     },
   };
 }
 
-router.get("/", async (_req, res) => {
-  const logs = await SleepLog.find().sort({ day: -1 }).lean();
+router.get("/", async (req, res) => {
+  const requested = String(req.query.source || "preferred");
+  const fit3Count = await SleepLog.countDocuments({ source: "health_connect" });
+  const source = requested === "preferred"
+    ? (fit3Count ? "health_connect" : "manual")
+    : requested;
+  const filter = source === "all"
+    ? {}
+    : source === "health_connect"
+      ? { source: "health_connect" }
+      : { $or: [{ source: "manual" }, { source: { $exists: false } }] };
+  const logs = await SleepLog.find(filter).sort({ day: -1, bedTime: 1 }).lean();
   const stats = statsFromLogs(logs);
-  res.json({ logs: stats.logs, stats });
+  res.json({ logs: stats.logs, stats, source, counts: { fit3: fit3Count, manual: await SleepLog.countDocuments({ $or: [{ source: "manual" }, { source: { $exists: false } }] }) } });
 });
 
 router.post("/", async (req, res) => {
@@ -81,7 +96,7 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ message: cleaned.error });
   }
   const log = await SleepLog.findOneAndUpdate(
-    { day: cleaned.data.day },
+    { day: cleaned.data.day, source: "manual" },
     cleaned.data,
     { new: true, upsert: true, runValidators: true }
   );
@@ -101,8 +116,11 @@ router.patch("/:id", async (req, res) => {
   if (!existing) {
     return res.status(404).json({ message: "Sleep log not found." });
   }
+  if (existing.source === "health_connect") {
+    return res.status(400).json({ message: "Fit3 sleep is read-only. Resync it from the Android app." });
+  }
   if (cleaned.data.day !== existing.day) {
-    const clash = await SleepLog.findOne({ day: cleaned.data.day });
+    const clash = await SleepLog.findOne({ day: cleaned.data.day, source: "manual" });
     if (clash && clash._id.toString() !== existing._id.toString()) {
       return res
         .status(400)

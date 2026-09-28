@@ -112,15 +112,17 @@ export function avg(values) {
 export function statsFromLogs(logs) {
   const enriched = logs.map((log) => ({
     ...log,
-    analysis: analyzeSleep(log),
+    analysis: log.source === "health_connect" ? null : analyzeSleep(log),
   }));
 
   const last7 = enriched.slice(0, 7);
   const durations = last7.map((l) => l.durationMinutes);
-  const scores = last7.map((l) => l.analysis.overall);
+  const scores = last7.map((l) => l.analysis?.overall).filter(Number.isFinite);
   const latest = enriched[0] || null;
 
-  const goodNights = last7.filter((l) => l.analysis.overall >= 70).length;
+  const goodNights = last7.filter((l) =>
+    l.analysis ? l.analysis.overall >= 70 : l.durationMinutes >= 420 && l.durationMinutes <= 540
+  ).length;
 
   return {
     count: enriched.length,

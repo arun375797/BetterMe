@@ -10,9 +10,11 @@ data class SleepSummary(
     val endZoneOffset: ZoneOffset?,
     val stageMinutes: Map<String, Long>,
     val sourceApp: String,
+    val recordedSleepMinutes: Long,
+    val actualSleepMinutes: Long,
 ) {
     val durationMinutes: Long
-        get() = java.time.Duration.between(startTime, endTime).toMinutes()
+        get() = recordedSleepMinutes
 }
 
 data class SyncRecord(

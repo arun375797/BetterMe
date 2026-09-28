@@ -21,18 +21,19 @@ function formatDay(key) {
 }
 
 export default function SleepPage() {
+  const [source, setSource] = useState("health_connect");
   const [logs, setLogs] = useState(
-    () => peek("/api/sleep", "/")?.logs || []
+    () => peek("/api/sleep", "/?source=health_connect")?.logs || []
   );
   const [stats, setStats] = useState(
-    () => peek("/api/sleep", "/")?.stats || null
+    () => peek("/api/sleep", "/?source=health_connect")?.stats || null
   );
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
 
   async function load() {
     try {
-      const data = await getSleepLogs();
+      const data = await getSleepLogs(source);
       setLogs(data.logs || []);
       setStats(data.stats || null);
       setError("");
@@ -43,7 +44,7 @@ export default function SleepPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [source]);
 
   async function handleSave(payload) {
     if (modal?.log?._id) {
@@ -78,9 +79,8 @@ export default function SleepPage() {
             Sleep tracker
           </h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Log when you went to bed and when you woke up. Duration and quality
-            scores are based on sleep-cycle research — about 90 minutes per
-            cycle, with 7–9 hours ideal for most adults.
+            Fit3 entries show recorded sleep and actual asleep time derived from
+            Health Connect stages. Samsung&apos;s proprietary sleep score is not available.
           </p>
         </div>
         <button
@@ -93,6 +93,14 @@ export default function SleepPage() {
       </div>
 
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
+
+      <div className="mt-5 flex flex-wrap gap-2">
+        {[['health_connect', 'Fit3'], ['manual', 'Manual'], ['all', 'All']].map(([value, label]) => (
+          <button key={value} type="button" onClick={() => setSource(value)} className={`rounded-full border px-3 py-1.5 text-xs ${source === value ? 'border-coral bg-coral/10 text-ink' : 'border-line text-muted'}`}>
+            {label}
+          </button>
+        ))}
+      </div>
 
       <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard
@@ -109,14 +117,18 @@ export default function SleepPage() {
           }
         />
         <StatCard
-          label="Quality score"
+          label={source === "manual" ? "Quality score" : "Actual asleep"}
           value={
-            stats?.lastNight?.analysis?.overall != null
+            source !== "manual" && stats?.lastNight?.actualSleepMinutes != null
+              ? formatMinutes(stats.lastNight.actualSleepMinutes)
+              : stats?.lastNight?.analysis?.overall != null
               ? stats.lastNight.analysis.overall
               : "—"
           }
           hint={
-            stats?.lastNight?.analysis?.label || "Log sleep to see score"
+            source === "manual"
+              ? stats?.lastNight?.analysis?.label || "Manual estimate"
+              : "From non-awake Health Connect stages"
           }
         />
         <StatCard
@@ -131,9 +143,7 @@ export default function SleepPage() {
         />
       </div>
 
-      <div className="mt-8">
-        <SleepQualityCard log={stats?.lastNight} />
-      </div>
+      {source === "manual" ? <div className="mt-8"><SleepQualityCard log={stats?.lastNight} /></div> : null}
 
       <div className="mt-8 rounded-2xl border border-line bg-raised/80 p-5">
         <h3 className="text-lg font-semibold">30-day history</h3>
@@ -162,6 +172,12 @@ export default function SleepPage() {
                     {log.bedTime} → {log.wakeTime} ·{" "}
                     {formatMinutes(log.durationMinutes)}
                   </p>
+                  {log.source === "health_connect" ? (
+                    <p className="mt-1 text-xs text-cyan">
+                      Fit3 · {log.actualSleepMinutes != null ? `${formatMinutes(log.actualSleepMinutes)} actual asleep` : "actual sleep unavailable"}
+                      {log.episodes?.length > 1 ? ` · ${log.episodes.length - 1} additional episode/nap` : ""}
+                    </p>
+                  ) : <p className="mt-1 text-xs text-gold">Manual entry</p>}
                   {log.notes ? (
                     <p className="mt-1 text-xs text-muted">{log.notes}</p>
                   ) : null}
@@ -178,13 +194,7 @@ export default function SleepPage() {
                       {log.analysis.overall} · {log.analysis.label}
                     </span>
                   ) : null}
-                  <button
-                    type="button"
-                    onClick={() => setModal({ log })}
-                    className="text-sm text-coral hover:underline"
-                  >
-                    Edit
-                  </button>
+                  {log.source !== "health_connect" ? <button type="button" onClick={() => setModal({ log })} className="text-sm text-coral hover:underline">Edit</button> : null}
                   <button
                     type="button"
                     onClick={() => handleDelete(log._id)}

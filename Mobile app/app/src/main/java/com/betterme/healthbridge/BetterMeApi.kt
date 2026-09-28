@@ -2,15 +2,18 @@ package com.betterme.healthbridge
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import org.json.JSONArray
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
+import java.net.SocketTimeoutException
+import java.time.Instant
 
 class BetterMeApi {
     suspend fun login(baseUrl: String, pin: String): String = withContext(Dispatchers.IO) {
         val root = checkedRoot(baseUrl)
-        val response = postJson("$root/api/auth/login", JSONObject().put("pin", pin))
+        val response = retryingPost("$root/api/auth/login", JSONObject().put("pin", pin), null)
         response.optString("token").takeIf { it.isNotBlank() }
             ?: error("BetterMe did not return a session token.")
     }
@@ -30,8 +33,32 @@ class BetterMeApi {
                         .put("data", mapToJson(record.data))
                 )
             }
-            postJson("$root/api/wearable/sync", JSONObject().put("records", array), token)
+            retryingPost("$root/api/wearable/sync", JSONObject().put("records", array), token)
         }
+
+    suspend fun replaceSyncedSleep(baseUrl: String, token: String, from: Instant, to: Instant, all: Boolean) =
+        withContext(Dispatchers.IO) {
+            retryingPost(
+                "${checkedRoot(baseUrl)}/api/wearable/sleep/replace",
+                JSONObject().put("from", from.toString()).put("to", to.toString()).put("all", all),
+                token,
+            )
+        }
+
+    private suspend fun retryingPost(url: String, body: JSONObject, token: String?): JSONObject {
+        var last: Throwable? = null
+        repeat(3) { attempt ->
+            try {
+                return postJson(url, body, token)
+            } catch (error: Throwable) {
+                val retryable = error is SocketTimeoutException || (error is ApiException && error.retryable)
+                if (!retryable || attempt == 2) throw error
+                last = error
+                delay((attempt + 1) * 1_500L)
+            }
+        }
+        throw last ?: ApiException("Sync failed.", true)
+    }
 
     private fun checkedRoot(value: String): String {
         require(value.startsWith("https://")) { "Use an HTTPS BetterMe API URL." }
@@ -56,7 +83,7 @@ class BetterMeApi {
         return try {
             connection.requestMethod = "POST"
             connection.connectTimeout = 15_000
-            connection.readTimeout = 30_000
+            connection.readTimeout = 45_000
             connection.doOutput = true
             connection.setRequestProperty("Content-Type", "application/json")
             connection.setRequestProperty("Accept", "application/json")
@@ -66,7 +93,7 @@ class BetterMeApi {
             val stream = if (status in 200..299) connection.inputStream else connection.errorStream
             val text = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             val response = runCatching { JSONObject(text) }.getOrElse { JSONObject() }
-            if (status !in 200..299) throw ApiException(response.optString("message", "Request failed ($status)."))
+            if (status !in 200..299) throw ApiException(response.optString("message", "Request failed ($status)."), status == 408 || status == 429 || status >= 500)
             response
         } finally {
             connection.disconnect()
@@ -74,4 +101,4 @@ class BetterMeApi {
     }
 }
 
-class ApiException(message: String) : Exception(message)
+class ApiException(message: String, val retryable: Boolean = false) : Exception(message)

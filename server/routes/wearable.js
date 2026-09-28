@@ -23,26 +23,74 @@ function localParts(date, offsetSeconds = null) {
   return { day: iso.slice(0, 10), time: iso.slice(11, 16) };
 }
 
-async function updateSleepDashboard(records) {
-  for (const record of records.filter((item) => item.type === "sleep")) {
-    const start = localParts(record.startTime, record.data?.startOffsetSeconds);
-    const end = localParts(record.endTime, record.data?.endOffsetSeconds);
-    const durationMinutes = Math.round((record.endTime - record.startTime) / 60000);
-    if (durationMinutes < 1 || durationMinutes > 960) continue;
-    const stageNote = Object.entries(record.data?.stages || {})
-      .filter(([, value]) => Number(value) > 0)
-      .map(([label, value]) => `${label} ${Math.round(Number(value))}m`)
-      .join(" · ");
+function sleepDay(record) {
+  return localParts(record.endTime, record.data?.endOffsetSeconds).day;
+}
+
+async function rebuildSleepDays(days) {
+  if (!days.size) return;
+  const candidates = await WearableRecord.find({ type: "sleep" }).sort({ startTime: 1 }).lean();
+  const grouped = new Map([...days].map((day) => [day, []]));
+  for (const record of candidates) {
+    const day = sleepDay(record);
+    if (grouped.has(day)) grouped.get(day).push(record);
+  }
+  for (const [day, records] of grouped) {
+    if (!records.length) {
+      await SleepLog.deleteOne({ day, source: "health_connect" });
+      continue;
+    }
+    const episodes = records.map((record) => {
+      const start = localParts(record.startTime, record.data?.startOffsetSeconds);
+      const end = localParts(record.endTime, record.data?.endOffsetSeconds);
+      return {
+        externalId: record.externalId,
+        bedDate: start.day,
+        bedTime: start.time,
+        wakeDate: end.day,
+        wakeTime: end.time,
+        durationMinutes: Math.max(1, Math.round(Number(record.data?.sleepTimeMinutes) || (record.endTime - record.startTime) / 60000)),
+        actualSleepMinutes: Math.max(0, Math.round(Number(record.data?.actualSleepMinutes) || 0)) || null,
+        elapsedMinutes: Math.max(1, Math.round((record.endTime - record.startTime) / 60000)),
+        stageMinutes: record.data?.stages || {},
+      };
+    });
+    const main = episodes.slice().sort((a, b) => b.durationMinutes - a.durationMinutes)[0];
+    const durationMinutes = Math.min(960, episodes.reduce((sum, item) => sum + item.durationMinutes, 0));
+    const actualValues = episodes.map((item) => item.actualSleepMinutes).filter(Number.isFinite);
+    const actualSleepMinutes = actualValues.length ? Math.min(960, actualValues.reduce((sum, value) => sum + value, 0)) : null;
+    const stageMinutes = {};
+    for (const episode of episodes) {
+      for (const [label, value] of Object.entries(episode.stageMinutes)) {
+        stageMinutes[label] = (stageMinutes[label] || 0) + (Number(value) || 0);
+      }
+    }
+    const stageNote = Object.entries(stageMinutes).filter(([, value]) => value > 0).map(([label, value]) => `${label} ${Math.round(value)}m`).join(" · ");
     await SleepLog.findOneAndUpdate(
-      { day: end.day },
+      { day, source: "health_connect" },
       {
-        day: end.day, bedDate: start.day, bedTime: start.time,
-        wakeDate: end.day, wakeTime: end.time, durationMinutes, quality: null,
-        notes: `Synced from Health Connect${stageNote ? ` · ${stageNote}` : ""}`,
+        day,
+        bedDate: main.bedDate,
+        bedTime: main.bedTime,
+        wakeDate: main.wakeDate,
+        wakeTime: main.wakeTime,
+        durationMinutes,
+        actualSleepMinutes,
+        elapsedMinutes: main.elapsedMinutes,
+        source: "health_connect",
+        stageMinutes,
+        episodes: episodes.map(({ elapsedMinutes: _elapsed, stageMinutes: _stages, ...item }) => item),
+        quality: null,
+        notes: `${episodes.length > 1 ? `${episodes.length} sleep episodes · ` : ""}${stageNote}`.trim(),
       },
       { new: true, upsert: true, runValidators: true }
     );
   }
+}
+
+async function updateSleepDashboard(records) {
+  const days = new Set(records.filter((item) => item.type === "sleep").map(sleepDay));
+  await rebuildSleepDays(days);
 }
 
 function average(values) {
@@ -114,6 +162,25 @@ router.post("/sync", async (req, res) => {
   })), { ordered: false });
   await updateSleepDashboard(records);
   res.status(201).json({ received: records.length, inserted: result.upsertedCount, updated: result.modifiedCount, stressAvailable: false });
+});
+
+router.post("/sleep/replace", async (req, res) => {
+  const all = req.body?.all === true;
+  const from = new Date(req.body?.from);
+  const to = new Date(req.body?.to);
+  if (!all && (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from)) {
+    return res.status(400).json({ message: "A valid sleep replacement range is required." });
+  }
+  const recordFilter = all
+    ? { type: "sleep", sourceApp: "com.sec.android.app.shealth" }
+    : { type: "sleep", sourceApp: "com.sec.android.app.shealth", startTime: { $lt: to }, endTime: { $gt: from } };
+  const removedRecords = await WearableRecord.deleteMany(recordFilter);
+  const syncedFilter = { $or: [{ source: "health_connect" }, { notes: /^Synced from Health Connect/ }] };
+  const sleepFilter = all
+    ? syncedFilter
+    : { ...syncedFilter, day: { $gte: from.toISOString().slice(0, 10), $lte: to.toISOString().slice(0, 10) } };
+  const removedLogs = await SleepLog.deleteMany(sleepFilter);
+  res.json({ removedRecords: removedRecords.deletedCount, removedSleepLogs: removedLogs.deletedCount });
 });
 
 export default router;
