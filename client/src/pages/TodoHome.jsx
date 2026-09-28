@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useOutletContext, useSearchParams } from "react-router-dom";
 import CategoryFormModal from "../components/CategoryFormModal.jsx";
-import TodoScheduleFields, { todayScheduleDate } from "../components/TodoScheduleFields.jsx";
+import TodoComposer from "../components/TodoComposer.jsx";
+import TodoPlanNotice from "../components/TodoPlanNotice.jsx";
+import TodoScheduleFields from "../components/TodoScheduleFields.jsx";
 import {
   buildScheduleRange,
   duePartsFromIso,
@@ -16,6 +18,7 @@ import {
 } from "../api.js";
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 import { todoScheduleLabel } from "../lib/todoSchedule.js";
+import { nextTodoData } from "../lib/todoDuplicate.js";
 
 // ── helpers ───────────────────────────────────────────────────
 
@@ -237,7 +240,7 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
   );
 }
 
-function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
+function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit, onDuplicate }) {
   return (
     <div
       className={`group flex items-start gap-3 rounded-xl border px-3.5 py-3 transition-colors ${
@@ -299,7 +302,16 @@ function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+        <button
+          type="button"
+          onClick={() => onDuplicate(todo)}
+          title="Duplicate / create next"
+          aria-label="Duplicate or create next task"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-cyan/10 hover:text-cyan"
+        >
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M3 10H2.8A1.8 1.8 0 011 8.2V2.8A1.8 1.8 0 012.8 1h5.4A1.8 1.8 0 0110 2.8V3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+        </button>
         <button
           type="button"
           onClick={() => onOpenEdit(todo)}
@@ -334,144 +346,6 @@ function TodoRow({ todo, category, onToggle, onDelete, onOpenEdit }) {
         </button>
       </div>
     </div>
-  );
-}
-
-function AddTodoForm({ categories, defaultCategoryId, onAdd, onCancel }) {
-  const [text, setText] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [categoryId, setCategoryId] = useState(defaultCategoryId || "");
-  const [dueDate, setDueDate] = useState(() => todayScheduleDate());
-  const [dueTime, setDueTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  async function submit(e) {
-    e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setError("Please write what you need to do.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      const schedule = buildScheduleRange(dueDate, dueTime, endTime);
-      await onAdd({
-        text: trimmed,
-        priority,
-        categoryId: categoryId || null,
-        ...schedule,
-      });
-      setText("");
-      setDueDate(todayScheduleDate());
-      setDueTime("");
-      setEndTime("");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={submit}
-      className="rounded-2xl border border-cyan/30 bg-dialog p-4 shadow-lg ring-1 ring-cyan/10"
-    >
-      <div className="mb-3 flex items-center gap-2">
-        <span className="h-2 w-2 rounded-full bg-cyan" />
-        <span className="text-xs font-medium tracking-wide text-cyan uppercase">
-          New Todo
-        </span>
-      </div>
-
-      <textarea
-        ref={inputRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="What do you need to do?"
-        rows={2}
-        className="w-full resize-none rounded-xl bg-white/5 px-3 py-2.5 text-sm text-ink placeholder-muted outline-none ring-1 ring-line focus:ring-cyan/40"
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            submit(e);
-          }
-          if (e.key === "Escape") onCancel();
-        }}
-      />
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-[auto_minmax(10rem,1fr)]">
-        <label className="block">
-          <span className="mb-1.5 block text-[11px] font-medium text-muted">Priority</span>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="w-full rounded-lg bg-white/5 px-2.5 py-2 text-xs text-muted ring-1 ring-line focus:outline-none focus:ring-cyan/40"
-          >
-            <option value="high">🔴 High</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="low">🟢 Low</option>
-          </select>
-        </label>
-
-        <label className="block min-w-0">
-          <span className="mb-1.5 block text-[11px] font-medium text-muted">Category</span>
-          <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full min-w-0 rounded-lg bg-white/5 px-2.5 py-2 text-xs text-muted ring-1 ring-line focus:outline-none focus:ring-cyan/40"
-          >
-            <option value="">No category</option>
-            {categories.map((c) => (
-              <option key={c._id} value={c._id}>
-                {c.emoji ? `${c.emoji} ` : ""}{c.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-      </div>
-
-      <div className="mt-4 rounded-xl border border-line/70 bg-white/[0.025] p-3">
-        <p className="mb-2 text-xs font-medium text-ink">Time period</p>
-        <TodoScheduleFields
-          date={dueDate}
-          startTime={dueTime}
-          endTime={endTime}
-          onDateChange={setDueDate}
-          onStartTimeChange={setDueTime}
-          onEndTimeChange={setEndTime}
-          compact
-        />
-      </div>
-
-      {error ? <p className="mt-2 text-xs text-coral">{error}</p> : null}
-
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg px-3 py-1.5 text-xs text-muted hover:bg-white/5 hover:text-ink"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-cyan/20 px-4 py-1.5 text-xs font-medium text-cyan ring-1 ring-cyan/30 hover:bg-cyan/30 disabled:opacity-50"
-        >
-          {saving ? "Adding…" : "Add Todo"}
-        </button>
-      </div>
-    </form>
   );
 }
 
@@ -592,10 +466,17 @@ export default function TodoHome() {
     setTodos((ts) => ts.map((t) => (t._id === id ? { ...t, ...updated } : t)));
   }
 
-  async function handleAdd(data) {
-    const todo = await createTodo(data);
-    setTodos((ts) => [todo, ...ts]);
-    setShowAddForm(false);
+  function handleCreated(created) {
+    setTodos((current) => [...created].reverse().concat(current));
+  }
+
+  async function handleDuplicate(todo) {
+    try {
+      const created = await createTodo(nextTodoData(todo));
+      setTodos((current) => [created, ...current]);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function handleDeleteCategory(id) {
@@ -673,6 +554,8 @@ export default function TodoHome() {
         </div>
       </div>
 
+      <TodoPlanNotice />
+
       {error ? (
         <p className="mt-4 rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral">
           {error}
@@ -705,10 +588,11 @@ export default function TodoHome() {
       {/* Add Todo form */}
       {showAddForm ? (
         <div className="mt-5">
-          <AddTodoForm
+          <TodoComposer
             categories={categories}
-            onAdd={handleAdd}
-            onCancel={() => setShowAddForm(false)}
+            todos={todos}
+            onCreated={handleCreated}
+            onClose={() => setShowAddForm(false)}
           />
         </div>
       ) : null}
@@ -863,6 +747,7 @@ export default function TodoHome() {
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onOpenEdit={setEditingTodo}
+                    onDuplicate={handleDuplicate}
                   />
                 ))}
               </div>

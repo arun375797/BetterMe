@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useOutletContext, useParams } from "react-router-dom";
 import CategoryFormModal from "../components/CategoryFormModal.jsx";
-import TodoScheduleFields, { todayScheduleDate } from "../components/TodoScheduleFields.jsx";
+import TodoComposer from "../components/TodoComposer.jsx";
+import TodoScheduleFields from "../components/TodoScheduleFields.jsx";
 import {
   buildScheduleRange,
   duePartsFromIso,
@@ -16,6 +17,7 @@ import {
 } from "../api.js";
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 import { todoScheduleLabel } from "../lib/todoSchedule.js";
+import { nextTodoData } from "../lib/todoDuplicate.js";
 
 const PRIORITY_META = {
   high: { label: "High", dot: "bg-coral", color: "#e88b7a" },
@@ -162,7 +164,7 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
   );
 }
 
-function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
+function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit, onDuplicate }) {
   const pm = PRIORITY_META[todo.priority] || PRIORITY_META.medium;
 
   return (
@@ -222,7 +224,11 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
         </div>
       </div>
 
-      <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100">
+        <button type="button" onClick={() => onDuplicate(todo)} title="Duplicate / create next" aria-label="Duplicate or create next task"
+          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink">
+          <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor" strokeWidth="1.4"/><path d="M3 10H2.8A1.8 1.8 0 011 8.2V2.8A1.8 1.8 0 012.8 1h5.4A1.8 1.8 0 0110 2.8V3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/></svg>
+        </button>
         <button type="button" onClick={() => onOpenEdit(todo)} title="Edit"
           className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-ink">
           <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
@@ -237,113 +243,6 @@ function TodoRow({ todo, catColor, onToggle, onDelete, onOpenEdit }) {
         </button>
       </div>
     </div>
-  );
-}
-
-function InlineAddForm({ catColor, categories, categoryId, onAdd, onCancel }) {
-  const [text, setText] = useState("");
-  const [priority, setPriority] = useState("medium");
-  const [dueDate, setDueDate] = useState(() => todayScheduleDate());
-  const [dueTime, setDueTime] = useState("");
-  const [endTime, setEndTime] = useState("");
-  const [error, setError] = useState("");
-  const [saving, setSaving] = useState(false);
-  const inputRef = useRef(null);
-
-  useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
-
-  async function submit(e) {
-    e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed) {
-      setError("Please write what you need to do.");
-      return;
-    }
-    setSaving(true);
-    setError("");
-    try {
-      const schedule = buildScheduleRange(dueDate, dueTime, endTime);
-      await onAdd({ text: trimmed, priority, categoryId, ...schedule });
-      setText("");
-      setDueDate(todayScheduleDate());
-      setDueTime("");
-      setEndTime("");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  return (
-    <form
-      onSubmit={submit}
-      className="rounded-2xl border p-4"
-      style={{ borderColor: `${catColor}40`, background: `${catColor}06` }}
-    >
-      <textarea
-        ref={inputRef}
-        value={text}
-        onChange={(e) => setText(e.target.value)}
-        placeholder="What do you need to do in this category?"
-        rows={2}
-        className="w-full resize-none rounded-xl bg-white/5 px-3 py-2.5 text-sm text-ink placeholder-muted outline-none ring-1 ring-line"
-        style={{ "--tw-ring-color": `${catColor}40` }}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            submit(e);
-          }
-          if (e.key === "Escape") onCancel();
-        }}
-      />
-      <div className="mt-3 flex flex-wrap gap-2">
-        <label className="block">
-          <span className="mb-1.5 block text-[11px] font-medium text-muted">Priority</span>
-          <select
-            value={priority}
-            onChange={(e) => setPriority(e.target.value)}
-            className="rounded-lg bg-white/5 px-2.5 py-2 text-xs text-muted ring-1 ring-line focus:outline-none"
-          >
-            <option value="high">🔴 High</option>
-            <option value="medium">🟡 Medium</option>
-            <option value="low">🟢 Low</option>
-          </select>
-        </label>
-      </div>
-      <div className="mt-4 rounded-xl border border-line/70 bg-white/[0.025] p-3">
-        <p className="mb-2 text-xs font-medium text-ink">Time period</p>
-        <TodoScheduleFields
-          date={dueDate}
-          startTime={dueTime}
-          endTime={endTime}
-          onDateChange={setDueDate}
-          onStartTimeChange={setDueTime}
-          onEndTimeChange={setEndTime}
-          compact
-        />
-      </div>
-      {error ? <p className="mt-2 text-xs text-coral">{error}</p> : null}
-      <div className="mt-3 flex justify-end gap-2">
-        <button
-          type="button"
-          onClick={onCancel}
-          className="rounded-lg px-3 py-1.5 text-xs text-muted hover:bg-white/5 hover:text-ink"
-        >
-          Cancel
-        </button>
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg px-4 py-1.5 text-xs font-medium text-overlay disabled:opacity-50"
-          style={{ background: catColor }}
-        >
-          {saving ? "Adding…" : "Add Todo"}
-        </button>
-      </div>
-    </form>
   );
 }
 
@@ -412,10 +311,17 @@ export default function TodoCategoryPage() {
     setTodos((ts) => ts.map((t) => (t._id === id ? { ...t, ...updated } : t)));
   }
 
-  async function handleAdd(data) {
-    const todo = await createTodo({ ...data, categoryId });
-    setTodos((ts) => [todo, ...ts]);
-    setShowAddForm(false);
+  function handleCreated(created) {
+    setTodos((current) => [...created].reverse().concat(current));
+  }
+
+  async function handleDuplicate(todo) {
+    try {
+      const created = await createTodo(nextTodoData(todo));
+      setTodos((current) => [created, ...current]);
+    } catch (err) {
+      setError(err.message);
+    }
   }
 
   async function handleDeleteCategory() {
@@ -602,11 +508,13 @@ export default function TodoCategoryPage() {
       {/* Add form */}
       {showAddForm ? (
         <div className="mt-5">
-          <InlineAddForm
-            catColor={catColor}
-            categoryId={categoryId}
-            onAdd={handleAdd}
-            onCancel={() => setShowAddForm(false)}
+          <TodoComposer
+            accent={catColor}
+            categories={categories}
+            defaultCategoryId={categoryId}
+            todos={todos}
+            onCreated={handleCreated}
+            onClose={() => setShowAddForm(false)}
           />
         </div>
       ) : null}
@@ -675,6 +583,7 @@ export default function TodoCategoryPage() {
                     onToggle={handleToggle}
                     onDelete={handleDelete}
                     onOpenEdit={setEditingTodo}
+                    onDuplicate={handleDuplicate}
                   />
                 ))}
               </div>

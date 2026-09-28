@@ -513,7 +513,24 @@ export const createTodo = (data) =>
     "/",
     { method: "POST", body: JSON.stringify(data) },
     TODOS
+    );
+export const createTodos = (items) =>
+  mutate(
+    TODOS_API,
+    "/bulk",
+    { method: "POST", body: JSON.stringify({ items }) },
+    TODOS
   );
+export const getTodoTemplates = () => get(TODOS_API, "/templates", 0);
+export const createTodoTemplate = (data) =>
+  mutate(
+    TODOS_API,
+    "/templates",
+    { method: "POST", body: JSON.stringify(data) },
+    TODOS
+  );
+export const deleteTodoTemplate = (id) =>
+  mutate(TODOS_API, `/templates/${id}`, { method: "DELETE" }, TODOS);
 export const updateTodo = (id, data) =>
   mutate(
     TODOS_API,
