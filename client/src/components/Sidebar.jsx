@@ -9,6 +9,7 @@ import { deleteTodoCategory } from "../api.js";
 import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
+  { label: "Galaxy Fit3", path: "/health/fit3" },
   { label: "Sugar", path: "/health/sugar" },
   { label: "Insulin", path: "/health/insulin" },
   {

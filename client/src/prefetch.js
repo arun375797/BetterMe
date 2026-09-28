@@ -24,6 +24,7 @@ import {
   getTodos,
   getLearningPlan,
   getPlanSubject,
+  getWearableData,
 } from "./api.js";
 
 const lastAt = new Map();
@@ -84,6 +85,7 @@ function pageLoaders(pathname) {
     return () => import("./pages/ExerciseKindPage.jsx");
   }
   if (pathname === "/health/sleep") return () => import("./pages/SleepPage.jsx");
+  if (pathname === "/health/fit3") return () => import("./pages/WearablePage.jsx");
   if (pathname === "/notebooks") {
     return () => import("./pages/MyNotebooksHome.jsx");
   }
@@ -162,7 +164,7 @@ function dataPrefetch(pathname) {
   }
 
   if (pathname === "/health") {
-    return [getSugarReadings(), getMealLogs(), getSleepLogs()];
+    return [getSugarReadings(), getMealLogs(), getSleepLogs(), getWearableData(30)];
   }
   if (pathname === "/health/sugar") return [getSugarReadings()];
   if (pathname === "/health/vitamin") return [getVitaminItems()];
@@ -173,6 +175,7 @@ function dataPrefetch(pathname) {
   const kind = pathname.match(/^\/health\/exercise\/([^/]+)$/);
   if (kind) return [getExerciseSessions(kind[1])];
   if (pathname === "/health/sleep") return [getSleepLogs()];
+  if (pathname === "/health/fit3") return [getWearableData(30)];
 
   if (pathname === "/report/statistics") return [getReportStats()];
   if (pathname === "/sit25" || pathname === "/sit25/define") {

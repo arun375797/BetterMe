@@ -1,0 +1,10 @@
+<resources>
+    <string name="app_name">BetterMe Health</string>
+    <string name="health_connect">Health Connect</string>
+    <string name="not_connected">Not connected</string>
+    <string name="connect_health">Connect Health Connect</string>
+    <string name="refresh_sleep">Refresh sleep</string>
+    <string name="sync_betterme">Sync Fit3 history to BetterMe</string>
+    <string name="api_url_hint">BetterMe API URL</string>
+    <string name="pin_hint">BetterMe PIN</string>
+</resources>

@@ -195,6 +195,7 @@ const BOOKS_API = "/api/notebooks";
 const PERSONALITY_API = "/api/personality";
 const TODOS_API = "/api/todos";
 const SLEEP_API = "/api/sleep";
+const WEARABLE_API = "/api/wearable";
 const REPORT_API = "/api/report";
 const SIT_BREAK_API = "/api/sit-break";
 const MUSIC_API = "/api/music";
@@ -211,6 +212,7 @@ const BOOKS = [BOOKS_API];
 const PERSONALITY = [PERSONALITY_API];
 const TODOS = [TODOS_API];
 const SLEEP = [SLEEP_API];
+const WEARABLE = [WEARABLE_API];
 const REPORT = [REPORT_API];
 const SIT_BREAK = [SIT_BREAK_API];
 const MUSIC = [MUSIC_API];
@@ -565,6 +567,11 @@ export const updateSleepLog = (id, data) =>
   );
 export const deleteSleepLog = (id) =>
   mutate(SLEEP_API, `/${id}`, { method: "DELETE" }, [...SLEEP, ...REPORT]);
+
+export const getWearableData = (days = 30) =>
+  get(WEARABLE_API, `/?days=${encodeURIComponent(days)}`, 0);
+export const peekWearableData = (days = 30) =>
+  peek(WEARABLE_API, `/?days=${encodeURIComponent(days)}`);
 
 export const getReportStats = () => get(REPORT_API, "/stats");
 

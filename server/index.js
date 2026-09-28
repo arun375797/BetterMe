@@ -23,6 +23,7 @@ import musicRoutes from "./routes/music.js";
 import studyRoutes from "./routes/study.js";
 import planRoutes from "./routes/plan.js";
 import authRoutes from "./routes/auth.js";
+import wearableRoutes from "./routes/wearable.js";
 import { requireAuth } from "./lib/auth.js";
 import { memoClear } from "./memo.js";
 import {
@@ -153,6 +154,7 @@ app.use("/api/notebooks", notebookRoutes);
 app.use("/api/personality", personalityRoutes);
 app.use("/api/todos", todoRoutes);
 app.use("/api/sleep", sleepRoutes);
+app.use("/api/wearable", wearableRoutes);
 app.use("/api/report", reportRoutes);
 app.use("/api/sit-break", sitBreakRoutes);
 app.use("/api/music", musicRoutes);

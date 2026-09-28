@@ -6,7 +6,13 @@ import FoodAdherenceChart, {
 import SleepDurationChart from "../components/SleepDurationChart.jsx";
 import SleepQualityCard from "../components/SleepQualityCard.jsx";
 import { formatMinutes } from "../lib/sleepStats.js";
-import { getMealLogs, getSleepLogs, getSugarReadings, peek } from "../api.js";
+import {
+  getMealLogs,
+  getSleepLogs,
+  getSugarReadings,
+  getWearableData,
+  peek,
+} from "../api.js";
 
 function daysAgo(n) {
   const d = new Date();
@@ -31,20 +37,25 @@ export default function HealthHomePage() {
   const [sleepStats, setSleepStats] = useState(
     () => peek("/api/sleep", "/")?.stats || null
   );
+  const [wearable, setWearable] = useState(
+    () => peek("/api/wearable", "/?days=30")?.latest || null
+  );
   const [error, setError] = useState("");
 
   useEffect(() => {
     async function load() {
       try {
-        const [sugar, food, sleep] = await Promise.all([
+        const [sugar, food, sleep, fit3] = await Promise.all([
           getSugarReadings(),
           getMealLogs(),
           getSleepLogs(),
+          getWearableData(30),
         ]);
         setReadings(sugar.readings || []);
         setLogs(food.logs || []);
         setSleepLogs(sleep.logs || []);
         setSleepStats(sleep.stats || null);
+        setWearable(fit3.latest || null);
         setError("");
       } catch (err) {
         setError(err.message);
@@ -74,10 +85,29 @@ export default function HealthHomePage() {
       </p>
       <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Overview</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Sugar, food, and sleep at a glance. Open each section for full logs and
-        charts.
+        Sugar, food, sleep, and Galaxy Fit3 activity at a glance. Open each
+        section for full logs and charts.
       </p>
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
+
+      <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
+            Galaxy Fit3
+          </p>
+          <h3 className="mt-1 text-lg font-semibold">Latest wearable sync</h3>
+        </div>
+        <Link to="/health/fit3" className="text-sm text-coral hover:underline">
+          Open Fit3 dashboard
+        </Link>
+      </div>
+
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard label="Steps" value={wearable?.steps?.toLocaleString() ?? "—"} hint={wearable?.day || "Sync from Android"} />
+        <StatCard label="Heart rate" value={wearable?.heartRate?.latest != null ? `${wearable.heartRate.latest} bpm` : "—"} hint={wearable?.heartRate?.average ? `Average ${wearable.heartRate.average} bpm` : "Latest reading"} />
+        <StatCard label="Blood oxygen" value={wearable?.oxygen?.latest != null ? `${Math.round(wearable.oxygen.latest)}%` : "—"} hint={wearable?.oxygen?.minimum ? `Range ${Math.round(wearable.oxygen.minimum)}–${Math.round(wearable.oxygen.maximum)}%` : "Latest reading"} />
+        <StatCard label="Active calories" value={wearable?.activeCaloriesKcal != null ? `${Math.round(wearable.activeCaloriesKcal)} kcal` : "—"} hint={wearable?.exerciseMinutes != null ? `${wearable.exerciseMinutes} exercise min` : "Today"} />
+      </div>
 
       <div
         id="jump-sugar"

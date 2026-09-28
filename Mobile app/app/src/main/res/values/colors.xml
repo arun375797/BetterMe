@@ -1,0 +1,12 @@
+<resources>
+    <color name="ink">#182022</color>
+    <color name="muted">#667477</color>
+    <color name="surface">#FFFDF8</color>
+    <color name="surface_soft">#F4F1E9</color>
+    <color name="coral">#E96B55</color>
+    <color name="coral_dark">#B84534</color>
+    <color name="mint">#DCECE4</color>
+    <color name="mint_dark">#30664E</color>
+    <color name="white">#FFFFFF</color>
+</resources>
+

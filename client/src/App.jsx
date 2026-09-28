@@ -24,6 +24,7 @@ const HealthSoonPage = lazy(() => import("./pages/HealthSoonPage.jsx"));
 const ExercisePage = lazy(() => import("./pages/ExercisePage.jsx"));
 const ExerciseKindPage = lazy(() => import("./pages/ExerciseKindPage.jsx"));
 const SleepPage = lazy(() => import("./pages/SleepPage.jsx"));
+const WearablePage = lazy(() => import("./pages/WearablePage.jsx"));
 const MyNotebooksHome = lazy(() => import("./pages/MyNotebooksHome.jsx"));
 const NotebookBookIndex = lazy(() => import("./pages/NotebookBookIndex.jsx"));
 const NotebookBookWrite = lazy(() => import("./pages/NotebookBookWrite.jsx"));
@@ -140,6 +141,7 @@ export default function App() {
         <Route path="/health/exercise" element={<ExercisePage />} />
         <Route path="/health/exercise/:kind" element={<ExerciseKindPage />} />
         <Route path="/health/sleep" element={<SleepPage />} />
+        <Route path="/health/fit3" element={<WearablePage />} />
         <Route path="/health/:item" element={<HealthSoonPage />} />
         <Route path="/notebooks" element={<MyNotebooksHome />} />
         <Route path="/notebooks/:bookId" element={<NotebookBookIndex />} />
