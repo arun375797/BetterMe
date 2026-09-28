@@ -10,6 +10,7 @@ import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
   { label: "Sugar", path: "/health/sugar" },
+  { label: "Insulin", path: "/health/insulin" },
   {
     label: "Exercise",
     path: "/health/exercise",

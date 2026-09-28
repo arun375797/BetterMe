@@ -187,6 +187,7 @@ function mutate(base, path, options, prefixes) {
 
 const API = "/api/learning";
 const SUGAR_API = "/api/sugar";
+const INSULIN_API = "/api/insulin";
 const VITAMIN_API = "/api/vitamins";
 const FOOD_API = "/api/food";
 const EXERCISE_API = "/api/exercise";
@@ -202,6 +203,7 @@ const PLAN_API = "/api/plan";
 
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
+const INSULIN = [INSULIN_API];
 const VITAMINS = [VITAMIN_API];
 const FOOD = [FOOD_API];
 const EXERCISE = [EXERCISE_API];
@@ -360,11 +362,21 @@ export const advanceStudyTopic = (data) =>
 
 export const getSugarReadings = () => get(SUGAR_API, "/");
 export const createSugarReading = (data) =>
-  mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SUGAR, ...REPORT]);
+  mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SUGAR, ...INSULIN, ...REPORT]);
 export const updateSugarReading = (id, data) =>
-  mutate(SUGAR_API, `/${id}`, { method: "PATCH", body: JSON.stringify(data) }, [...SUGAR, ...REPORT]);
+  mutate(SUGAR_API, `/${id}`, { method: "PATCH", body: JSON.stringify(data) }, [...SUGAR, ...INSULIN, ...REPORT]);
 export const deleteSugarReading = (id) =>
-  mutate(SUGAR_API, `/${id}`, { method: "DELETE" }, [...SUGAR, ...REPORT]);
+  mutate(SUGAR_API, `/${id}`, { method: "DELETE" }, [...SUGAR, ...INSULIN, ...REPORT]);
+
+export const getInsulinEntries = () => get(INSULIN_API, "/", 0);
+export const createInsulinEntry = (data) =>
+  mutate(INSULIN_API, "/", { method: "POST", body: JSON.stringify(data) }, INSULIN);
+export const updateInsulinEntry = (id, data) =>
+  mutate(INSULIN_API, `/${id}`, { method: "PATCH", body: JSON.stringify(data) }, INSULIN);
+export const deleteInsulinEntry = (id) =>
+  mutate(INSULIN_API, `/${id}`, { method: "DELETE" }, INSULIN);
+export const updateInsulinSettings = (data) =>
+  mutate(INSULIN_API, "/settings", { method: "PATCH", body: JSON.stringify(data) }, INSULIN);
 
 export const getVitaminItems = () => get(VITAMIN_API, "/");
 export const createVitaminItem = (data) =>

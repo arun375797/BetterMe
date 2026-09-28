@@ -65,6 +65,13 @@ export const JUMP_SHORTCUTS = [
     match: (p) => p.startsWith("/health/sugar"),
   },
   {
+    id: "insulin",
+    label: "Insulin",
+    path: "/health/insulin",
+    color: "var(--ui-cyan)",
+    match: (p) => p.startsWith("/health/insulin"),
+  },
+  {
     id: "notebooks",
     label: "Notebooks",
     path: "/notebooks",
@@ -111,6 +118,7 @@ export const JUMP_SHORTCUTS = [
 const HEALTH_SUBS = [
   { id: "health-home", label: "Overview", path: "/health" },
   { id: "sugar", label: "Sugar", path: "/health/sugar" },
+  { id: "insulin", label: "Insulin", path: "/health/insulin" },
   { id: "exercise", label: "Exercise", path: "/health/exercise" },
   { id: "vitamin", label: "Vitamin", path: "/health/vitamin" },
   { id: "food", label: "Food", path: "/health/food" },
@@ -213,6 +221,13 @@ function IconGlyph({ id }) {
     return (
       <svg {...common}>
         <path d="M7 3h6l3 7-6 7-6-7 3-7z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      </svg>
+    );
+  }
+  if (id === "insulin") {
+    return (
+      <svg {...common}>
+        <path d="M6 14l8-8M11.5 4.5l2 2M4.5 11.5l2 2M3 15l2.5-.5L3.5 12.5 3 15zM12.8 3.2l1-1 3 3-1 1" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }

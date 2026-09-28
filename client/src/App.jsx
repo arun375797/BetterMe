@@ -15,6 +15,7 @@ const NotebookPage = lazy(() => import("./pages/NotebookPage.jsx"));
 const QuestionsPage = lazy(() => import("./pages/QuestionsPage.jsx"));
 const QuestionViewPage = lazy(() => import("./pages/QuestionViewPage.jsx"));
 const SugarPage = lazy(() => import("./pages/SugarPage.jsx"));
+const InsulinPage = lazy(() => import("./pages/InsulinPage.jsx"));
 const VitaminPage = lazy(() => import("./pages/VitaminPage.jsx"));
 const FoodPage = lazy(() => import("./pages/FoodPage.jsx"));
 const RecipePage = lazy(() => import("./pages/RecipePage.jsx"));
@@ -132,6 +133,7 @@ export default function App() {
         />
         <Route path="/health" element={<HealthHomePage />} />
         <Route path="/health/sugar" element={<SugarPage />} />
+        <Route path="/health/insulin" element={<InsulinPage />} />
         <Route path="/health/vitamin" element={<VitaminPage />} />
         <Route path="/health/food" element={<FoodPage />} />
         <Route path="/health/food/:foodId" element={<RecipePage />} />
