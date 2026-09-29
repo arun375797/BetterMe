@@ -135,9 +135,9 @@ class MainActivity : AppCompatActivity() {
         }
         val syncStartedAt = Instant.now()
         val localZone = ZoneId.systemDefault()
-        // v3 intentionally starts with a clean 40-day reconciliation once so
-        // installs upgraded from the old append-only sync repair inflated data.
-        val previous = syncPreferences.getString("last_successful_sync_v3", null)
+        // v4 intentionally performs one clean reconciliation so raw step
+        // fragments from older builds are replaced by Health Connect totals.
+        val previous = syncPreferences.getString("last_successful_sync_v4", null)
             ?.let { runCatching { Instant.parse(it) }.getOrNull() }
         val since = previous
             ?.atZone(localZone)
@@ -169,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             }.onSuccess { progress ->
-                syncPreferences.edit().putString("last_successful_sync_v3", syncStartedAt.toString()).apply()
+                syncPreferences.edit().putString("last_successful_sync_v4", syncStartedAt.toString()).apply()
                 binding.pinInput.text?.clear()
                 binding.syncMessage.setTextColor(getColor(R.color.mint_dark))
                 binding.syncMessage.text = "Complete · ${progress.totalRecords} records checked and safely upserted."

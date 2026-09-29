@@ -14,6 +14,7 @@ import androidx.health.connect.client.records.RestingHeartRateRecord
 import androidx.health.connect.client.records.SleepSessionRecord
 import androidx.health.connect.client.records.StepsRecord
 import androidx.health.connect.client.records.TotalCaloriesBurnedRecord
+import androidx.health.connect.client.request.AggregateRequest
 import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Duration
@@ -98,7 +99,7 @@ class HealthConnectManager(private val context: Context) {
             accept("sleep", mergeSleepRecords(readAllSleepRecords(start, end)).map { it.toSyncRecord() })
         }
         if (HealthPermission.getReadPermission(StepsRecord::class) in granted) {
-            accept("steps", dailySteps(readAll<StepsRecord>(start, end)))
+            accept("steps", aggregateDailySteps(start, end))
         }
         if (HealthPermission.getReadPermission(HeartRateRecord::class) in granted) {
             readPaged<HeartRateRecord>(start, end, { it.toSyncRecords() }) { accept("heart rate", it) }
@@ -173,25 +174,6 @@ class HealthConnectManager(private val context: Context) {
             onPage(response.records.flatMap(transform).filter { it.sourceApp == SAMSUNG_HEALTH_PACKAGE })
             pageToken = response.pageToken
         } while (pageToken != null)
-    }
-
-    private suspend inline fun <reified T : Record> readAll(start: Instant, end: Instant): List<T> {
-        val records = mutableListOf<T>()
-        var pageToken: String? = null
-        do {
-            val response = client.readRecords(
-                ReadRecordsRequest(
-                    recordType = T::class,
-                    timeRangeFilter = TimeRangeFilter.between(start, end),
-                    ascendingOrder = true,
-                    pageSize = 1000,
-                    pageToken = pageToken,
-                )
-            )
-            records += response.records.filter { it.metadata.dataOrigin.packageName == SAMSUNG_HEALTH_PACKAGE }
-            pageToken = response.pageToken
-        } while (pageToken != null)
-        return records
     }
 
     private fun base(record: Record, type: String, start: Instant, end: Instant, data: Map<String, Any?>) = SyncRecord(
@@ -290,29 +272,41 @@ class HealthConnectManager(private val context: Context) {
         recordedSleepMinutes, actualSleepMinutes,
     )
 
-    private fun dailySteps(records: List<StepsRecord>): List<SyncRecord> = records
-        .groupBy { record ->
-            val offset = record.startZoneOffset ?: ZoneId.systemDefault().rules.getOffset(record.startTime)
-            record.startTime.atOffset(offset).toLocalDate().toString()
+    private suspend fun aggregateDailySteps(start: Instant, end: Instant): List<SyncRecord> {
+        val zone = ZoneId.systemDefault()
+        val records = mutableListOf<SyncRecord>()
+        var day = start.atZone(zone).toLocalDate()
+        val finalDay = end.atZone(zone).toLocalDate()
+        while (!day.isAfter(finalDay)) {
+            val dayStart = day.atStartOfDay(zone).toInstant()
+            val nextDayStart = day.plusDays(1).atStartOfDay(zone).toInstant()
+            val bucketEnd = minOf(nextDayStart, end)
+            if (dayStart < bucketEnd) {
+                val aggregate = client.aggregate(
+                    AggregateRequest(
+                        metrics = setOf(StepsRecord.COUNT_TOTAL),
+                        timeRangeFilter = TimeRangeFilter.between(dayStart, bucketEnd),
+                    )
+                )
+                aggregate[StepsRecord.COUNT_TOTAL]?.let { count ->
+                    records += SyncRecord(
+                        externalId = "hc:steps:day:$day",
+                        type = "steps",
+                        startTime = dayStart,
+                        endTime = bucketEnd,
+                        sourceApp = "health_connect_aggregate",
+                        data = mapOf(
+                            "count" to count,
+                            "startOffsetSeconds" to zone.rules.getOffset(dayStart).totalSeconds,
+                            "aggregation" to "health_connect_daily_total",
+                        ),
+                    )
+                }
+            }
+            day = day.plusDays(1)
         }
-        .map { (day, parts) ->
-            val first = parts.minBy { it.startTime }
-            val last = parts.maxBy { it.endTime }
-            val offset = first.startZoneOffset ?: ZoneId.systemDefault().rules.getOffset(first.startTime)
-            SyncRecord(
-                externalId = "hc:steps:day:$day",
-                type = "steps",
-                startTime = first.startTime,
-                endTime = last.endTime,
-                sourceApp = SAMSUNG_HEALTH_PACKAGE,
-                data = mapOf(
-                    "count" to parts.sumOf { it.count },
-                    "startOffsetSeconds" to offset.totalSeconds,
-                    "recordCount" to parts.size,
-                ),
-            )
-        }
-        .sortedBy { it.startTime }
+        return records
+    }
 
     private fun HeartRateRecord.toSyncRecords() = samples.map { sample ->
         SyncRecord(

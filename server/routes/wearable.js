@@ -172,7 +172,9 @@ router.post("/reconcile", async (req, res) => {
     return res.status(400).json({ message: "A valid wearable reconciliation range is required." });
   }
 
-  const sourceFilter = { sourceApp: "com.sec.android.app.shealth" };
+  const sourceFilter = {
+    sourceApp: { $in: ["com.sec.android.app.shealth", "health_connect_aggregate"] },
+  };
   const recordFilter = all
     ? sourceFilter
     : { ...sourceFilter, startTime: { $lt: to }, endTime: { $gte: from } };

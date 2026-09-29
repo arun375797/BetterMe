@@ -22,7 +22,7 @@ The production API is prefilled as `https://betterme-production.up.railway.app`.
 ## Behavior
 
 - The initial import reads only the latest 40 days. Without Android's past-data permission, Health Connect may limit older data further.
-- Steps are stored as one stable daily record. Heart samples use their timestamp and value as a stable identity.
+- Steps use Health Connect's deduplicated daily aggregate and are stored as one stable daily record. This includes device steps according to Health Connect's source-priority rules. Heart samples use their timestamp and value as a stable identity.
 - Later syncs start one day before the last successful cursor, reconcile only that small overlap, and preserve older days without duplicates.
 - Reads Health Connect in pages and uploads batches of at most 50 records with bounded timeouts and automatic retries.
 - Reconstructs a Samsung sleep episode from overlapping/nearby Health Connect fragments, deduplicates overlapping stage intervals, preserves separate naps, and syncs both recorded sleep time and actual non-awake sleep.
