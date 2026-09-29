@@ -146,9 +146,9 @@ export default function SleepPage() {
       {source === "manual" ? <div className="mt-8"><SleepQualityCard log={stats?.lastNight} /></div> : null}
 
       <div className="mt-8 rounded-2xl border border-line bg-raised/80 p-5">
-        <h3 className="text-lg font-semibold">30-day history</h3>
+        <h3 className="text-lg font-semibold">40-day history</h3>
         <div className="mt-4">
-          <SleepDurationChart logs={logs} dayCount={30} />
+          <SleepDurationChart logs={logs} dayCount={40} />
         </div>
       </div>
 

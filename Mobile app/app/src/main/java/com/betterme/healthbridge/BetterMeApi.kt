@@ -36,10 +36,10 @@ class BetterMeApi {
             retryingPost("$root/api/wearable/sync", JSONObject().put("records", array), token)
         }
 
-    suspend fun replaceSyncedSleep(baseUrl: String, token: String, from: Instant, to: Instant, all: Boolean) =
+    suspend fun reconcileWearableWindow(baseUrl: String, token: String, from: Instant, to: Instant, all: Boolean) =
         withContext(Dispatchers.IO) {
             retryingPost(
-                "${checkedRoot(baseUrl)}/api/wearable/sleep/replace",
+                "${checkedRoot(baseUrl)}/api/wearable/reconcile",
                 JSONObject().put("from", from.toString()).put("to", to.toString()).put("all", all),
                 token,
             )

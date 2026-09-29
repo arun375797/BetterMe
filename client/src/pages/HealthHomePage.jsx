@@ -38,7 +38,7 @@ export default function HealthHomePage() {
     () => peek("/api/sleep", "/")?.stats || null
   );
   const [wearable, setWearable] = useState(
-    () => peek("/api/wearable", "/?days=30")?.latest || null
+    () => peek("/api/wearable", "/?days=40")?.latest || null
   );
   const [error, setError] = useState("");
 
@@ -49,7 +49,7 @@ export default function HealthHomePage() {
           getSugarReadings(),
           getMealLogs(),
           getSleepLogs(),
-          getWearableData(30),
+          getWearableData(40),
         ]);
         setReadings(sugar.readings || []);
         setLogs(food.logs || []);
@@ -85,7 +85,7 @@ export default function HealthHomePage() {
       </p>
       <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Overview</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Sugar, food, sleep, and Galaxy Fit3 activity at a glance. Open each
+        Sugar, food, sleep, steps, and heart rate at a glance. Open each
         section for full logs and charts.
       </p>
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
@@ -93,12 +93,12 @@ export default function HealthHomePage() {
       <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
-            Galaxy Fit3
+            Steps and heart rate
           </p>
           <h3 className="mt-1 text-lg font-semibold">Latest wearable sync</h3>
         </div>
-        <Link to="/health/fit3" className="text-sm text-coral hover:underline">
-          Open Fit3 dashboard
+        <Link to="/health/step" className="text-sm text-coral hover:underline">
+          Open step dashboard
         </Link>
       </div>
 

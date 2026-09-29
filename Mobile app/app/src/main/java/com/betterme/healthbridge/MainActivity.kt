@@ -134,19 +134,33 @@ class MainActivity : AppCompatActivity() {
             return
         }
         val syncStartedAt = Instant.now()
-        val previous = syncPreferences.getString("last_successful_sync_v2", null)
+        val localZone = ZoneId.systemDefault()
+        // v3 intentionally starts with a clean 40-day reconciliation once so
+        // installs upgraded from the old append-only sync repair inflated data.
+        val previous = syncPreferences.getString("last_successful_sync_v3", null)
             ?.let { runCatching { Instant.parse(it) }.getOrNull() }
-        val since = previous?.minus(1, ChronoUnit.DAYS)
+        val since = previous
+            ?.atZone(localZone)
+            ?.toLocalDate()
+            ?.minusDays(1)
+            ?.atStartOfDay(localZone)
+            ?.toInstant()
         binding.syncButton.isEnabled = false
         binding.syncMessage.setTextColor(getColor(R.color.muted))
-        binding.syncMessage.text = if (since == null) "Starting full historical import…" else "Checking for updated health records…"
+        binding.syncMessage.text = if (since == null) "Importing the latest 40 days…" else "Checking for new and updated health records…"
 
         lifecycleScope.launch {
             runCatching {
                 val token = api.login(baseUrl, pin)
-                val readFrom = since ?: Instant.EPOCH
-                binding.syncMessage.text = "Preparing corrected sleep history…"
-                api.replaceSyncedSleep(baseUrl, token, readFrom, syncStartedAt.plus(1, ChronoUnit.MINUTES), previous == null)
+                val initialDayCount = if (health.hasHistoryPermission()) 40L else 30L
+                val readFrom = since ?: syncStartedAt
+                    .atZone(localZone)
+                    .toLocalDate()
+                    .minusDays(initialDayCount - 1)
+                    .atStartOfDay(localZone)
+                    .toInstant()
+                binding.syncMessage.text = "Preparing a duplicate-free sync window…"
+                api.reconcileWearableWindow(baseUrl, token, readFrom, syncStartedAt.plus(1, ChronoUnit.MINUTES), previous == null)
                 health.syncHistory(
                     incrementalSince = since,
                     onBatch = { api.syncBatch(baseUrl, token, it) },
@@ -155,7 +169,7 @@ class MainActivity : AppCompatActivity() {
                     },
                 )
             }.onSuccess { progress ->
-                syncPreferences.edit().putString("last_successful_sync_v2", syncStartedAt.toString()).apply()
+                syncPreferences.edit().putString("last_successful_sync_v3", syncStartedAt.toString()).apply()
                 binding.pinInput.text?.clear()
                 binding.syncMessage.setTextColor(getColor(R.color.mint_dark))
                 binding.syncMessage.text = "Complete · ${progress.totalRecords} records checked and safely upserted."

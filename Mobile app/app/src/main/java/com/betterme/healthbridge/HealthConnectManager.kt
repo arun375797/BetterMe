@@ -18,6 +18,7 @@ import androidx.health.connect.client.request.ReadRecordsRequest
 import androidx.health.connect.client.time.TimeRangeFilter
 import java.time.Duration
 import java.time.Instant
+import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.temporal.ChronoUnit
 import java.security.MessageDigest
@@ -66,15 +67,18 @@ class HealthConnectManager(private val context: Context) {
     suspend fun hasAnyDataPermission(): Boolean =
         grantedPermissions().any { it in PERMISSIONS && it != HISTORY_PERMISSION }
 
+    suspend fun hasHistoryPermission(): Boolean = HISTORY_PERMISSION in grantedPermissions()
+
     suspend fun syncHistory(
         incrementalSince: Instant?,
         onBatch: suspend (List<SyncRecord>) -> Unit,
         onProgress: (SyncProgress) -> Unit,
     ): SyncProgress {
         val granted = grantedPermissions()
-        val fullHistory = HISTORY_PERMISSION in granted
+        val initialDayCount = if (HISTORY_PERMISSION in granted) 40L else 30L
         val start = incrementalSince
-            ?: if (fullHistory) Instant.EPOCH else Instant.now().minus(30, ChronoUnit.DAYS)
+            ?: Instant.now().atZone(ZoneId.systemDefault()).toLocalDate().minusDays(initialDayCount - 1)
+                .atStartOfDay(ZoneId.systemDefault()).toInstant()
         val end = Instant.now().plus(1, ChronoUnit.MINUTES)
         val counts = linkedMapOf<String, Int>()
         var total = 0
@@ -94,7 +98,7 @@ class HealthConnectManager(private val context: Context) {
             accept("sleep", mergeSleepRecords(readAllSleepRecords(start, end)).map { it.toSyncRecord() })
         }
         if (HealthPermission.getReadPermission(StepsRecord::class) in granted) {
-            readPaged<StepsRecord>(start, end, { listOf(it.toSyncRecord()) }) { accept("steps", it) }
+            accept("steps", dailySteps(readAll<StepsRecord>(start, end)))
         }
         if (HealthPermission.getReadPermission(HeartRateRecord::class) in granted) {
             readPaged<HeartRateRecord>(start, end, { it.toSyncRecords() }) { accept("heart rate", it) }
@@ -169,6 +173,25 @@ class HealthConnectManager(private val context: Context) {
             onPage(response.records.flatMap(transform).filter { it.sourceApp == SAMSUNG_HEALTH_PACKAGE })
             pageToken = response.pageToken
         } while (pageToken != null)
+    }
+
+    private suspend inline fun <reified T : Record> readAll(start: Instant, end: Instant): List<T> {
+        val records = mutableListOf<T>()
+        var pageToken: String? = null
+        do {
+            val response = client.readRecords(
+                ReadRecordsRequest(
+                    recordType = T::class,
+                    timeRangeFilter = TimeRangeFilter.between(start, end),
+                    ascendingOrder = true,
+                    pageSize = 1000,
+                    pageToken = pageToken,
+                )
+            )
+            records += response.records.filter { it.metadata.dataOrigin.packageName == SAMSUNG_HEALTH_PACKAGE }
+            pageToken = response.pageToken
+        } while (pageToken != null)
+        return records
     }
 
     private fun base(record: Record, type: String, start: Instant, end: Instant, data: Map<String, Any?>) = SyncRecord(
@@ -267,11 +290,33 @@ class HealthConnectManager(private val context: Context) {
         recordedSleepMinutes, actualSleepMinutes,
     )
 
-    private fun StepsRecord.toSyncRecord() = base(this, "steps", startTime, endTime, mapOf("count" to count, "startOffsetSeconds" to startZoneOffset?.totalSeconds))
+    private fun dailySteps(records: List<StepsRecord>): List<SyncRecord> = records
+        .groupBy { record ->
+            val offset = record.startZoneOffset ?: ZoneId.systemDefault().rules.getOffset(record.startTime)
+            record.startTime.atOffset(offset).toLocalDate().toString()
+        }
+        .map { (day, parts) ->
+            val first = parts.minBy { it.startTime }
+            val last = parts.maxBy { it.endTime }
+            val offset = first.startZoneOffset ?: ZoneId.systemDefault().rules.getOffset(first.startTime)
+            SyncRecord(
+                externalId = "hc:steps:day:$day",
+                type = "steps",
+                startTime = first.startTime,
+                endTime = last.endTime,
+                sourceApp = SAMSUNG_HEALTH_PACKAGE,
+                data = mapOf(
+                    "count" to parts.sumOf { it.count },
+                    "startOffsetSeconds" to offset.totalSeconds,
+                    "recordCount" to parts.size,
+                ),
+            )
+        }
+        .sortedBy { it.startTime }
 
     private fun HeartRateRecord.toSyncRecords() = samples.map { sample ->
         SyncRecord(
-            externalId = "hc:heart_rate:${metadata.id}:${sample.time.toEpochMilli()}:${sample.beatsPerMinute}",
+            externalId = "hc:heart_rate:${sample.time.toEpochMilli()}:${sample.beatsPerMinute}",
             type = "heart_rate", startTime = sample.time, endTime = sample.time,
             sourceApp = metadata.dataOrigin.packageName,
             data = mapOf("bpm" to sample.beatsPerMinute, "zoneOffsetSeconds" to startZoneOffset?.totalSeconds),

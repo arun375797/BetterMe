@@ -9,21 +9,12 @@ import { deleteTodoCategory } from "../api.js";
 import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
-  { label: "Galaxy Fit3", path: "/health/fit3" },
   { label: "Sugar", path: "/health/sugar" },
   { label: "Insulin", path: "/health/insulin" },
-  {
-    label: "Exercise",
-    path: "/health/exercise",
-    children: [
-      { label: "Yoga", path: "/health/exercise/yoga" },
-      { label: "Badminton", path: "/health/exercise/badminton" },
-      { label: "Weight training", path: "/health/exercise/weight" },
-    ],
-  },
+  { label: "Sleep", path: "/health/sleep" },
+  { label: "Step", path: "/health/step" },
   { label: "Vitamin", path: "/health/vitamin" },
   { label: "Food", path: "/health/food" },
-  { label: "Sleep", path: "/health/sleep" },
 ];
 
 const reportItems = [{ label: "Statistics", path: "/report/statistics" }];

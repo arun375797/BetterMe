@@ -164,6 +164,33 @@ router.post("/sync", async (req, res) => {
   res.status(201).json({ received: records.length, inserted: result.upsertedCount, updated: result.modifiedCount, stressAvailable: false });
 });
 
+router.post("/reconcile", async (req, res) => {
+  const all = req.body?.all === true;
+  const from = new Date(req.body?.from);
+  const to = new Date(req.body?.to);
+  if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to <= from) {
+    return res.status(400).json({ message: "A valid wearable reconciliation range is required." });
+  }
+
+  const sourceFilter = { sourceApp: "com.sec.android.app.shealth" };
+  const recordFilter = all
+    ? sourceFilter
+    : { ...sourceFilter, startTime: { $lt: to }, endTime: { $gte: from } };
+  const affectedSleepDays = all
+    ? []
+    : (await WearableRecord.find({ ...recordFilter, type: "sleep" }).lean()).map(sleepDay);
+  const removedRecords = await WearableRecord.deleteMany(recordFilter);
+  const sleepFilter = all
+    ? { source: "health_connect" }
+    : { source: "health_connect", day: { $in: [...new Set(affectedSleepDays)] } };
+  const removedSleepLogs = await SleepLog.deleteMany(sleepFilter);
+
+  res.json({
+    removedRecords: removedRecords.deletedCount,
+    removedSleepLogs: removedSleepLogs.deletedCount,
+  });
+});
+
 router.post("/sleep/replace", async (req, res) => {
   const all = req.body?.all === true;
   const from = new Date(req.body?.from);

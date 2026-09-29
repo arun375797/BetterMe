@@ -27,6 +27,7 @@ import wearableRoutes from "./routes/wearable.js";
 import { requireAuth } from "./lib/auth.js";
 import { memoClear } from "./memo.js";
 import SleepLog from "./models/SleepLog.js";
+import WearableRecord from "./models/WearableRecord.js";
 import {
   ensureSubjects,
   renamePracticalSolveTitles,
@@ -225,6 +226,7 @@ async function start() {
       serverSelectionTimeoutMS: 10000,
     });
     await SleepLog.syncIndexes();
+    await WearableRecord.syncIndexes();
     app.listen(PORT, "0.0.0.0", () => {
       console.log(`API running on http://localhost:${PORT}`);
     });

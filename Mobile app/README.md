@@ -1,6 +1,6 @@
 # BetterMe Health
 
-An Android companion app that imports the available Samsung Health/Fit3 history from Health Connect and syncs it into BetterMe.
+An Android companion app that imports the latest 40 days of Samsung Health/Fit3 history from Health Connect and syncs it into BetterMe.
 
 ## Data flow
 
@@ -21,9 +21,9 @@ The production API is prefilled as `https://betterme-production.up.railway.app`.
 
 ## Behavior
 
-- The initial import reads all history Health Connect makes available. Without Android's past-data permission, Health Connect limits other apps' older data.
-- Every record keeps its original Health Connect ID, source app, timestamps and timezone offset. Server upserts make repeated imports idempotent.
-- Later syncs start one day before the last successful cursor, safely catching late Samsung Health updates without duplicates.
+- The initial import reads only the latest 40 days. Without Android's past-data permission, Health Connect may limit older data further.
+- Steps are stored as one stable daily record. Heart samples use their timestamp and value as a stable identity.
+- Later syncs start one day before the last successful cursor, reconcile only that small overlap, and preserve older days without duplicates.
 - Reads Health Connect in pages and uploads batches of at most 50 records with bounded timeouts and automatic retries.
 - Reconstructs a Samsung sleep episode from overlapping/nearby Health Connect fragments, deduplicates overlapping stage intervals, preserves separate naps, and syncs both recorded sleep time and actual non-awake sleep.
 - Sleep sessions continue to populate the existing BetterMe sleep dashboard; all wearable metrics appear on the Galaxy Fit3 dashboard.

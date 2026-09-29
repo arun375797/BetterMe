@@ -141,7 +141,8 @@ export default function App() {
         <Route path="/health/exercise" element={<ExercisePage />} />
         <Route path="/health/exercise/:kind" element={<ExerciseKindPage />} />
         <Route path="/health/sleep" element={<SleepPage />} />
-        <Route path="/health/fit3" element={<WearablePage />} />
+        <Route path="/health/step" element={<WearablePage />} />
+        <Route path="/health/fit3" element={<Navigate to="/health/step" replace />} />
         <Route path="/health/:item" element={<HealthSoonPage />} />
         <Route path="/notebooks" element={<MyNotebooksHome />} />
         <Route path="/notebooks/:bookId" element={<NotebookBookIndex />} />
