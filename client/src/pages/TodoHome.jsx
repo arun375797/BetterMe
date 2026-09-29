@@ -496,6 +496,13 @@ export default function TodoHome() {
     }
   }
 
+  async function handlePlanTodo(data) {
+    const created = await createTodo(data);
+    setTodos((current) => [created, ...current]);
+    setError("");
+    return created;
+  }
+
   async function handleDeleteCategory(id) {
     if (!confirm("Delete this category? Todos will become uncategorized.")) return;
     try {
@@ -538,6 +545,13 @@ export default function TodoHome() {
           </p>
         </div>
         <div className="flex gap-2">
+          <Link
+            to="/todos/calendar"
+            className="flex items-center gap-1.5 rounded-xl border border-cyan/25 bg-cyan/8 px-3 py-2 text-sm text-cyan hover:bg-cyan/15"
+          >
+            <span aria-hidden="true">▦</span>
+            Calendar
+          </Link>
           <button
             type="button"
             onClick={handleDeleteAll}
@@ -583,7 +597,7 @@ export default function TodoHome() {
         </div>
       </div>
 
-      <TodoPlanNotice />
+      <TodoPlanNotice onAddTodo={handlePlanTodo} />
 
       {error ? (
         <p className="mt-4 rounded-xl border border-coral/30 bg-coral/10 px-4 py-3 text-sm text-coral">

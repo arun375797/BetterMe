@@ -43,6 +43,7 @@ const PersonalityItemPage = lazy(
   () => import("./pages/PersonalityItemPage.jsx")
 );
 const TodoHome = lazy(() => import("./pages/TodoHome.jsx"));
+const TodoCalendarPage = lazy(() => import("./pages/TodoCalendarPage.jsx"));
 const TodoCategoryPage = lazy(() => import("./pages/TodoCategoryPage.jsx"));
 const ReportStatsPage = lazy(() => import("./pages/ReportStatsPage.jsx"));
 const Sit25Layout = lazy(() => import("./pages/Sit25Layout.jsx"));
@@ -170,6 +171,7 @@ export default function App() {
           element={<PersonalitySectionPage />}
         />
         <Route path="/todos" element={<TodoHome />} />
+        <Route path="/todos/calendar" element={<TodoCalendarPage />} />
         <Route
           path="/todos/category/:categoryId"
           element={<TodoCategoryPage />}

@@ -343,6 +343,7 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
     if (path.startsWith("/todos")) {
       return [
         { id: "todos-all", label: "All todos", path: "/todos" },
+        { id: "todos-calendar", label: "Calendar", path: "/todos/calendar" },
         ...todoCategories.map((cat) => ({
           id: `todo-${cat._id}`,
           label: cat.name,

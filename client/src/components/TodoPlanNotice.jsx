@@ -1,5 +1,58 @@
 import { useState } from "react";
 
+function todayValue() {
+  const now = new Date();
+  const pad = (value) => String(value).padStart(2, "0");
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+}
+
+function to24Hour(hour, minute, meridiem) {
+  let value = Number(hour);
+  if (meridiem === "AM" && value === 12) value = 0;
+  if (meridiem === "PM" && value !== 12) value += 12;
+  return { hour: value, minute: Number(minute || 0) };
+}
+
+function timePoint(text, fallbackMeridiem) {
+  const match = String(text || "").trim().match(/(\d{1,2})(?::(\d{2}))?\s*(AM|PM)?/i);
+  if (!match) return null;
+  return {
+    hour: match[1],
+    minute: match[2] || "00",
+    meridiem: (match[3] || fallbackMeridiem || "").toUpperCase(),
+  };
+}
+
+export function timetableSchedule(time, day = todayValue()) {
+  const normalized = String(time || "").replace(/[–—]/g, "-");
+  const parts = normalized.split("-");
+  const end = timePoint(parts[1]);
+
+  // A single clock time (for example 5:15 AM) is a valid start without an end.
+  if (!end) {
+    const single = timePoint(parts[0]);
+    if (!single?.meridiem) return {};
+    const [year, month, date] = day.split("-").map(Number);
+    const clock = to24Hour(single.hour, single.minute, single.meridiem);
+    return { dueDate: new Date(year, month - 1, date, clock.hour, clock.minute).toISOString() };
+  }
+  if (!end.meridiem) return {};
+
+  // For ranges such as 9:15-10:15 AM, the ending AM/PM also applies to the start.
+  // A choice such as 6:30/7:00 starts at the earliest displayed time.
+  const firstStartChoice = String(parts[0] || "").split("/")[0];
+  const start = timePoint(firstStartChoice, end.meridiem);
+  if (!start?.meridiem) return {};
+
+  const [year, month, date] = day.split("-").map(Number);
+  const startClock = to24Hour(start.hour, start.minute, start.meridiem);
+  const endClock = to24Hour(end.hour, end.minute, end.meridiem);
+  const dueDate = new Date(year, month - 1, date, startClock.hour, startClock.minute);
+  const endDate = new Date(year, month - 1, date, endClock.hour, endClock.minute);
+  if (endDate <= dueDate) endDate.setDate(endDate.getDate() + 1);
+  return { dueDate: dueDate.toISOString(), endDate: endDate.toISOString() };
+}
+
 const DEFAULT_PLAN = [
   { time: "5:15 AM", task: "Wake up, morning routine" },
   { time: "5:45–8:30 AM", task: "Indoor badminton + return home", icon: "🏸" },
@@ -50,11 +103,14 @@ function loadPlan() {
   return DEFAULT_PLAN;
 }
 
-export default function TodoPlanNotice() {
+export default function TodoPlanNotice({ onAddTodo }) {
   const [expanded, setExpanded] = useState(initialExpanded);
   const [plan, setPlan] = useState(loadPlan);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState([]);
+  const [addingIndex, setAddingIndex] = useState(null);
+  const [addedIndexes, setAddedIndexes] = useState([]);
+  const [addError, setAddError] = useState("");
 
   function toggle() {
     setExpanded((current) => {
@@ -100,6 +156,7 @@ export default function TodoPlanNotice() {
     if (!cleaned.length) return;
     setPlan(cleaned);
     setEditing(false);
+    setAddedIndexes([]);
     try {
       window.localStorage.setItem(PLAN_STORAGE_KEY, JSON.stringify(cleaned));
     } catch {
@@ -109,6 +166,25 @@ export default function TodoPlanNotice() {
 
   function restoreDefault() {
     setDraft(DEFAULT_PLAN.map((item) => ({ ...item })));
+  }
+
+  async function addTodo(item, index) {
+    if (!onAddTodo || addingIndex != null) return;
+    setAddingIndex(index);
+    setAddError("");
+    try {
+      await onAddTodo({
+        text: item.task,
+        priority: item.focus ? "high" : "medium",
+        categoryId: null,
+        ...timetableSchedule(item.time),
+      });
+      setAddedIndexes((current) => current.includes(index) ? current : [...current, index]);
+    } catch (error) {
+      setAddError(error.message || "Could not add this todo.");
+    } finally {
+      setAddingIndex(null);
+    }
   }
 
   return (
@@ -189,20 +265,41 @@ export default function TodoPlanNotice() {
               aria-label="Daily timetable. Scroll to see all time blocks."
               className="max-h-[32rem] touch-pan-y overflow-y-scroll overscroll-contain rounded-xl border border-line/70 bg-surface/55 focus:outline-none focus:ring-1 focus:ring-cyan/35"
             >
-              {plan.map((item, index) => (
+              {plan.map((item, index) => {
+                const added = addedIndexes.includes(index);
+                return (
                 <div
                   key={`${item.time}-${item.task}-${index}`}
-                  className={`grid grid-cols-[7.5rem_minmax(0,1fr)] gap-3 px-3 py-2.5 text-xs sm:grid-cols-[10rem_minmax(0,1fr)] sm:px-4 ${index ? "border-t border-line/45" : ""}`}
+                  className={`grid grid-cols-[7rem_minmax(0,1fr)_4.5rem] items-center gap-2 px-3 py-2.5 text-xs sm:grid-cols-[10rem_minmax(0,1fr)_5rem] sm:gap-3 sm:px-4 ${index ? "border-t border-line/45" : ""}`}
                 >
                   <time className="font-medium tabular-nums text-cyan/90">{item.time}</time>
                   <span className={item.focus ? "font-medium text-ink" : "text-ink/80"}>
                     {item.icon ? <span className="mr-1.5" aria-hidden="true">{item.icon}</span> : null}
                     {item.task}
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => addTodo(item, index)}
+                    disabled={added || addingIndex != null}
+                    aria-label={`Add ${item.task} to today's todos`}
+                    className={`rounded-lg px-2 py-1.5 text-[11px] font-medium ring-1 transition-colors ${
+                      added
+                        ? "cursor-default bg-teal/10 text-teal ring-teal/25"
+                        : "bg-cyan/10 text-cyan ring-cyan/25 hover:bg-cyan/20 disabled:opacity-50"
+                    }`}
+                  >
+                    {addingIndex === index ? "Adding…" : added ? "✓ Added" : "+ Add"}
+                  </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
+          {addError ? (
+            <p role="alert" className="mt-3 rounded-lg border border-coral/25 bg-coral/10 px-3 py-2 text-xs text-coral">
+              {addError}
+            </p>
+          ) : null}
           <p className="mt-3 px-1 text-[11px] leading-5 text-muted">
             Health reminder: follow your prescribed insulin and medication plan; adjust exercise, food, and glucose care based on your clinician’s guidance and how you feel.
           </p>

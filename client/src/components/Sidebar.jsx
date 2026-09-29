@@ -492,6 +492,19 @@ export default function Sidebar({
                 >
                   All Todos
                 </NavLink>
+                <NavLink
+                  to="/todos/calendar"
+                  className={({ isActive }) =>
+                    `flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[13px] ${
+                      isActive
+                        ? "bg-white/8 text-ink"
+                        : "text-muted hover:bg-white/5 hover:text-ink"
+                    }`
+                  }
+                >
+                  <span aria-hidden="true">▦</span>
+                  Calendar
+                </NavLink>
                 {todoCategories.map((cat) => {
                   const inCat = location.pathname === `/todos/category/${cat._id}`;
                   return (
