@@ -117,6 +117,11 @@ export const JUMP_SHORTCUTS = [
 
 const HEALTH_SUBS = [
   { id: "health-home", label: "Overview", path: "/health" },
+  { id: "health-today", label: "Today", path: "/health/today" },
+  { id: "care-plan", label: "My care plan", path: "/health/care-plan" },
+  { id: "symptoms", label: "Symptoms & body", path: "/health/symptoms" },
+  { id: "checkups", label: "Checkups & results", path: "/health/checkups" },
+  { id: "health-trends", label: "Trends", path: "/health/trends" },
   { id: "sugar", label: "Sugar", path: "/health/sugar" },
   { id: "insulin", label: "Insulin", path: "/health/insulin" },
   { id: "exercise", label: "Exercise", path: "/health/exercise" },

@@ -10,6 +10,7 @@ import {
 } from "../components/TimePicker12.jsx";
 import {
   createTodo,
+  deleteAllTodos,
   deleteTodo,
   deleteTodoCategory,
   getTodoCategories,
@@ -470,6 +471,22 @@ export default function TodoHome() {
     setTodos((current) => [...created].reverse().concat(current));
   }
 
+  async function handleDeleteAll() {
+    if (!todos.length) return;
+    const accepted = confirm(
+      `Clear all ${todos.length} todos? This removes pending and completed todos from every category. Categories and templates will stay.`
+    );
+    if (!accepted) return;
+    try {
+      await deleteAllTodos();
+      setTodos([]);
+      setEditingTodo(null);
+      setError("");
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   async function handleDuplicate(todo) {
     try {
       const created = await createTodo(nextTodoData(todo));
@@ -521,6 +538,18 @@ export default function TodoHome() {
           </p>
         </div>
         <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={handleDeleteAll}
+            disabled={!todos.length}
+            title="Delete every todo"
+            className="flex items-center gap-1.5 rounded-xl border border-coral/30 bg-coral/8 px-3 py-2 text-sm text-coral hover:bg-coral/15 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+              <path d="M3 4h10M6 4V3h4v1M5 4l.5 8h5l.5-8M7 6.5v3.5M9 6.5v3.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            </svg>
+            Clear all
+          </button>
           <button
             type="button"
             onClick={() => setShowNewCategory(true)}

@@ -10,24 +10,22 @@ import {
 } from "../api.js";
 
 const statusClass = {
-  low: "text-cyan",
-  "in range": "text-teal",
-  elevated: "text-gold",
-  high: "text-coral",
+  "below target": "text-cyan",
+  "in target": "text-teal",
+  "above target": "text-coral",
 };
 
 const levelNumberClass = {
-  low: "text-cyan",
-  "in range": "text-teal",
-  elevated: "text-gold",
-  high: "text-coral",
+  "below target": "text-cyan",
+  "in target": "text-teal",
+  "above target": "text-coral",
 };
 
 const FILTERS = [
   { id: "week", label: "Past 1 week" },
   { id: "month", label: "Past 1 month" },
   { id: "twoMonths", label: "Past 2 months" },
-  { id: "high", label: "Exceeded high" },
+  { id: "high", label: "Above target" },
 ];
 
 function daysAgo(n) {
@@ -61,7 +59,7 @@ function filterReadings(readings, filterId) {
     return readings.filter((item) => new Date(item.recordedAt) >= daysAgo(29));
   }
   if (filterId === "high") {
-    return readings.filter((item) => item.status === "high");
+    return readings.filter((item) => item.status === "above target");
   }
   const from = daysAgo(59);
   return readings.filter((item) => new Date(item.recordedAt) >= from);
@@ -69,17 +67,20 @@ function filterReadings(readings, filterId) {
 
 export default function SugarPage() {
   const [readings, setReadings] = useState(
-    () => peek("/api/sugar", "/")?.readings || []
+    () => peek("/api/sugar", "/?scope=real")?.readings || []
   );
   const [error, setError] = useState("");
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState(null);
   const [filter, setFilter] = useState("twoMonths");
+  const [scope, setScope] = useState("real");
+  const [targets, setTargets] = useState({ beforeMin: 70, beforeMax: 140, afterMin: 70, afterMax: 180 });
 
   async function load() {
     try {
-      const data = await getSugarReadings();
+      const data = await getSugarReadings(scope);
       setReadings(data.readings || []);
+      setTargets(data.targets || targets);
       setError("");
     } catch (err) {
       setError(err.message);
@@ -88,10 +89,11 @@ export default function SugarPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [scope]);
 
   async function handleCreate(payload) {
     await createSugarReading(payload);
+    setScope("real");
     await load();
   }
 
@@ -119,7 +121,7 @@ export default function SugarPage() {
   );
   const latest = readings[0];
   const levels = filtered.map((item) => item.level);
-  const highCount = filtered.filter((item) => item.status === "high").length;
+  const highCount = filtered.filter((item) => item.status === "above target").length;
   const todayCount = readings.filter(
     (item) => new Date(item.recordedAt) >= daysAgo(0)
   ).length;
@@ -146,8 +148,8 @@ export default function SugarPage() {
             </p>
             <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Sugar levels</h2>
             <p className="mt-2 max-w-xl text-sm text-muted">
-              Dummy readings fill the past two months so the chart has a
-              history. Record sugar and insulin together in one popup.
+              Your real records are kept separate from sample data. Record
+              sugar and insulin together in one popup.
             </p>
           </div>
           <button
@@ -165,6 +167,12 @@ export default function SugarPage() {
         {error ? (
           <p className="mt-4 text-sm text-coral">{error}</p>
         ) : null}
+
+        <div className="mt-5 inline-flex rounded-xl bg-white/4 p-1">
+          {[{ id: "real", label: "My records" }, { id: "demo", label: "Sample data" }].map((item) => (
+            <button key={item.id} type="button" onClick={() => setScope(item.id)} className={`rounded-lg px-3 py-1.5 text-xs font-medium ${scope === item.id ? "bg-white/10 text-ink" : "text-muted hover:text-ink"}`}>{item.label}</button>
+          ))}
+        </div>
 
         <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -187,7 +195,7 @@ export default function SugarPage() {
             hint={`${filtered.length} readings`}
           />
           <StatCard
-            label="High in this view"
+            label="Above target in this view"
             value={highCount}
             hint={
               levels.length
@@ -235,7 +243,7 @@ export default function SugarPage() {
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full bg-coral" />
-              High / mistake
+              Above your care-plan target
             </span>
             <span className="inline-flex items-center gap-1.5">
               <span className="h-2.5 w-2.5 rounded-full border border-ink bg-transparent" />
@@ -251,7 +259,7 @@ export default function SugarPage() {
             </span>
           </div>
           <div className="mt-4">
-            <SugarChart readings={filtered} />
+            <SugarChart readings={filtered} targets={targets} />
           </div>
         </div>
 
@@ -355,7 +363,7 @@ export default function SugarPage() {
               ) ?? "—"
             }
           />
-          <Row label="High readings" value={highCount} />
+          <Row label="Above target" value={highCount} />
           <Row label="Insulin doses" value={insulinTaken.length} />
           <Row
             label="Insulin total"
@@ -368,9 +376,9 @@ export default function SugarPage() {
           />
         </div>
         <div className="mt-8 rounded-2xl border border-line bg-white/4 p-4 text-sm text-muted">
-          Stay in the green band. After-food highs usually mean the meal or
-          insulin timing slipped. Before-food highs usually mean overnight
-          control slipped.
+          Targets come from My care plan and differ for before-food and
+          after-food readings. Use patterns for discussion; the chart does not
+          determine why a value changed.
         </div>
       </aside>
 

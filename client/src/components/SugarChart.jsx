@@ -1,15 +1,10 @@
 import { useMemo } from "react";
 
 const STATUS_COLOR = {
-  low: "#6ec8ff",
-  "in range": "#3ce6d4",
-  elevated: "#e8c36a",
-  high: "#e88b7a",
+  "below target": "#6ec8ff",
+  "in target": "#3ce6d4",
+  "above target": "#e88b7a",
 };
-
-const TARGET_LOW = 70;
-const TARGET_HIGH = 140;
-const HIGH_LINE = 180;
 
 function avg(values) {
   if (!values.length) return null;
@@ -72,7 +67,7 @@ function groupDays(readings) {
       average: avg(levels),
       beforeAvg: avg(before.map((item) => item.level)),
       afterAvg: avg(after.map((item) => item.level)),
-      highs: group.items.filter((item) => item.status === "high"),
+      highs: group.items.filter((item) => item.status === "above target"),
     };
   });
 }
@@ -92,7 +87,7 @@ function Diamond({ cx, cy, r, fill, stroke, title }) {
   );
 }
 
-export default function SugarChart({ readings }) {
+export default function SugarChart({ readings, targets = { beforeMin: 70, beforeMax: 140, afterMin: 70, afterMax: 180 } }) {
   const days = useMemo(() => groupDays(readings), [readings]);
 
   const insight = useMemo(() => {
@@ -105,8 +100,8 @@ export default function SugarChart({ readings }) {
         spikes: [],
       };
     }
-    const high = readings.filter((item) => item.status === "high");
-    const inRange = readings.filter((item) => item.status === "in range");
+    const high = readings.filter((item) => item.status === "above target");
+    const inRange = readings.filter((item) => item.status === "in target");
     return {
       inRange: Math.round((inRange.length / readings.length) * 100),
       highCount: high.length,
@@ -132,8 +127,8 @@ export default function SugarChart({ readings }) {
   const plotWidth = days.length * colW;
   const width = pad.left + pad.right + plotWidth;
   const levels = readings.map((item) => item.level);
-  const minY = 60;
-  const maxY = Math.max(220, ...levels) + 16;
+  const minY = Math.max(20, Math.min(targets.beforeMin, targets.afterMin) - 20);
+  const maxY = Math.max(220, targets.beforeMax, targets.afterMax, ...levels) + 16;
   const ySpan = maxY - minY;
 
   function xDay(index) {
@@ -160,10 +155,6 @@ export default function SugarChart({ readings }) {
   const yTicks = [80, 100, 120, 140, 180, 220].filter(
     (mark) => mark >= minY && mark <= maxY
   );
-  const bandTop = yLevel(TARGET_HIGH);
-  const bandBottom = yLevel(TARGET_LOW);
-  const dangerTop = yLevel(maxY);
-  const dangerBottom = yLevel(HIGH_LINE);
 
   const dayIndexById = new Map();
   days.forEach((day, index) => {
@@ -190,24 +181,24 @@ export default function SugarChart({ readings }) {
     .map(pointFor);
 
   const dayStep = days.length <= 10 ? 1 : days.length <= 21 ? 2 : 3;
-  const mistakeNote =
+  const patternNote =
     insight.afterHighs >= insight.beforeHighs && insight.highCount
-      ? "Most highs are after food — meals or insulin timing."
+      ? "More above-target readings occurred after food."
       : insight.highCount
-        ? "Most highs are before food — overnight or skipped dose."
-        : "No high readings in this view.";
+        ? "More above-target readings occurred before food."
+        : "No above-target readings in this view.";
 
   return (
     <div>
       <div className="mb-3 grid gap-2 sm:grid-cols-3">
         <Insight
-          label="Time in range"
+          label="In target"
           value={`${insight.inRange}%`}
-          hint="green zone, 70–140"
+          hint="using care-plan targets"
           good={insight.inRange >= 70}
         />
         <Insight
-          label="High mistakes"
+          label="Above target"
           value={insight.highCount}
           hint={
             insight.highCount
@@ -219,7 +210,7 @@ export default function SugarChart({ readings }) {
         <Insight
           label="Watch"
           value={insight.spikes[0] ? insight.spikes[0].level : "—"}
-          hint={mistakeNote}
+          hint={patternNote}
           good={!insight.highCount}
         />
       </div>
@@ -244,42 +235,10 @@ export default function SugarChart({ readings }) {
             </linearGradient>
           </defs>
 
-          <rect
-            x={pad.left}
-            y={bandTop}
-            width={plotWidth}
-            height={Math.max(0, bandBottom - bandTop)}
-            fill="url(#targetBand)"
-          />
-          {dangerBottom > pad.top ? (
-            <rect
-              x={pad.left}
-              y={dangerTop}
-              width={plotWidth}
-              height={Math.max(0, dangerBottom - dangerTop)}
-              fill="#e88b7a"
-              opacity="0.08"
-            />
-          ) : null}
-
-          <text
-            x={pad.left + 8}
-            y={bandTop + 14}
-            fill="#3ce6d4"
-            fontSize="11"
-            opacity="0.9"
-          >
-            In range
-          </text>
-          <text
-            x={pad.left + 8}
-            y={Math.max(pad.top + 14, dangerBottom - 8)}
-            fill="#e88b7a"
-            fontSize="11"
-            opacity="0.85"
-          >
-            High / mistake
-          </text>
+          {[
+            { value: targets.beforeMax, label: `Before-food max ${targets.beforeMax}`, color: "#6ec8ff" },
+            { value: targets.afterMax, label: `After-food max ${targets.afterMax}`, color: "#e8c36a" },
+          ].map((line, index) => <g key={line.label}><line x1={pad.left} x2={width - pad.right} y1={yLevel(line.value)} y2={yLevel(line.value)} stroke={line.color} strokeWidth="1.5" strokeDasharray="7 5" opacity="0.75"/><text x={pad.left + 8} y={yLevel(line.value) - 6 - index * 2} fill={line.color} fontSize="10">{line.label}</text></g>)}
 
           {yTicks.map((mark) => {
             const y = yLevel(mark);
@@ -290,7 +249,7 @@ export default function SugarChart({ readings }) {
                   x2={width - pad.right}
                   y1={y}
                   y2={y}
-                  stroke={mark === TARGET_HIGH || mark === HIGH_LINE ? "#3a4358" : "#2a3142"}
+                  stroke="#2a3142"
                   strokeDasharray="4 6"
                 />
                 <text
@@ -389,7 +348,7 @@ export default function SugarChart({ readings }) {
               const title = `${formatWhen(item.recordedAt)} · ${item.level} mg/dL · ${
                 item.mealTiming === "before" ? "before food" : "after food"
               }${item.insulinDose ? ` · insulin ${item.insulinDose} u` : ""}`;
-              const high = item.status === "high";
+              const high = item.status === "above target";
               if (item.mealTiming === "after") {
                 return (
                   <Diamond
@@ -469,7 +428,7 @@ export default function SugarChart({ readings }) {
       {insight.spikes.length ? (
         <div className="mt-3 rounded-xl border border-coral/25 bg-coral/8 px-4 py-3">
           <p className="text-[11px] tracking-[0.16em] text-coral uppercase">
-            Where it went wrong
+            Above-target readings
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
             {insight.spikes.map((item) => (
@@ -489,7 +448,7 @@ export default function SugarChart({ readings }) {
         </div>
       ) : (
         <p className="mt-3 text-xs text-teal">
-          No high spikes in this filter. Control is holding.
+          No above-target readings in this filter.
         </p>
       )}
     </div>

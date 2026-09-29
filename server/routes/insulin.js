@@ -30,7 +30,7 @@ function parseEntry(body) {
 router.get("/", async (_req, res) => {
   const [direct, sugar, setting] = await Promise.all([
     InsulinEntry.find().sort({ recordedAt: -1 }).lean(),
-    SugarReading.find({ insulinDose: { $gt: 0 } }).sort({ recordedAt: -1 }).lean(),
+    SugarReading.find({ insulinDose: { $gt: 0 }, demo: { $ne: true } }).sort({ recordedAt: -1 }).lean(),
     InsulinSetting.findOne({ key: "default" }).lean(),
   ]);
   const entries = [

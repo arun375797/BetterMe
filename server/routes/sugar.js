@@ -1,5 +1,6 @@
 import { Router } from "express";
 import SugarReading from "../models/SugarReading.js";
+import HealthProfile from "../models/HealthProfile.js";
 import { parseWallClock } from "../lib/wallClock.js";
 
 const router = Router();
@@ -17,17 +18,15 @@ function daysAgo(n) {
   return d;
 }
 
-function classify(level, mealTiming) {
-  if (mealTiming === "before") {
-    if (level < 70) return "low";
-    if (level <= 99) return "in range";
-    if (level <= 125) return "elevated";
-    return "high";
-  }
-  if (level < 70) return "low";
-  if (level <= 139) return "in range";
-  if (level <= 179) return "elevated";
-  return "high";
+const DEFAULT_TARGETS = { beforeMin: 70, beforeMax: 140, afterMin: 70, afterMax: 180 };
+
+function classify(level, mealTiming, targets = DEFAULT_TARGETS) {
+  const prefix = mealTiming === "before" ? "before" : "after";
+  const min = Number(targets[`${prefix}Min`] ?? DEFAULT_TARGETS[`${prefix}Min`]);
+  const max = Number(targets[`${prefix}Max`] ?? DEFAULT_TARGETS[`${prefix}Max`]);
+  if (level < min) return "below target";
+  if (level <= max) return "in target";
+  return "above target";
 }
 
 function avg(values) {
@@ -95,15 +94,23 @@ function parseReading(body) {
   };
 }
 
-router.get("/", async (_req, res) => {
-  const readings = await SugarReading.find().sort({ recordedAt: -1 }).lean();
+router.get("/", async (req, res) => {
+  const scope = String(req.query.scope || "real");
+  const filter = scope === "demo" ? { demo: true } : scope === "all" ? {} : { demo: { $ne: true } };
+  const [readings, profile] = await Promise.all([
+    SugarReading.find(filter).sort({ recordedAt: -1 }).lean(),
+    HealthProfile.findOne({ key: "default" }).lean(),
+  ]);
+  const targets = profile?.glucoseTargets || DEFAULT_TARGETS;
   const withStatus = readings.map((item) => ({
     ...item,
-    status: classify(item.level, item.mealTiming),
+    status: classify(item.level, item.mealTiming, targets),
   }));
   res.json({
     readings: withStatus,
     stats: statsFrom(withStatus),
+    targets,
+    scope,
   });
 });
 
@@ -113,9 +120,9 @@ router.post("/", async (req, res) => {
     return res.status(400).json({ message: parsed.error });
   }
 
-  const reading = await SugarReading.create(parsed.data);
+  const [reading, profile] = await Promise.all([SugarReading.create(parsed.data), HealthProfile.findOne({ key: "default" }).lean()]);
   const obj = reading.toObject();
-  res.status(201).json({ ...obj, status: classify(obj.level, obj.mealTiming) });
+  res.status(201).json({ ...obj, status: classify(obj.level, obj.mealTiming, profile?.glucoseTargets) });
 });
 
 router.patch("/:id", async (req, res) => {
@@ -124,16 +131,15 @@ router.patch("/:id", async (req, res) => {
     return res.status(400).json({ message: parsed.error });
   }
 
-  const reading = await SugarReading.findByIdAndUpdate(
-    req.params.id,
-    parsed.data,
-    { new: true, runValidators: true }
-  );
+  const [reading, profile] = await Promise.all([
+    SugarReading.findByIdAndUpdate(req.params.id, parsed.data, { new: true, runValidators: true }),
+    HealthProfile.findOne({ key: "default" }).lean(),
+  ]);
   if (!reading) {
     return res.status(404).json({ message: "Reading not found." });
   }
   const obj = reading.toObject();
-  res.json({ ...obj, status: classify(obj.level, obj.mealTiming) });
+  res.json({ ...obj, status: classify(obj.level, obj.mealTiming, profile?.glucoseTargets) });
 });
 
 router.delete("/:id", async (req, res) => {

@@ -9,6 +9,11 @@ import { deleteTodoCategory } from "../api.js";
 import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
+  { label: "Today", path: "/health/today" },
+  { label: "My care plan", path: "/health/care-plan" },
+  { label: "Symptoms & body", path: "/health/symptoms" },
+  { label: "Checkups & results", path: "/health/checkups" },
+  { label: "Trends", path: "/health/trends" },
   { label: "Sugar", path: "/health/sugar" },
   { label: "Insulin", path: "/health/insulin" },
   { label: "Sleep", path: "/health/sleep" },

@@ -28,9 +28,9 @@ function avg(values) {
 
 export default function HealthHomePage() {
   const [readings, setReadings] = useState(
-    () => peek("/api/sugar", "/")?.readings || []
+    () => peek("/api/sugar", "/?scope=real")?.readings || []
   );
-  const [logs, setLogs] = useState(() => peek("/api/food", "/logs")?.logs || []);
+  const [logs, setLogs] = useState(() => peek("/api/food", "/logs?scope=real")?.logs || []);
   const [sleepLogs, setSleepLogs] = useState(
     () => peek("/api/sleep", "/")?.logs || []
   );
@@ -72,7 +72,7 @@ export default function HealthHomePage() {
     () => readings.filter((item) => new Date(item.recordedAt) >= daysAgo(0)),
     [readings]
   );
-  const highCount = week.filter((item) => item.status === "high").length;
+  const highCount = week.filter((item) => item.status === "above target").length;
   const latest = readings[0];
   const rows = buildDayRows(logs, 30);
   const todayFood = rows[rows.length - 1];
@@ -85,10 +85,20 @@ export default function HealthHomePage() {
       </p>
       <h2 className="mt-2 text-2xl font-semibold break-words sm:text-3xl">Overview</h2>
       <p className="mt-2 max-w-xl text-sm text-muted">
-        Sugar, food, sleep, steps, and heart rate at a glance. Open each
+        Sugar, insulin, food, sleep, steps, and heart rate at a glance. Open each
         section for full logs and charts.
       </p>
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
+
+      <div className="mt-7 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {[
+          ["Today", "Daily care checklist", "/health/today", "✓"],
+          ["My care plan", "Targets and instructions", "/health/care-plan", "📋"],
+          ["Symptoms & body", "Severity, trigger, impact", "/health/symptoms", "🩺"],
+          ["Checkups & results", "Appointments and tests", "/health/checkups", "📅"],
+          ["Trends", "7, 30, and 90 days", "/health/trends", "↗"],
+        ].map(([title, detail, path, icon]) => <Link key={path} to={path} className="rounded-2xl border border-line bg-raised/80 p-4 transition hover:border-cyan/35 hover:bg-white/[0.045]"><span className="text-xl" aria-hidden="true">{icon}</span><h3 className="mt-2 text-sm font-semibold">{title}</h3><p className="mt-1 text-xs text-muted">{detail}</p></Link>)}
+      </div>
 
       <div className="mt-8 flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -146,9 +156,9 @@ export default function HealthHomePage() {
           hint={`${week.length} readings`}
         />
         <StatCard
-          label="High this week"
+          label="Above target this week"
           value={highCount}
-          hint="Over the high cut-off"
+          hint="Using My care plan targets"
         />
       </div>
 
@@ -162,7 +172,7 @@ export default function HealthHomePage() {
             Food consumption
           </p>
           <h3 className="mt-1 text-lg font-semibold">
-            Eaten vs missed across the four meals
+            Eaten, skipped, and unlogged across the four meals
           </h3>
         </div>
         <Link to="/health/food" className="text-sm text-coral hover:underline">
@@ -177,7 +187,7 @@ export default function HealthHomePage() {
           hint={
             todayFood?.complete
               ? "All four eaten"
-              : `${todayFood?.skipped || 0} missed`
+              : `${todayFood?.skipped || 0} skipped · ${todayFood?.notLogged || 0} not logged`
           }
         />
         <StatCard
@@ -188,7 +198,7 @@ export default function HealthHomePage() {
         <StatCard
           label="Meal logs"
           value={logs.length}
-          hint="Including dummy history"
+          hint="Real records only"
         />
       </div>
 
@@ -200,7 +210,11 @@ export default function HealthHomePage() {
           </span>
           <span className="inline-flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-full bg-coral" />
-            Did not eat / not recorded
+            Explicitly skipped
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <span className="h-2.5 w-2.5 rounded-full bg-[#5b6780]" />
+            Not logged
           </span>
         </div>
         <FoodAdherenceChart logs={logs} dayCount={30} />

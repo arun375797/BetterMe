@@ -55,6 +55,7 @@ function cleanItem(body) {
       fiberG: num(body?.fiberG),
       proteinG: num(body?.proteinG),
       fatG: num(body?.fatG),
+      demo: false,
     },
   };
 }
@@ -92,6 +93,7 @@ function cleanLog(body) {
       fiberG: num(body?.fiberG),
       proteinG: num(body?.proteinG),
       fatG: num(body?.fatG),
+      demo: false,
     },
   };
 }
@@ -153,8 +155,10 @@ router.delete("/items/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-router.get("/logs", async (_req, res) => {
-  const logs = await MealLog.find().sort({ day: -1, slot: 1 }).lean();
+router.get("/logs", async (req, res) => {
+  const scope = String(req.query.scope || "real");
+  const filter = scope === "demo" ? { demo: true } : scope === "all" ? {} : { demo: { $ne: true } };
+  const logs = await MealLog.find(filter).sort({ day: -1, slot: 1 }).lean();
   res.json({ logs });
 });
 

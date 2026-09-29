@@ -22,7 +22,7 @@ export default function FoodPage() {
   const [items, setItems] = useState(
     () => peek("/api/food", "/items")?.items || []
   );
-  const [logs, setLogs] = useState(() => peek("/api/food", "/logs")?.logs || []);
+  const [logs, setLogs] = useState(() => peek("/api/food", "/logs?scope=real")?.logs || []);
   const [error, setError] = useState("");
   const [view, setView] = useState("styles");
   const [foodModal, setFoodModal] = useState(null);

@@ -124,6 +124,11 @@ router.post("/bulk", async (req, res) => {
   }
 });
 
+router.delete("/", async (_req, res) => {
+  const result = await Todo.deleteMany({});
+  res.json({ ok: true, deletedCount: result.deletedCount || 0 });
+});
+
 router.get("/", async (req, res) => {
   const filter = {};
 

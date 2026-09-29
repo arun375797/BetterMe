@@ -45,7 +45,8 @@ export function buildDayRows(logs, dayCount = 30) {
       day: key,
       slots,
       eaten,
-      skipped: skipped + missing,
+      skipped,
+      notLogged: missing,
       complete: eaten === 4,
     });
   }
@@ -65,8 +66,8 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
   return (
     <div>
       <p className="mb-2 text-xs text-muted">
-        Teal is meals eaten. Coral is skipped or not recorded. Four teal means
-        that day was complete.
+        Teal is eaten, coral is explicitly skipped, and gray means not logged.
+        These are kept separate so missing data is not treated as a skipped meal.
       </p>
       <div className="max-w-full overflow-x-auto rounded-xl border border-line/70 bg-surface/50">
         <svg
@@ -75,7 +76,7 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
           viewBox={`0 0 ${width} ${height}`}
           style={{ width, minWidth: width, height }}
           role="img"
-          aria-label="Meals eaten versus missed by day"
+          aria-label="Meals eaten, skipped, and not logged by day"
         >
           {[1, 2, 3, 4].map((mark) => {
             const y =
@@ -108,8 +109,19 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
             const plotH = height - pad.top - pad.bottom;
             const eatenH = (row.eaten / 4) * plotH;
             const missH = (row.skipped / 4) * plotH;
+            const missingH = (row.notLogged / 4) * plotH;
             return (
               <g key={row.day}>
+                <rect
+                  x={x}
+                  y={height - pad.bottom - missingH - missH - eatenH}
+                  width={barW}
+                  height={missingH}
+                  fill="#5b6780"
+                  opacity="0.55"
+                >
+                  <title>{formatDay(row.day)} · eaten {row.eaten} · skipped {row.skipped} · not logged {row.notLogged}</title>
+                </rect>
                 <rect
                   x={x}
                   y={height - pad.bottom - missH - eatenH}
@@ -119,8 +131,7 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
                   opacity="0.85"
                 >
                   <title>
-                    {formatDay(row.day)} · eaten {row.eaten}/4 · missed{" "}
-                    {row.skipped}
+                    {formatDay(row.day)} · eaten {row.eaten} · skipped {row.skipped} · not logged {row.notLogged}
                   </title>
                 </rect>
                 <rect
@@ -131,8 +142,7 @@ export default function FoodAdherenceChart({ logs, dayCount = 30 }) {
                   fill="#3ce6d4"
                 >
                   <title>
-                    {formatDay(row.day)} · eaten {row.eaten}/4 · missed{" "}
-                    {row.skipped}
+                    {formatDay(row.day)} · eaten {row.eaten} · skipped {row.skipped} · not logged {row.notLogged}
                   </title>
                 </rect>
                 {i % 3 === 0 ? (

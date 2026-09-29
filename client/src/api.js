@@ -188,6 +188,7 @@ function mutate(base, path, options, prefixes) {
 const API = "/api/learning";
 const SUGAR_API = "/api/sugar";
 const INSULIN_API = "/api/insulin";
+const HEALTH_DASHBOARD_API = "/api/health-dashboard";
 const VITAMIN_API = "/api/vitamins";
 const FOOD_API = "/api/food";
 const EXERCISE_API = "/api/exercise";
@@ -205,6 +206,7 @@ const PLAN_API = "/api/plan";
 const LEARNING = [API];
 const SUGAR = [SUGAR_API];
 const INSULIN = [INSULIN_API];
+const HEALTH_DASHBOARD = [HEALTH_DASHBOARD_API];
 const VITAMINS = [VITAMIN_API];
 const FOOD = [FOOD_API];
 const EXERCISE = [EXERCISE_API];
@@ -362,7 +364,8 @@ export const advanceStudyTopic = (data) =>
     STUDY
   );
 
-export const getSugarReadings = () => get(SUGAR_API, "/");
+export const getSugarReadings = (scope = "real") =>
+  get(SUGAR_API, `/?scope=${encodeURIComponent(scope)}`, 0);
 export const createSugarReading = (data) =>
   mutate(SUGAR_API, "/", { method: "POST", body: JSON.stringify(data) }, [...SUGAR, ...INSULIN, ...REPORT]);
 export const updateSugarReading = (id, data) =>
@@ -379,6 +382,23 @@ export const deleteInsulinEntry = (id) =>
   mutate(INSULIN_API, `/${id}`, { method: "DELETE" }, INSULIN);
 export const updateInsulinSettings = (data) =>
   mutate(INSULIN_API, "/settings", { method: "PATCH", body: JSON.stringify(data) }, INSULIN);
+
+export const getHealthProfile = () => get(HEALTH_DASHBOARD_API, "/profile", 0);
+export const updateHealthProfile = (data) =>
+  mutate(HEALTH_DASHBOARD_API, "/profile", { method: "PATCH", body: JSON.stringify(data) }, [...HEALTH_DASHBOARD, ...SUGAR]);
+export const getCareToday = (day) => get(HEALTH_DASHBOARD_API, `/today?day=${encodeURIComponent(day)}`, 0);
+export const updateCareToday = (taskId, data) =>
+  mutate(HEALTH_DASHBOARD_API, `/today/${taskId}`, { method: "PATCH", body: JSON.stringify(data) }, HEALTH_DASHBOARD);
+export const getSymptomLogs = () => get(HEALTH_DASHBOARD_API, "/symptoms", 0);
+export const createSymptomLog = (data) =>
+  mutate(HEALTH_DASHBOARD_API, "/symptoms", { method: "POST", body: JSON.stringify(data) }, HEALTH_DASHBOARD);
+export const deleteSymptomLog = (id) =>
+  mutate(HEALTH_DASHBOARD_API, `/symptoms/${id}`, { method: "DELETE" }, HEALTH_DASHBOARD);
+export const getHealthCheckups = () => get(HEALTH_DASHBOARD_API, "/checkups", 0);
+export const createHealthCheckup = (data) =>
+  mutate(HEALTH_DASHBOARD_API, "/checkups", { method: "POST", body: JSON.stringify(data) }, HEALTH_DASHBOARD);
+export const deleteHealthCheckup = (id) =>
+  mutate(HEALTH_DASHBOARD_API, `/checkups/${id}`, { method: "DELETE" }, HEALTH_DASHBOARD);
 
 export const getVitaminItems = () => get(VITAMIN_API, "/");
 export const createVitaminItem = (data) =>
@@ -411,7 +431,8 @@ export const updateFoodItem = (id, data) =>
   );
 export const deleteFoodItem = (id) =>
   mutate(FOOD_API, `/items/${id}`, { method: "DELETE" }, FOOD);
-export const getMealLogs = () => get(FOOD_API, "/logs");
+export const getMealLogs = (scope = "real") =>
+  get(FOOD_API, `/logs?scope=${encodeURIComponent(scope)}`, 0);
 export const upsertMealLog = (data) =>
   mutate(FOOD_API, "/logs", { method: "POST", body: JSON.stringify(data) }, [...FOOD, ...REPORT]);
 export const deleteMealLog = (id) =>
@@ -554,6 +575,8 @@ export const updateTodo = (id, data) =>
   );
 export const deleteTodo = (id) =>
   mutate(TODOS_API, `/${id}`, { method: "DELETE" }, TODOS);
+export const deleteAllTodos = () =>
+  mutate(TODOS_API, "/", { method: "DELETE" }, TODOS);
 
 export const getSleepLogs = (source = "preferred") =>
   get(SLEEP_API, `/?source=${encodeURIComponent(source)}`, 0);

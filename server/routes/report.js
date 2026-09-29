@@ -12,9 +12,9 @@ const router = Router();
 router.get("/stats", async (_req, res) => {
   const [sugarReadings, exerciseSessions, mealLogs, sleepLogs, studyLogs, studySettings] =
     await Promise.all([
-      SugarReading.find().sort({ recordedAt: -1 }).lean(),
+      SugarReading.find({ demo: { $ne: true } }).sort({ recordedAt: -1 }).lean(),
       ExerciseSession.find().sort({ recordedAt: -1 }).lean(),
-      MealLog.find().sort({ day: -1 }).lean(),
+      MealLog.find({ demo: { $ne: true } }).sort({ day: -1 }).lean(),
       SleepLog.find().sort({ day: -1 }).lean(),
       StudyLog.find().sort({ day: -1 }).lean(),
       StudySettings.findOne().lean(),

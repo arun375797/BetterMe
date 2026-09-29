@@ -20,6 +20,11 @@ const VitaminPage = lazy(() => import("./pages/VitaminPage.jsx"));
 const FoodPage = lazy(() => import("./pages/FoodPage.jsx"));
 const RecipePage = lazy(() => import("./pages/RecipePage.jsx"));
 const HealthHomePage = lazy(() => import("./pages/HealthHomePage.jsx"));
+const HealthTodayPage = lazy(() => import("./pages/HealthTodayPage.jsx"));
+const CarePlanPage = lazy(() => import("./pages/CarePlanPage.jsx"));
+const SymptomsPage = lazy(() => import("./pages/SymptomsPage.jsx"));
+const CheckupsPage = lazy(() => import("./pages/CheckupsPage.jsx"));
+const HealthTrendsPage = lazy(() => import("./pages/HealthTrendsPage.jsx"));
 const HealthSoonPage = lazy(() => import("./pages/HealthSoonPage.jsx"));
 const ExercisePage = lazy(() => import("./pages/ExercisePage.jsx"));
 const ExerciseKindPage = lazy(() => import("./pages/ExerciseKindPage.jsx"));
@@ -133,6 +138,11 @@ export default function App() {
           element={<NestedTopicPage />}
         />
         <Route path="/health" element={<HealthHomePage />} />
+        <Route path="/health/today" element={<HealthTodayPage />} />
+        <Route path="/health/care-plan" element={<CarePlanPage />} />
+        <Route path="/health/symptoms" element={<SymptomsPage />} />
+        <Route path="/health/checkups" element={<CheckupsPage />} />
+        <Route path="/health/trends" element={<HealthTrendsPage />} />
         <Route path="/health/sugar" element={<SugarPage />} />
         <Route path="/health/insulin" element={<InsulinPage />} />
         <Route path="/health/vitamin" element={<VitaminPage />} />
