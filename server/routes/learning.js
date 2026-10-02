@@ -128,7 +128,9 @@ function normalizeSolutions(raw, fallback = {}) {
       id: String(item.id || item._id || newSolutionId()),
       language: item.language || "javascript",
       code: item.code || "",
+      output: item.output || "",
       logic: item.logic || "",
+      logicHtml: item.logicHtml || "",
     }));
   }
   if (fallback.code || fallback.notes) {
@@ -137,12 +139,21 @@ function normalizeSolutions(raw, fallback = {}) {
         id: "legacy",
         language: fallback.language || "javascript",
         code: fallback.code || "",
+        output: fallback.output || "",
         logic: fallback.notes || "",
+        logicHtml: "",
       },
     ];
   }
   return [
-    { id: newSolutionId(), language: "javascript", code: "", logic: "" },
+    {
+      id: newSolutionId(),
+      language: "javascript",
+      code: "",
+      output: "",
+      logic: "",
+      logicHtml: "",
+    },
   ];
 }
 
@@ -154,6 +165,7 @@ function questionHasAnswer(question) {
     solutions.some(
       (item) =>
         Boolean(String(item?.code || "").trim()) ||
+        Boolean(String(item?.output || "").trim()) ||
         Boolean(String(item?.logic || "").trim())
     )
   ) {
@@ -344,6 +356,69 @@ router.get("/review", async (_req, res) => {
         (a, b) =>
           (rank[a.difficulty] ?? 2) - (rank[b.difficulty] ?? 2) ||
           new Date(b.updatedAt) - new Date(a.updatedAt)
+      );
+    });
+    res.json(payload);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/revise", async (_req, res) => {
+  try {
+    const payload = await memoGet("learning:revise", 20_000, async () => {
+      const [topics, questions] = await Promise.all([
+        Topic.find({
+          inRevise: true,
+          fromNote: { $ne: true },
+        })
+          .select(LIST_SELECT)
+          .populate("subject", "name slug shortName accent")
+          .populate("parent", "title")
+          .sort({ updatedAt: -1 })
+          .lean(),
+        Question.find({ inRevise: true })
+          .populate({
+            path: "topic",
+            select: "title parent section subject",
+            populate: [
+              { path: "subject", select: "name slug shortName accent" },
+              { path: "parent", select: "title" },
+            ],
+          })
+          .sort({ updatedAt: -1 })
+          .lean(),
+      ]);
+
+      const topicItems = topics.map((item) => ({
+        ...item,
+        kind: "topic",
+        parentTopic: item.parent,
+        parent: item.parent?._id || item.parent,
+      }));
+      const questionItems = questions
+        .filter((item) => item.topic)
+        .map((item) => {
+          const topic = item.topic;
+          const parent = topic.parent;
+          return {
+            _id: item._id,
+            kind: "question",
+            title: item.title,
+            difficulty: item.difficulty,
+            section: topic.section || "practical",
+            subject: topic.subject,
+            parentTopic: { _id: topic._id, title: topic.title },
+            parent: parent?._id || parent || null,
+            hostId: topic._id,
+            inRevise: true,
+            reviseCompleted: Boolean(item.reviseCompleted),
+            updatedAt: item.updatedAt,
+          };
+        });
+
+      return [...questionItems, ...topicItems].sort(
+        (a, b) => new Date(b.updatedAt) - new Date(a.updatedAt)
       );
     });
     res.json(payload);
@@ -670,6 +745,8 @@ router.patch("/topics/:id", async (req, res) => {
       "notebook",
       "difficulty",
       "inReview",
+      "inRevise",
+      "reviseCompleted",
       "youtubeUrl",
     ];
     const updates = {};
@@ -684,6 +761,13 @@ router.patch("/topics/:id", async (req, res) => {
     }
     if (updates.inReview !== undefined) {
       updates.inReview = Boolean(updates.inReview);
+    }
+    if (updates.inRevise !== undefined) {
+      updates.inRevise = Boolean(updates.inRevise);
+      if (!updates.inRevise) updates.reviseCompleted = false;
+    }
+    if (updates.reviseCompleted !== undefined) {
+      updates.reviseCompleted = Boolean(updates.reviseCompleted);
     }
     if (updates.youtubeUrl !== undefined) {
       const cleaned = cleanUrl(updates.youtubeUrl);
@@ -741,7 +825,7 @@ router.get("/topics/:id/questions", async (req, res) => {
     }
     const questions = await Question.find({ topic: topic._id })
       .select(
-        "title collectionName difficulty order relatedSection createdAt code notes solutions notebook inReview"
+        "title collectionName difficulty order relatedSection createdAt code notes solutions notebook inReview inRevise reviseCompleted"
       )
       .populate("relatedSection", "title")
       .sort({ order: 1, createdAt: 1 })
@@ -790,6 +874,7 @@ router.post("/topics/:id/questions", async (req, res) => {
       prompt: req.body.prompt || "",
       collectionName: req.body.collectionName || "",
       approach: req.body.approach || "",
+      approachHtml: req.body.approachHtml || "",
       notes: solutions[0]?.logic || "",
       code: solutions[0]?.code || "",
       language: solutions[0]?.language || "javascript",
@@ -863,7 +948,13 @@ router.patch("/questions/:id", async (req, res) => {
     if (req.body.collectionName !== undefined) {
       question.collectionName = req.body.collectionName;
     }
-    if (req.body.approach !== undefined) question.approach = req.body.approach;
+    if (req.body.approach !== undefined) {
+      question.approach = req.body.approach;
+      if (req.body.approachHtml === undefined) question.approachHtml = "";
+    }
+    if (req.body.approachHtml !== undefined) {
+      question.approachHtml = req.body.approachHtml;
+    }
     if (req.body.difficulty !== undefined) {
       question.difficulty = req.body.difficulty;
     }
@@ -881,6 +972,13 @@ router.patch("/questions/:id", async (req, res) => {
     }
     if (req.body.inReview !== undefined) {
       question.inReview = Boolean(req.body.inReview);
+    }
+    if (req.body.inRevise !== undefined) {
+      question.inRevise = Boolean(req.body.inRevise);
+      if (!question.inRevise) question.reviseCompleted = false;
+    }
+    if (req.body.reviseCompleted !== undefined) {
+      question.reviseCompleted = Boolean(req.body.reviseCompleted);
     }
     if (req.body.notebook !== undefined) {
       question.notebook = req.body.notebook;

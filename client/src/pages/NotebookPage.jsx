@@ -439,6 +439,27 @@ export default function NotebookPage() {
     await patchMeta({ inReview: !sub.inReview });
   }
 
+  async function toggleRevise() {
+    if (isQuestionBook) {
+      if (!question) return;
+      const next = !question.inRevise;
+      setQuestion((prev) => (prev ? { ...prev, inRevise: next } : prev));
+      try {
+        await updateQuestion(questionId, { inRevise: next });
+        await refreshSubjects();
+        setStatus(next ? "Added to revise" : "Removed from revise");
+        setTimeout(() => setStatus(""), 1800);
+      } catch (err) {
+        setQuestion((prev) =>
+          prev ? { ...prev, inRevise: !next } : prev
+        );
+        setStatus(err.message);
+      }
+      return;
+    }
+    await patchMeta({ inRevise: !sub.inRevise });
+  }
+
   async function saveYoutubeUrl() {
     const normalized = normalizeUrlForHref(youtubeUrlDraft);
     setYoutubeUrlDraft(normalized);
@@ -805,6 +826,19 @@ export default function NotebookPage() {
           {(isQuestionBook ? question?.inReview : sub?.inReview)
             ? "✓ In review"
             : "Add to review"}
+        </button>
+        <button
+          type="button"
+          onClick={toggleRevise}
+          className={`rounded-lg border px-2.5 py-1 text-[11px] font-medium ${
+            (isQuestionBook ? question?.inRevise : sub?.inRevise)
+              ? "border-violet/50 bg-violet/20 text-violet"
+              : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+          }`}
+        >
+          {(isQuestionBook ? question?.inRevise : sub?.inRevise)
+            ? "✓ In revise"
+            : "Add to revise"}
         </button>
         <span className="mx-1 h-4 w-px bg-white/15" />
         <span className="ml-auto text-[11px] font-medium text-[#8d95aa] uppercase tracking-wide">

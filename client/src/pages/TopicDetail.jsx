@@ -183,6 +183,30 @@ export default function TopicDetail() {
     await afterChange();
   }
 
+  async function toggleTopicRevise(item) {
+    const next = !item.inRevise;
+    try {
+      await updateTopic(item._id, { inRevise: next });
+      setTopic((prev) => {
+        if (!prev) return prev;
+        if (String(prev._id) === String(item._id)) {
+          return { ...prev, inRevise: next };
+        }
+        return {
+          ...prev,
+          subtopics: (prev.subtopics || []).map((sub) =>
+            String(sub._id) === String(item._id)
+              ? { ...sub, inRevise: next }
+              : sub
+          ),
+        };
+      });
+      await refreshSubjects();
+    } catch (err) {
+      setError(err.message || "Could not update revise list");
+    }
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -257,6 +281,17 @@ export default function TopicDetail() {
         </p>
 
         <div className="mt-5 flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => toggleTopicRevise(topic)}
+            className={`rounded-xl border px-4 py-2 text-sm font-medium ${
+              topic.inRevise
+                ? "border-violet/50 bg-violet/20 text-violet"
+                : "border-violet/30 bg-violet/8 text-violet hover:bg-violet/15"
+            }`}
+          >
+            {topic.inRevise ? "✓ In revise" : "Add topic to revise"}
+          </button>
           <button
             type="button"
             onClick={() => setEditMain(true)}
@@ -612,6 +647,17 @@ export default function TopicDetail() {
                     Review
                   </span>
                 ) : null}
+                <button
+                  type="button"
+                  onClick={() => toggleTopicRevise(sub)}
+                  className={`rounded-full border px-2 py-0.5 text-[10px] ${
+                    sub.inRevise
+                      ? "border-violet/40 bg-violet/15 text-violet"
+                      : "border-violet/25 text-violet/80 hover:bg-violet/10"
+                  }`}
+                >
+                  {sub.inRevise ? "✓ Revise" : "+ Revise"}
+                </button>
                 {section !== "practical" ? (
                   <button
                     type="button"

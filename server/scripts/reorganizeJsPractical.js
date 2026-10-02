@@ -128,7 +128,10 @@ function key(value) {
 function hasAnswer(question) {
   return (
     (question.solutions || []).some(
-      (item) => String(item?.code || "").trim() || String(item?.logic || "").trim()
+      (item) =>
+        String(item?.code || "").trim() ||
+        String(item?.output || "").trim() ||
+        String(item?.logic || "").trim()
     ) ||
     Boolean(String(question.code || "").trim()) ||
     Boolean(String(question.notes || "").trim())

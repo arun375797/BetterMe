@@ -14,6 +14,7 @@ const NamasteDevPage = lazy(() => import("./pages/NamasteDevPage.jsx"));
 const NotebookPage = lazy(() => import("./pages/NotebookPage.jsx"));
 const QuestionsPage = lazy(() => import("./pages/QuestionsPage.jsx"));
 const QuestionViewPage = lazy(() => import("./pages/QuestionViewPage.jsx"));
+const RevisePage = lazy(() => import("./pages/RevisePage.jsx"));
 const SugarPage = lazy(() => import("./pages/SugarPage.jsx"));
 const InsulinPage = lazy(() => import("./pages/InsulinPage.jsx"));
 const VitaminPage = lazy(() => import("./pages/VitaminPage.jsx"));
@@ -114,6 +115,10 @@ export default function App() {
         <Route path="/learning/:slug" element={<SubjectHub />} />
         <Route path="/learning/dsa/namaste-dev" element={<NamasteDevPage />} />
         <Route path="/learning/:slug/:section" element={<SubjectPage />} />
+        <Route
+          path="/learning/:slug/:section/revise"
+          element={<RevisePage />}
+        />
         <Route
           path="/learning/:slug/:section/:topicId"
           element={<TopicDetail />}

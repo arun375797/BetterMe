@@ -223,6 +223,7 @@ const PLAN = [PLAN_API];
 
 export const peekSubjects = () => peek(API, "/subjects");
 export const peekReviewQueue = () => peek(API, "/review");
+export const peekReviseQueue = () => peek(API, "/revise");
 export const peekSubject = (slug, section) => {
   const query = section ? `?section=${section}` : "";
   return peek(API, `/subjects/${slug}${query}`);
@@ -234,6 +235,7 @@ export const peekBooks = () => peek(BOOKS_API, "/")?.books;
 
 export const getSubjects = () => get(API, "/subjects");
 export const getReviewQueue = () => get(API, "/review");
+export const getReviseQueue = () => get(API, "/revise");
 export const getSubject = (slug, section) => {
   const query = section ? `?section=${section}` : "";
   return get(API, `/subjects/${slug}${query}`);

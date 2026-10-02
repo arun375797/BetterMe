@@ -746,6 +746,30 @@ body {
   box-shadow: 0 0 0 2px rgba(255, 31, 31, 0.28), 0 0 12px rgba(255, 31, 31, 0.95);
 }
 
+.approach-rich p,
+.approach-rich div {
+  margin-bottom: 0.65rem;
+}
+
+.approach-rich ul,
+.approach-rich ol {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+}
+
+.approach-rich ul {
+  list-style: disc;
+}
+
+.approach-rich ol {
+  list-style: decimal;
+}
+
+.approach-rich:empty::before {
+  content: "Write the approach here…";
+  color: var(--color-muted);
+}
+
 .topic-row-meta {
   flex: 0 0 auto;
   align-self: center;

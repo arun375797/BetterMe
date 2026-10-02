@@ -12,6 +12,7 @@ import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import IdeEditor from "../components/IdeEditor.jsx";
+import InlineApproachEditor from "../components/InlineApproachEditor.jsx";
 import { questionHasAnswer, solutionsOf } from "../questions.js";
 import { accentMap } from "../theme.jsx";
 
@@ -74,6 +75,24 @@ export default function QuestionViewPage() {
     await load();
   }
 
+  async function saveApproach(values) {
+    const saved = await updateQuestion(question._id, {
+      approach: values.text,
+      approachHtml: values.html,
+    });
+    setQuestion(saved);
+  }
+
+  async function saveSolutionLogic(solutionId, values) {
+    const solutions = solutionsOf(question).map((solution) =>
+      String(solution.id || solution._id) === String(solutionId)
+        ? { ...solution, logic: values.text, logicHtml: values.html }
+        : solution
+    );
+    const saved = await updateQuestion(question._id, { solutions });
+    setQuestion(saved);
+  }
+
   async function removeQuestion() {
     await deleteQuestion(question._id);
     await refreshSubjects();
@@ -98,6 +117,22 @@ export default function QuestionViewPage() {
         prev ? { ...prev, inReview: !next } : prev
       );
       setStatus(err.message || "Could not update review");
+    }
+  }
+
+  async function toggleRevise() {
+    if (!question) return;
+    const next = !question.inRevise;
+    setQuestion((prev) => (prev ? { ...prev, inRevise: next } : prev));
+    try {
+      await updateQuestion(question._id, { inRevise: next });
+      setStatus(next ? "Added to revise" : "Removed from revise");
+      setTimeout(() => setStatus(""), 1800);
+    } catch (err) {
+      setQuestion((prev) =>
+        prev ? { ...prev, inRevise: !next } : prev
+      );
+      setStatus(err.message || "Could not update revise list");
     }
   }
 
@@ -217,6 +252,17 @@ export default function QuestionViewPage() {
           </button>
           <button
             type="button"
+            onClick={toggleRevise}
+            className={`rounded-lg border px-3 py-1.5 text-xs font-medium ${
+              question.inRevise
+                ? "border-violet/50 bg-violet/20 text-violet"
+                : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+            }`}
+          >
+            {question.inRevise ? "✓ In revise" : "Add to revise"}
+          </button>
+          <button
+            type="button"
             onClick={() => setEditOpen(true)}
             className="rounded-lg border border-cyan/30 px-3 py-1.5 text-xs text-cyan hover:bg-cyan/10"
           >
@@ -232,27 +278,13 @@ export default function QuestionViewPage() {
         </div>
       </div>
 
-      {question.approach ? (
-        <div className="mt-6 max-w-3xl rounded-2xl border border-gold/20 bg-gold/5">
-          <button
-            type="button"
-            onClick={() => setApproachOpen((open) => !open)}
-            className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left"
-          >
-            <span className="text-[11px] tracking-[0.14em] text-gold uppercase">
-              How to approach it
-            </span>
-            <span className="text-xs text-muted">
-              {approachOpen ? "Hide" : "Show"}
-            </span>
-          </button>
-          {approachOpen ? (
-            <p className="border-t border-gold/15 px-4 py-4 text-sm leading-6 whitespace-pre-wrap text-[#d7dbe6]">
-              {question.approach}
-            </p>
-          ) : null}
-        </div>
-      ) : null}
+      <InlineApproachEditor
+        text={question.approach}
+        html={question.approachHtml}
+        open={approachOpen}
+        onToggle={() => setApproachOpen((open) => !open)}
+        onSave={saveApproach}
+      />
 
       <div className="mt-8 space-y-6">
         {ways.length ? (
@@ -265,11 +297,18 @@ export default function QuestionViewPage() {
                 Way {index + 1}
                 {way.language ? ` · ${way.language}` : ""}
               </p>
-              {way.logic ? (
-                <p className="mt-3 whitespace-pre-wrap text-sm leading-6">
-                  {way.logic}
-                </p>
-              ) : null}
+              <InlineApproachEditor
+                text={way.logic}
+                html={way.logicHtml}
+                open
+                collapsible={false}
+                variant="solution"
+                title="Logic behind this answer"
+                emptyMessage="No explanation added yet. Select Edit to write one here."
+                onSave={(values) =>
+                  saveSolutionLogic(way.id || way._id || index, values)
+                }
+              />
               {way.code ? (
                 <div className="mt-4">
                   <IdeEditor
@@ -282,6 +321,16 @@ export default function QuestionViewPage() {
               ) : (
                 <p className="mt-3 text-sm text-muted">No code for this way.</p>
               )}
+              {way.output ? (
+                <div className="mt-4 overflow-hidden rounded-xl border border-line bg-inset">
+                  <div className="border-b border-line px-4 py-2 text-[11px] tracking-[0.14em] text-teal uppercase">
+                    Output
+                  </div>
+                  <pre className="overflow-x-auto p-4 font-mono text-sm leading-6 whitespace-pre text-[#d7dbe6]">
+                    {way.output}
+                  </pre>
+                </div>
+              ) : null}
             </div>
           ))
         ) : (

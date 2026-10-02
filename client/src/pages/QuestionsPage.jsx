@@ -120,6 +120,21 @@ export default function QuestionsPage() {
     }
   }
 
+  async function toggleRevise() {
+    if (!sub) return;
+    const next = !sub.inRevise;
+    setSub((prev) => (prev ? { ...prev, inRevise: next } : prev));
+    try {
+      await updateTopic(hostId, { inRevise: next });
+      await refreshSubjects();
+      setStatus(next ? "Added to revise" : "Removed from revise");
+      setTimeout(() => setStatus(""), 1800);
+    } catch (err) {
+      setSub((prev) => (prev ? { ...prev, inRevise: !next } : prev));
+      setStatus(err.message || "Could not update revise list");
+    }
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -190,6 +205,17 @@ export default function QuestionsPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={toggleRevise}
+              className={`rounded-lg border px-3 py-1.5 text-[11px] font-medium ${
+                sub.inRevise
+                  ? "border-violet/50 bg-violet/20 text-violet"
+                  : "border-white/15 bg-white/5 text-[#c8cfe0] hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {sub.inRevise ? "✓ In revise" : "Add to revise"}
+            </button>
             {isPractical ? (
               sub.inReview ? (
                 <button
@@ -258,6 +284,11 @@ export default function QuestionsPage() {
                   {item.inReview ? (
                     <span className="mt-0.5 shrink-0 rounded-full border border-teal/30 bg-teal/12 px-2 py-0.5 text-[10px] font-medium text-teal">
                       Review
+                    </span>
+                  ) : null}
+                  {item.inRevise ? (
+                    <span className="mt-0.5 shrink-0 rounded-full border border-violet/30 bg-violet/12 px-2 py-0.5 text-[10px] font-medium text-violet">
+                      Revise
                     </span>
                   ) : null}
                 </Link>

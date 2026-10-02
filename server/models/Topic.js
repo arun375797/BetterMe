@@ -24,6 +24,8 @@ const topicSchema = new mongoose.Schema(
       default: "medium",
     },
     inReview: { type: Boolean, default: false },
+    inRevise: { type: Boolean, default: false },
+    reviseCompleted: { type: Boolean, default: false },
     fromNote: { type: Boolean, default: false },
     section: {
       type: String,
@@ -45,5 +47,6 @@ const topicSchema = new mongoose.Schema(
 topicSchema.index({ subject: 1, section: 1, parent: 1, slNo: 1 });
 topicSchema.index({ parent: 1, fromNote: 1 });
 topicSchema.index({ inReview: 1, parent: 1, updatedAt: -1 });
+topicSchema.index({ inRevise: 1, parent: 1, updatedAt: -1 });
 
 export default mongoose.model("Topic", topicSchema);

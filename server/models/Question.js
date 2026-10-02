@@ -15,6 +15,7 @@ const questionSchema = new mongoose.Schema(
     // How to think about the problem, written without code. Kept apart from
     // solutions[].logic so a seeded hint never mixes with your own answer.
     approach: { type: String, default: "" },
+    approachHtml: { type: String, default: "" },
     notes: { type: String, default: "" },
     code: { type: String, default: "" },
     language: { type: String, default: "javascript" },
@@ -23,7 +24,9 @@ const questionSchema = new mongoose.Schema(
         id: { type: String, required: true },
         language: { type: String, default: "javascript" },
         code: { type: String, default: "" },
+        output: { type: String, default: "" },
         logic: { type: String, default: "" },
+        logicHtml: { type: String, default: "" },
       },
     ],
     notebook: {
@@ -31,6 +34,8 @@ const questionSchema = new mongoose.Schema(
       default: undefined,
     },
     inReview: { type: Boolean, default: false },
+    inRevise: { type: Boolean, default: false },
+    reviseCompleted: { type: Boolean, default: false },
     relatedSection: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Topic",
@@ -48,5 +53,6 @@ const questionSchema = new mongoose.Schema(
 
 questionSchema.index({ topic: 1, order: 1 });
 questionSchema.index({ inReview: 1, updatedAt: -1 });
+questionSchema.index({ inRevise: 1, updatedAt: -1 });
 
 export default mongoose.model("Question", questionSchema);

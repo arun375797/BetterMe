@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { createTopic, deleteTopic, getReviewQueue, getSubject, peekReviewQueue, peekSubject, updateTopic } from "../api.js";
+import { createTopic, deleteTopic, getReviewQueue, getReviseQueue, getSubject, peekReviewQueue, peekReviseQueue, peekSubject, updateTopic } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import PdfExportDialog from "../components/PdfExportDialog.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
@@ -54,6 +54,9 @@ export default function SubjectPage() {
   const [reviewQueue, setReviewQueue] = useState(
     () => peekReviewQueue() || []
   );
+  const [reviseQueue, setReviseQueue] = useState(
+    () => peekReviseQueue() || []
+  );
   const [error, setError] = useState("");
   const [query, setQuery] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
@@ -105,6 +108,14 @@ export default function SubjectPage() {
       .catch(() => {
         if (live) setReviewQueue([]);
       });
+    getReviseQueue()
+      .then((data) => {
+        if (!live) return;
+        setReviseQueue(Array.isArray(data) ? data : []);
+      })
+      .catch(() => {
+        if (live) setReviseQueue([]);
+      });
     return () => {
       live = false;
     };
@@ -137,6 +148,14 @@ export default function SubjectPage() {
         (item.section || "theory") === section
     );
   }, [reviewQueue, slug, section]);
+
+  const reviseItems = useMemo(() => {
+    return (reviseQueue || []).filter(
+      (item) =>
+        item.subject?.slug === slug &&
+        (item.section || "theory") === section
+    );
+  }, [reviseQueue, slug, section]);
 
   async function saveMainTopic(values) {
     await updateTopic(editTopic._id, {
@@ -227,6 +246,12 @@ export default function SubjectPage() {
             >
               Add topic
             </button>
+            <Link
+              to={`/learning/${slug}/${section}/revise`}
+              className="inline-flex items-center justify-center rounded-xl border border-violet/35 bg-violet/10 px-4 py-2.5 text-sm font-medium text-violet hover:bg-violet/15"
+            >
+              Revise{reviseItems.length ? ` (${reviseItems.length})` : ""}
+            </Link>
             <button
               type="button"
               onClick={() => {

@@ -13,7 +13,9 @@ function newSolution() {
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
     language: "javascript",
     code: "",
+    output: "",
     logic: "",
+    logicHtml: "",
   };
 }
 
@@ -23,7 +25,9 @@ function initialSolutions(initial) {
       id: item.id || item._id || newSolution().id,
       language: item.language || "javascript",
       code: item.code || "",
+      output: item.output || "",
       logic: item.logic || "",
+      logicHtml: item.logicHtml || "",
     }));
   }
   if (initial?.code || initial?.notes) {
@@ -32,7 +36,9 @@ function initialSolutions(initial) {
         id: "legacy",
         language: initial.language || "javascript",
         code: initial.code || "",
+        output: initial.output || "",
         logic: initial.notes || "",
+        logicHtml: "",
       },
     ];
   }
@@ -81,6 +87,10 @@ export default function QuestionFormModal({
         prompt,
         collectionName: collectionName.trim(),
         approach,
+        approachHtml:
+          approach === (initial?.approach || "")
+            ? initial?.approachHtml || ""
+            : "",
         difficulty,
         solutions,
         relatedSectionId: relatedSectionId || null,
@@ -206,7 +216,10 @@ export default function QuestionFormModal({
                   <textarea
                     value={item.logic}
                     onChange={(e) =>
-                      patchSolution(item.id, { logic: e.target.value })
+                      patchSolution(item.id, {
+                        logic: e.target.value,
+                        logicHtml: "",
+                      })
                     }
                     rows={3}
                     placeholder="Explain why this solution works."
@@ -223,6 +236,21 @@ export default function QuestionFormModal({
                     placeholder="// answer"
                   />
                 </div>
+                <label className="block">
+                  <span className="mb-1.5 block text-xs text-muted">
+                    Output
+                  </span>
+                  <textarea
+                    value={item.output}
+                    onChange={(e) =>
+                      patchSolution(item.id, { output: e.target.value })
+                    }
+                    rows={6}
+                    spellCheck={false}
+                    placeholder={"Paste console output here\nEach line will be preserved"}
+                    className={`${fieldClass} resize-y whitespace-pre font-mono leading-6`}
+                  />
+                </label>
               </div>
             ))}
             <button

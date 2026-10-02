@@ -8,7 +8,9 @@ export function solutionsOf(item) {
         id: "legacy",
         language: item.language || "javascript",
         code: item.code || "",
+        output: item.output || "",
         logic: item.notes || "",
+        logicHtml: "",
       },
     ];
   }
@@ -21,6 +23,7 @@ export function questionHasAnswer(item) {
     solutionsOf(item).some(
       (way) =>
         Boolean(String(way.code || "").trim()) ||
+        Boolean(String(way.output || "").trim()) ||
         Boolean(String(way.logic || "").trim())
     )
   ) {

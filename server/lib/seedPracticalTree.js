@@ -37,7 +37,9 @@ function planSolutions(question) {
     id: `plan-${index + 1}`,
     language: item.language || "javascript",
     code: item.code || "",
+    output: item.output || "",
     logic: item.logic || "",
+    logicHtml: item.logicHtml || "",
   }));
 }
 
@@ -46,7 +48,9 @@ function hasAnswer(question) {
   if (
     solutions.some(
       (item) =>
-        String(item?.code || "").trim() || String(item?.logic || "").trim()
+        String(item?.code || "").trim() ||
+        String(item?.output || "").trim() ||
+        String(item?.logic || "").trim()
     )
   ) {
     return true;
@@ -140,7 +144,14 @@ export async function seedPracticalTree({ slug, plan, dry = false }) {
             // edits to the data file reach questions that already exist. Your
             // answers live in solutions/code/notes and are never touched here.
             ...(question.prompt ? { prompt: question.prompt } : {}),
-            ...(question.approach ? { approach: question.approach } : {}),
+            ...(question.approach
+              ? {
+                  approach: question.approach,
+                  ...(match.approach !== question.approach
+                    ? { approachHtml: "" }
+                    : {}),
+                }
+              : {}),
           };
           if (question.managed && question.solutions) {
             const solutions = planSolutions(question);
@@ -163,7 +174,9 @@ export async function seedPracticalTree({ slug, plan, dry = false }) {
                 id: `seed-${Date.now()}-${index}`,
                 language: "javascript",
                 code: "",
+                output: "",
                 logic: "",
+                logicHtml: "",
               },
             ];
         await Question.create({
