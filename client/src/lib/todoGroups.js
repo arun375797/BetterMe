@@ -49,9 +49,9 @@ export function todoListGroup(todo, now = new Date()) {
 }
 
 export const TODO_GROUP_ORDER = [
-  "Overdue",
   "Today",
   "Tomorrow",
+  "Overdue",
   "Upcoming",
   "Yesterday",
   "This Week",
