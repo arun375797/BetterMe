@@ -8,6 +8,7 @@ import {
 } from "../api.js";
 import TodoScheduleFields, { todayScheduleDate } from "./TodoScheduleFields.jsx";
 import { buildScheduleRange, duePartsFromIso } from "./TimePicker12.jsx";
+import { orderedTodoCategories } from "../lib/todoCategories.js";
 
 function dateValue(offsetDays = 0) {
   const date = new Date();
@@ -66,6 +67,10 @@ export default function TodoComposer({
   const sourceItems = useMemo(
     () => templateItemsForDate(todos, templateDate),
     [todos, templateDate]
+  );
+  const categoryOptions = useMemo(
+    () => orderedTodoCategories(categories),
+    [categories]
   );
 
   useEffect(() => {
@@ -189,7 +194,7 @@ export default function TodoComposer({
         <span className="mb-1.5 block text-[11px] font-medium text-muted">Category</span>
         <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)} className="w-full rounded-lg bg-white/5 px-2.5 py-2 text-xs text-muted ring-1 ring-line focus:outline-none focus:ring-cyan/40">
           <option value="">No category</option>
-          {categories.map((category) => <option key={category._id} value={category._id}>{category.emoji ? `${category.emoji} ` : ""}{category.name}</option>)}
+          {categoryOptions.map((category) => <option key={category._id} value={category._id}>{category.depth ? "↳ " : ""}{category.emoji ? `${category.emoji} ` : ""}{category.name}</option>)}
         </select>
       </label>
     </div>

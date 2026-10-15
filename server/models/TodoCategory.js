@@ -16,11 +16,17 @@ const todoCategorySchema = new mongoose.Schema(
     name: { type: String, required: true, trim: true, maxlength: 50 },
     color: { type: String, default: "#6ec8ff" },
     emoji: { type: String, default: "", maxlength: 10 },
+    parent: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "TodoCategory",
+      default: null,
+    },
     order: { type: Number, default: 0 },
   },
   { timestamps: true }
 );
 
 todoCategorySchema.index({ order: 1, createdAt: 1 });
+todoCategorySchema.index({ parent: 1, order: 1 });
 
 export default mongoose.model("TodoCategory", todoCategorySchema);

@@ -27,6 +27,7 @@ export default function LearningHome() {
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [openCards, setOpenCards] = useState({});
 
   async function load() {
     const data = await getLearningPlan();
@@ -63,6 +64,10 @@ export default function LearningHome() {
   const due = plan?.today || [];
   const studied = cards.reduce((sum, card) => sum + (card.learned || 0), 0);
   const planned = cards.reduce((sum, card) => sum + (card.total || 0), 0);
+  const planGroups = groupPlanByLanguage(plan?.items || [], cards);
+  const topicsBySlug = new Map(
+    planGroups.map((group) => [group.subject.slug, group.topics])
+  );
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -117,44 +122,90 @@ export default function LearningHome() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {cards.map((subject) => {
               const accent = accentMap[subject.accent] || accentMap.teal;
+              const topics = topicsBySlug.get(subject.slug) || [];
+              const expanded = Boolean(openCards[subject.slug]);
               return (
-                <Link
+                <div
                   key={subject.slug}
-                  to={`/learning/plan/${subject.slug}`}
-                  className={`rounded-2xl border border-line bg-raised/80 p-5 ring-1 ring-transparent transition hover:-translate-y-0.5 hover:border-white/15 ${accent.glow}`}
+                  className={`overflow-hidden rounded-2xl border border-line bg-raised/80 ring-1 ring-transparent transition hover:border-white/15 ${accent.glow}`}
                 >
-                  <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className={`text-xs font-medium ${accent.text}`}>
-                        {subject.shortName}
-                      </p>
-                      <h3 className="mt-1 text-xl font-semibold break-words">
-                        {subject.name}
-                      </h3>
+                  <div className="p-5">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <Link
+                        to={`/learning/plan/${subject.slug}`}
+                        className="min-w-0 hover:opacity-90"
+                      >
+                        <p className={`text-xs font-medium ${accent.text}`}>
+                          {subject.shortName}
+                        </p>
+                        <h3 className="mt-1 text-xl font-semibold break-words">
+                          {subject.name}
+                        </h3>
+                      </Link>
+                      <span className="shrink-0 rounded-lg bg-white/6 px-2 py-1 text-xs">
+                        {subject.total
+                          ? `${subject.learned} / ${subject.total}`
+                          : "Empty"}
+                      </span>
                     </div>
-                    <span className="shrink-0 rounded-lg bg-white/6 px-2 py-1 text-xs">
-                      {subject.total
-                        ? `${subject.learned} / ${subject.total}`
-                        : "Empty"}
-                    </span>
-                  </div>
-                  <p className="mt-3 text-sm leading-6 text-muted">
-                    {subject.description || "Add topics for this language."}
-                  </p>
-                  <div className="mt-4">
-                    <PlanProgressLine
-                      segments={subject.segments}
-                      accentClass={accent.bar}
-                    />
-                    <p className="mt-2 text-xs text-muted">
-                      {subject.total
-                        ? subject.remaining
-                          ? `${subject.remaining} left to study`
-                          : "All planned topics studied"
-                        : "No topics yet"}
+                    <p className="mt-3 text-sm leading-6 text-muted">
+                      {subject.description || "Add topics for this language."}
                     </p>
+                    <div className="mt-4">
+                      <PlanProgressLine
+                        segments={subject.segments}
+                        accentClass={accent.bar}
+                      />
+                      <p className="mt-2 text-xs text-muted">
+                      {subject.total
+                          ? subject.remaining
+                            ? `${subject.remaining} left to study`
+                            : "All planned topics studied"
+                          : "No topics yet"}
+                      </p>
+                    </div>
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-3">
+                      <Link
+                        to={`/learning/plan/${subject.slug}`}
+                        className={`text-xs font-medium ${accent.text} hover:underline`}
+                      >
+                        Open subject →
+                      </Link>
+                      <button
+                        type="button"
+                        aria-expanded={expanded}
+                        onClick={() =>
+                          setOpenCards((current) => ({
+                            ...current,
+                            [subject.slug]: !current[subject.slug],
+                          }))
+                        }
+                        className="inline-flex items-center gap-2 rounded-lg border border-line bg-white/5 px-3 py-1.5 text-xs text-cyan hover:bg-white/10"
+                      >
+                        {expanded ? "Hide topics" : "Show topics"}
+                        <svg
+                          viewBox="0 0 16 16"
+                          className={`h-3.5 w-3.5 transition ${
+                            expanded ? "rotate-180" : ""
+                          }`}
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          aria-hidden="true"
+                        >
+                          <path d="M3.5 6 8 10.5 12.5 6" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                </Link>
+                  {expanded ? (
+                    <SubjectTopicDropdown
+                      slug={subject.slug}
+                      topics={topics}
+                      accentClass={accent.text}
+                    />
+                  ) : null}
+                </div>
               );
             })}
           </div>
@@ -193,6 +244,17 @@ export default function LearningHome() {
               await createPlanItem(payload);
             }
             await load();
+            if (modal.type !== "edit") {
+              const addedSubject = subjects.find(
+                (subject) => String(subject._id) === String(payload.subject)
+              );
+              if (addedSubject) {
+                setOpenCards((current) => ({
+                  ...current,
+                  [addedSubject.slug]: true,
+                }));
+              }
+            }
           }}
         />
       ) : null}
@@ -379,6 +441,96 @@ function LanguagePlanList({ subjects, items, onEdit, onDelete }) {
         );
       })}
     </div>
+  );
+}
+
+function SubjectTopicDropdown({ slug, topics, accentClass }) {
+  if (!topics.length) {
+    return (
+      <p className="border-t border-line bg-surface/40 px-5 py-4 text-sm text-muted">
+        No topics in this subject yet.
+      </p>
+    );
+  }
+
+  return (
+    <ul className="space-y-2 border-t border-line bg-surface/35 px-5 py-4">
+      {topics.map((topic) => {
+        const done = topicLearned(topic);
+        const priority =
+          PLAN_PRIORITY_META[topic.priority] || PLAN_PRIORITY_META.medium;
+        return (
+          <li
+            key={topic._id}
+            className="rounded-xl border border-line/70 bg-raised/70 px-3 py-3"
+          >
+            <Link
+              to={`/learning/plan/${slug}`}
+              className="flex min-w-0 items-start gap-2 hover:opacity-90"
+            >
+              <span
+                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
+                  done ? "bg-teal" : "bg-white/20"
+                }`}
+              />
+              <span className="min-w-0 flex-1">
+                <span
+                  className={`block break-words text-sm font-medium ${
+                    done ? "text-muted line-through" : accentClass
+                  }`}
+                >
+                  {topic.title}
+                </span>
+                <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
+                  <span>{formatPlanDate(topic.date)}</span>
+                  <span className={`rounded-full px-1.5 py-px ${priority.className}`}>
+                    {priority.label}
+                  </span>
+                  {topic.children?.length ? (
+                    <span>
+                      {topic.children.length} {topic.children.length === 1 ? "subtopic" : "subtopics"}
+                    </span>
+                  ) : null}
+                </span>
+              </span>
+              <span className="shrink-0 text-xs text-cyan">Open →</span>
+            </Link>
+
+            {topic.children?.length ? (
+              <ul className="mt-3 space-y-1.5 border-l border-line pl-4">
+                {topic.children.map((child) => {
+                  const childDone = topicLearned(child);
+                  return (
+                    <li key={child._id}>
+                      <Link
+                        to={`/learning/plan/${slug}`}
+                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-white/5"
+                      >
+                        <span
+                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
+                            childDone ? "bg-teal" : "bg-white/20"
+                          }`}
+                        />
+                        <span
+                          className={`min-w-0 flex-1 break-words ${
+                            childDone ? "text-muted line-through" : "text-ink"
+                          }`}
+                        >
+                          {child.title}
+                        </span>
+                        <span className="shrink-0 text-[10px] text-muted">
+                          {formatPlanDate(child.date)}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : null}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 

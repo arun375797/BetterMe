@@ -18,6 +18,7 @@ router.post("/categories", async (req, res) => {
   const name = String(req.body?.name || "").trim();
   const color = String(req.body?.color || "#6ec8ff");
   const emoji = String(req.body?.emoji || "").trim().slice(0, 10);
+  const parentId = req.body?.parentId || null;
 
   if (!name) {
     return res.status(400).json({ message: "Category name is required." });
@@ -26,7 +27,26 @@ router.post("/categories", async (req, res) => {
   const lastCat = await TodoCategory.findOne().sort({ order: -1 }).lean();
   const order = lastCat ? lastCat.order + 1 : 0;
 
-  const category = await TodoCategory.create({ name, color, emoji, order });
+  let parent = null;
+  if (parentId) {
+    parent = await TodoCategory.findById(parentId).lean();
+    if (!parent) {
+      return res.status(400).json({ message: "Parent category not found." });
+    }
+    if (parent.parent) {
+      return res.status(400).json({
+        message: "A subcategory cannot contain another subcategory.",
+      });
+    }
+  }
+
+  const category = await TodoCategory.create({
+    name,
+    color,
+    emoji,
+    parent: parent?._id || null,
+    order,
+  });
   res.status(201).json(category);
 });
 
@@ -37,6 +57,32 @@ router.patch("/categories/:id", async (req, res) => {
   if (req.body?.emoji != null)
     update.emoji = String(req.body.emoji).trim().slice(0, 10);
   if (req.body?.order != null) update.order = Number(req.body.order);
+  if (req.body?.parentId !== undefined) {
+    const parentId = req.body.parentId || null;
+    if (parentId && String(parentId) === String(req.params.id)) {
+      return res.status(400).json({ message: "A category cannot contain itself." });
+    }
+    if (parentId) {
+      const [parent, hasChildren] = await Promise.all([
+        TodoCategory.findById(parentId).lean(),
+        TodoCategory.exists({ parent: req.params.id }),
+      ]);
+      if (!parent) {
+        return res.status(400).json({ message: "Parent category not found." });
+      }
+      if (parent.parent) {
+        return res.status(400).json({
+          message: "A subcategory cannot contain another subcategory.",
+        });
+      }
+      if (hasChildren) {
+        return res.status(400).json({
+          message: "Move or delete this category's subcategories first.",
+        });
+      }
+    }
+    update.parent = parentId;
+  }
 
   const category = await TodoCategory.findByIdAndUpdate(
     req.params.id,
@@ -57,6 +103,10 @@ router.delete("/categories/:id", async (req, res) => {
   await Todo.updateMany(
     { categoryId: req.params.id },
     { $set: { categoryId: null } }
+  );
+  await TodoCategory.updateMany(
+    { parent: req.params.id },
+    { $set: { parent: null } }
   );
   res.json({ ok: true });
 });
@@ -135,7 +185,12 @@ router.get("/", async (req, res) => {
   if (req.query.category === "none") {
     filter.categoryId = null;
   } else if (req.query.category) {
-    filter.categoryId = req.query.category;
+    const children = await TodoCategory.find({ parent: req.query.category })
+      .select("_id")
+      .lean();
+    filter.categoryId = {
+      $in: [req.query.category, ...children.map((item) => item._id)],
+    };
   }
 
   if (req.query.done === "true") filter.done = true;

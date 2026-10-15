@@ -6,6 +6,7 @@ import MusicControl from "./MusicControl.jsx";
 import { MusicNowPlaying } from "./MusicProgress.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
 import { deleteTodoCategory } from "../api.js";
+import { orderedTodoCategories } from "../lib/todoCategories.js";
 import LogoutButton from "./LogoutButton.jsx";
 
 const healthItems = [
@@ -75,7 +76,7 @@ export default function Sidebar({
   async function handleDeleteTodoCategory(e, catId) {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm("Delete this category? Todos will become uncategorized.")) return;
+    if (!confirm("Delete this category? Its todos will become uncategorized and its subcategories will become main categories.")) return;
     try {
       await deleteTodoCategory(catId);
       refreshTodoCategories?.();
@@ -505,10 +506,13 @@ export default function Sidebar({
                   <span aria-hidden="true">▦</span>
                   Calendar
                 </NavLink>
-                {todoCategories.map((cat) => {
+                {orderedTodoCategories(todoCategories).map((cat) => {
                   const inCat = location.pathname === `/todos/category/${cat._id}`;
                   return (
-                    <div key={cat._id} className="group/cat flex items-center gap-0.5">
+                    <div
+                      key={cat._id}
+                      className={`group/cat flex items-center gap-0.5 ${cat.depth ? "ml-3" : ""}`}
+                    >
                       <NavLink
                         to={`/todos/category/${cat._id}`}
                         className={() =>
@@ -524,6 +528,7 @@ export default function Sidebar({
                           style={{ background: cat.color }}
                         />
                         <span className="min-w-0 truncate">
+                          {cat.depth ? "↳ " : ""}
                           {cat.emoji ? `${cat.emoji} ` : ""}
                           {cat.name}
                         </span>

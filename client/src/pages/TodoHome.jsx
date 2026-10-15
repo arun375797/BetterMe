@@ -20,6 +20,10 @@ import {
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 import { todoScheduleLabel } from "../lib/todoSchedule.js";
 import { nextTodoData } from "../lib/todoDuplicate.js";
+import {
+  categoryAndChildIds,
+  orderedTodoCategories,
+} from "../lib/todoCategories.js";
 
 // ── helpers ───────────────────────────────────────────────────
 
@@ -194,9 +198,9 @@ function EditTodoModal({ todo, categories, onSave, onClose }) {
               className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-muted ring-1 ring-line focus:outline-none focus:ring-cyan/40"
             >
               <option value="">No category</option>
-              {categories.map((c) => (
+              {orderedTodoCategories(categories).map((c) => (
                 <option key={c._id} value={c._id}>
-                  {c.emoji ? `${c.emoji} ` : ""}{c.name}
+                  {c.depth ? "↳ " : ""}{c.emoji ? `${c.emoji} ` : ""}{c.name}
                 </option>
               ))}
             </select>
@@ -378,6 +382,7 @@ export default function TodoHome() {
   const [showNewCategory, setShowNewCategory] = useState(
     searchParams.get("new") === "category"
   );
+  const [newCategoryParentId, setNewCategoryParentId] = useState("");
   const [editingCategory, setEditingCategory] = useState(null);
   const [editingTodo, setEditingTodo] = useState(null);
 
@@ -422,13 +427,17 @@ export default function TodoHome() {
   }, []);
 
   const catMap = Object.fromEntries(categories.map((c) => [c._id, c]));
+  const orderedCategories = orderedTodoCategories(categories);
 
   const filtered = todos.filter((t) => {
     if (filterStatus === "pending" && t.done) return false;
     if (filterStatus === "done" && !t.done) return false;
     if (filterCategory !== "all") {
       if (filterCategory === "none" && t.categoryId != null) return false;
-      if (filterCategory !== "none" && t.categoryId !== filterCategory) return false;
+      if (filterCategory !== "none") {
+        const visibleIds = categoryAndChildIds(categories, filterCategory);
+        if (!visibleIds.has(String(t.categoryId))) return false;
+      }
     }
     return true;
   });
@@ -504,10 +513,18 @@ export default function TodoHome() {
   }
 
   async function handleDeleteCategory(id) {
-    if (!confirm("Delete this category? Todos will become uncategorized.")) return;
+    if (!confirm("Delete this category? Its todos will become uncategorized and its subcategories will become main categories.")) return;
     try {
       await deleteTodoCategory(id);
-      setCategories((cs) => cs.filter((c) => c._id !== id));
+      setCategories((cs) =>
+        cs
+          .filter((c) => c._id !== id)
+          .map((c) =>
+            String(c.parent?._id || c.parent || "") === String(id)
+              ? { ...c, parent: null }
+              : c
+          )
+      );
       setTodos((ts) =>
         ts.map((t) => (t.categoryId === id ? { ...t, categoryId: null } : t))
       );
@@ -525,6 +542,7 @@ export default function TodoHome() {
       return exists ? cs.map((c) => (c._id === cat._id ? cat : c)) : [...cs, cat];
     });
     setShowNewCategory(false);
+    setNewCategoryParentId("");
     setEditingCategory(null);
     refreshTodoCategories?.();
   }
@@ -566,7 +584,10 @@ export default function TodoHome() {
           </button>
           <button
             type="button"
-            onClick={() => setShowNewCategory(true)}
+            onClick={() => {
+              setNewCategoryParentId("");
+              setShowNewCategory(true);
+            }}
             className="flex items-center gap-1.5 rounded-xl border border-line bg-white/4 px-3 py-2 text-sm text-muted hover:bg-white/8 hover:text-ink"
           >
             <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none">
@@ -664,7 +685,7 @@ export default function TodoHome() {
         >
           Uncategorized
         </button>
-        {categories.map((cat) => (
+        {orderedCategories.map((cat) => (
           <button
             key={cat._id}
             type="button"
@@ -687,7 +708,7 @@ export default function TodoHome() {
             <span
               className={filterCategory === cat._id ? "" : "text-muted hover:text-ink"}
             >
-              {cat.emoji ? `${cat.emoji} ` : ""}
+              {cat.depth ? "↳ " : ""}{cat.emoji ? `${cat.emoji} ` : ""}
               {cat.name}
             </span>
           </button>
@@ -719,7 +740,7 @@ export default function TodoHome() {
 
         {categories.length > 0 ? (
           <div className="flex flex-wrap gap-1.5">
-            {categories.map((cat) => (
+            {orderedCategories.map((cat) => (
               <Link
                 key={cat._id}
                 to={`/todos/category/${cat._id}`}
@@ -730,6 +751,7 @@ export default function TodoHome() {
                   color: cat.color,
                 }}
               >
+                {cat.depth ? <span>↳</span> : null}
                 {cat.emoji ? <span>{cat.emoji}</span> : null}
                 {cat.name}
                 <svg
@@ -809,8 +831,11 @@ export default function TodoHome() {
             <span className="flex-1 border-t border-line/50" />
           </div>
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {categories.map((cat) => {
-              const catTodos = todos.filter((t) => t.categoryId === cat._id);
+            {orderedCategories.map((cat) => {
+              const visibleIds = categoryAndChildIds(categories, cat._id);
+              const catTodos = todos.filter((t) =>
+                visibleIds.has(String(t.categoryId))
+              );
               const catPending = catTodos.filter((t) => !t.done).length;
               return (
                 <Link
@@ -825,8 +850,13 @@ export default function TodoHome() {
                   <div className="flex items-start justify-between">
                     <div>
                       <span className="text-2xl">{cat.emoji || "📁"}</span>
+                      {cat.depth ? (
+                        <p className="mt-2 text-[10px] tracking-wide text-muted uppercase">
+                          Subcategory of {cat.parentCategory?.name}
+                        </p>
+                      ) : null}
                       <h3
-                        className="mt-2 text-base font-semibold"
+                        className={`${cat.depth ? "mt-1" : "mt-2"} text-base font-semibold`}
                         style={{ color: cat.color }}
                       >
                         {cat.name}
@@ -836,6 +866,21 @@ export default function TodoHome() {
                       </p>
                     </div>
                     <div className="flex gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      {!cat.depth ? (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setNewCategoryParentId(cat._id);
+                            setShowNewCategory(true);
+                          }}
+                          className="flex h-7 w-7 items-center justify-center rounded-lg text-muted hover:bg-white/8 hover:text-cyan"
+                          title="Add subcategory"
+                          aria-label={`Add subcategory under ${cat.name}`}
+                        >
+                          +
+                        </button>
+                      ) : null}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -910,7 +955,10 @@ export default function TodoHome() {
 
             <button
               type="button"
-              onClick={() => setShowNewCategory(true)}
+              onClick={() => {
+                setNewCategoryParentId("");
+                setShowNewCategory(true);
+              }}
               className="flex flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-line py-8 text-muted transition-colors hover:border-cyan/40 hover:text-cyan"
             >
               <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none">
@@ -929,6 +977,8 @@ export default function TodoHome() {
 
       {showNewCategory ? (
         <CategoryFormModal
+          categories={categories}
+          defaultParentId={newCategoryParentId}
           onClose={() => setShowNewCategory(false)}
           onSaved={handleCategorySaved}
         />
@@ -937,6 +987,7 @@ export default function TodoHome() {
       {editingCategory ? (
         <CategoryFormModal
           category={editingCategory}
+          categories={categories}
           onClose={() => setEditingCategory(null)}
           onSaved={handleCategorySaved}
           onDelete={() => handleDeleteCategory(editingCategory._id)}

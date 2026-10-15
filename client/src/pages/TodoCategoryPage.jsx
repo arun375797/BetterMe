@@ -18,6 +18,10 @@ import {
 import { createdGroup, groupTodos } from "../lib/todoGroups.js";
 import { todoScheduleLabel } from "../lib/todoSchedule.js";
 import { nextTodoData } from "../lib/todoDuplicate.js";
+import {
+  categoryParentId,
+  orderedTodoCategories,
+} from "../lib/todoCategories.js";
 
 const PRIORITY_META = {
   high: { label: "High", dot: "bg-coral", color: "#e88b7a" },
@@ -127,8 +131,8 @@ function EditTodoModal({ todo, categories, catColor, onSave, onClose }) {
             <select value={categoryId} onChange={(e) => setCategoryId(e.target.value)}
               className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-muted ring-1 ring-line focus:outline-none">
               <option value="">No category</option>
-              {categories.map((c) => (
-                <option key={c._id} value={c._id}>{c.emoji ? `${c.emoji} ` : ""}{c.name}</option>
+              {orderedTodoCategories(categories).map((c) => (
+                <option key={c._id} value={c._id}>{c.depth ? "↳ " : ""}{c.emoji ? `${c.emoji} ` : ""}{c.name}</option>
               ))}
             </select>
           </div>
@@ -261,6 +265,7 @@ export default function TodoCategoryPage() {
   const [filterStatus, setFilterStatus] = useState("all");
   const [editingTodo, setEditingTodo] = useState(null);
   const [showEditCategory, setShowEditCategory] = useState(false);
+  const [showNewSubcategory, setShowNewSubcategory] = useState(false);
 
   async function loadData() {
     setLoading(true);
@@ -326,7 +331,7 @@ export default function TodoCategoryPage() {
 
   async function handleDeleteCategory() {
     if (!category) return;
-    if (!confirm("Delete this category? Todos will become uncategorized.")) return;
+    if (!confirm("Delete this category? Its todos will become uncategorized and its subcategories will become main categories.")) return;
     try {
       await deleteTodoCategory(category._id);
       refreshTodoCategories?.();
@@ -343,7 +348,19 @@ export default function TodoCategoryPage() {
     refreshTodoCategories?.();
   }
 
+  function handleSubcategorySaved(created) {
+    setCategories((current) => [...current, created]);
+    setShowNewSubcategory(false);
+    refreshTodoCategories?.();
+  }
+
   const catColor = category?.color || "#6ec8ff";
+  const parentCategory = categories.find(
+    (item) => String(item._id) === categoryParentId(category)
+  );
+  const subcategories = categories.filter(
+    (item) => categoryParentId(item) === String(categoryId)
+  );
 
   const filtered = todos.filter((t) => {
     if (filterStatus === "pending") return !t.done;
@@ -377,6 +394,18 @@ export default function TodoCategoryPage() {
           My Todos
         </Link>
         {" · "}
+        {parentCategory ? (
+          <>
+            <Link
+              to={`/todos/category/${parentCategory._id}`}
+              className="hover:underline"
+              style={{ color: parentCategory.color }}
+            >
+              {parentCategory.emoji || ""} {parentCategory.name}
+            </Link>
+            {" · "}
+          </>
+        ) : null}
         <span style={{ color: catColor }}>
           {category?.emoji || ""} {category?.name || "…"}
         </span>
@@ -405,6 +434,16 @@ export default function TodoCategoryPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {!category?.parent ? (
+            <button
+              type="button"
+              onClick={() => setShowNewSubcategory(true)}
+              className="flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm"
+              style={{ borderColor: `${catColor}40`, color: catColor }}
+            >
+              + Subcategory
+            </button>
+          ) : null}
           <button
             type="button"
             onClick={() => setShowEditCategory(true)}
@@ -505,6 +544,26 @@ export default function TodoCategoryPage() {
         ))}
       </div>
 
+      {subcategories.length ? (
+        <div className="mt-5">
+          <p className="mb-2 text-[11px] font-semibold tracking-[0.16em] text-muted uppercase">
+            Subcategories
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {subcategories.map((item) => (
+              <Link
+                key={item._id}
+                to={`/todos/category/${item._id}`}
+                className="rounded-xl border px-3 py-2 text-sm hover:bg-white/5"
+                style={{ borderColor: `${item.color}40`, color: item.color }}
+              >
+                ↳ {item.emoji ? `${item.emoji} ` : ""}{item.name}
+              </Link>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       {/* Add form */}
       {showAddForm ? (
         <div className="mt-5">
@@ -595,9 +654,19 @@ export default function TodoCategoryPage() {
       {showEditCategory && category ? (
         <CategoryFormModal
           category={category}
+          categories={categories}
           onClose={() => setShowEditCategory(false)}
           onSaved={handleCategorySaved}
           onDelete={handleDeleteCategory}
+        />
+      ) : null}
+
+      {showNewSubcategory && category ? (
+        <CategoryFormModal
+          categories={categories}
+          defaultParentId={category._id}
+          onClose={() => setShowNewSubcategory(false)}
+          onSaved={handleSubcategorySaved}
         />
       ) : null}
 

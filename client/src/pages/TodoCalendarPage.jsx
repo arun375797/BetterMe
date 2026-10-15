@@ -3,6 +3,7 @@ import { Link, useOutletContext } from "react-router-dom";
 import TodoScheduleFields from "../components/TodoScheduleFields.jsx";
 import { buildScheduleRange } from "../components/TimePicker12.jsx";
 import { createTodo, deleteTodo, getTodos, updateTodo } from "../api.js";
+import { orderedTodoCategories } from "../lib/todoCategories.js";
 
 const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const PRIORITY_COLOR = {
@@ -385,7 +386,7 @@ export default function TodoCalendarPage() {
 
               <label className="block">
                 <span className="mb-1.5 block text-xs font-medium text-muted">Category</span>
-                <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl bg-surface px-3 py-2.5 text-sm text-muted ring-1 ring-line outline-none focus:ring-cyan/40"><option value="">No category</option>{todoCategories.map((category) => <option key={category._id} value={category._id}>{category.emoji ? `${category.emoji} ` : ""}{category.name}</option>)}</select>
+                <select value={categoryId} onChange={(event) => setCategoryId(event.target.value)} className="w-full rounded-xl bg-surface px-3 py-2.5 text-sm text-muted ring-1 ring-line outline-none focus:ring-cyan/40"><option value="">No category</option>{orderedTodoCategories(todoCategories).map((category) => <option key={category._id} value={category._id}>{category.depth ? "↳ " : ""}{category.emoji ? `${category.emoji} ` : ""}{category.name}</option>)}</select>
               </label>
 
               <div>

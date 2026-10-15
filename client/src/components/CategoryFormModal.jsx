@@ -14,6 +14,8 @@ export const CATEGORY_PALETTE = [
 
 export default function CategoryFormModal({
   category = null,
+  categories = [],
+  defaultParentId = "",
   onClose,
   onSaved,
   onDelete,
@@ -22,6 +24,9 @@ export default function CategoryFormModal({
   const [name, setName] = useState(category?.name || "");
   const [emoji, setEmoji] = useState(category?.emoji || "");
   const [color, setColor] = useState(category?.color || CATEGORY_PALETTE[0]);
+  const [parentId, setParentId] = useState(
+    category?.parent?._id || category?.parent || defaultParentId || ""
+  );
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const inputRef = useRef(null);
@@ -40,7 +45,12 @@ export default function CategoryFormModal({
     setSaving(true);
     setError("");
     try {
-      const payload = { name: trimmed, emoji: emoji.trim(), color };
+      const payload = {
+        name: trimmed,
+        emoji: emoji.trim(),
+        color,
+        parentId: parentId || null,
+      };
       const result = editing
         ? await updateTodoCategory(category._id, payload)
         : await createTodoCategory(payload);
@@ -84,6 +94,30 @@ export default function CategoryFormModal({
           </div>
 
           <div>
+            <label className="mb-1.5 block text-xs text-muted">
+              Parent category <span className="text-muted/60">(optional)</span>
+            </label>
+            <select
+              value={parentId}
+              onChange={(e) => setParentId(e.target.value)}
+              className="w-full rounded-xl bg-white/5 px-3 py-2.5 text-sm text-muted outline-none ring-1 ring-line focus:ring-cyan/40"
+            >
+              <option value="">None — main category</option>
+              {categories
+                .filter(
+                  (item) =>
+                    !item.parent && String(item._id) !== String(category?._id)
+                )
+                .map((item) => (
+                  <option key={item._id} value={item._id}>
+                    {item.emoji ? `${item.emoji} ` : ""}
+                    {item.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+
+          <div>
             <p className="mb-2 text-xs text-muted">Color</p>
             <div className="flex flex-wrap gap-2">
               {CATEGORY_PALETTE.map((c) => (
@@ -107,7 +141,7 @@ export default function CategoryFormModal({
           >
             <span className="text-lg">{emoji || "🏷"}</span>
             <span className="text-sm font-medium" style={{ color }}>
-              {name || "Preview"}
+              {parentId ? "↳ " : ""}{name || "Preview"}
             </span>
           </div>
 

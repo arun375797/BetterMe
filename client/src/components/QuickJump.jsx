@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { PERSONALITY_NAV } from "../personality.js";
 import { ThemeStrip, useUiTheme } from "../theme.jsx";
 import { appLenis } from "./SmoothScroll.jsx";
+import { orderedTodoCategories } from "../lib/todoCategories.js";
 
 const STORAGE_KEY = "quick-jump-v1";
 const DEFAULT_IDS = [
@@ -344,9 +345,9 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
       return [
         { id: "todos-all", label: "All todos", path: "/todos" },
         { id: "todos-calendar", label: "Calendar", path: "/todos/calendar" },
-        ...todoCategories.map((cat) => ({
+        ...orderedTodoCategories(todoCategories).map((cat) => ({
           id: `todo-${cat._id}`,
-          label: cat.name,
+          label: `${cat.depth ? "↳ " : ""}${cat.name}`,
           path: `/todos/category/${cat._id}`,
         })),
       ];
