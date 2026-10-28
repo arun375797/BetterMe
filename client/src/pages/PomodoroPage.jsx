@@ -102,6 +102,20 @@ export default function PomodoroPage() {
           </div>}
           <p className="mt-4 text-xs text-muted" role="status">{active.status === "review" ? "Save your review to add this session to your statistics." : "Timer continues across pages and refreshes. Pause when you step away."}</p>
         </>}
+        <div className="mt-6 border-t border-line pt-4 text-left">
+          <label className="flex items-center gap-3 text-sm">
+            <input type="checkbox" checked={pom.keepAwake} onChange={event => pom.setKeepAwake(event.target.checked)} className="h-4 w-4 accent-teal" />
+            Keep screen awake while the timer runs
+          </label>
+          <p className="mt-2 text-xs text-muted" role="status">
+            {pom.wakeLock.status === "active" ? "Screen will stay awake. Keep BetterMe open in the foreground." :
+              pom.wakeLock.status === "unsupported" ? "Screen wake lock is unavailable here. Use an updated browser over HTTPS." :
+              ["blocked", "released"].includes(pom.wakeLock.status) ? "Your device isn’t keeping the screen awake. Check battery saver or try again." :
+              pom.wakeLock.status === "requesting" ? "Keeping your screen awake…" :
+              pom.keepAwake ? "Prevents automatic screen sleep during focus and breaks. Released when paused or finished." : "Your phone’s normal screen timeout applies."}
+          </p>
+          {["blocked", "released"].includes(pom.wakeLock.status) && <button type="button" className={`${button} mt-3`} onClick={pom.wakeLock.retry}>Try keeping screen awake</button>}
+        </div>
       </section>
       <div className="space-y-5">
         <Settings settings={settings} setSettings={pom.setSettings} />

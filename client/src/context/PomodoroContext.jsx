@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { getPomodoroSessions, savePomodoroSession } from "../api.js";
 import { advance, clock, dayKey, defaults } from "../lib/pomodoro.js";
+import useScreenWakeLock from "../hooks/useScreenWakeLock.js";
 
 const KEY = "betterme-pomodoro-v1";
 const Context = createContext(null);
@@ -20,6 +21,17 @@ export function PomodoroProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const syncing = useRef(false);
   const location = useLocation();
+  const [keepAwake, setKeepAwake] = useState(() => {
+    try { return localStorage.getItem("betterme-pomodoro-keep-awake") !== "false"; }
+    catch { return true; }
+  });
+  const wakeLock = useScreenWakeLock(keepAwake && data.active?.status === "running" &&
+    data.active.updatedAt + data.active.plannedMs - data.active.elapsedMs > Date.now());
+  function changeKeepAwake(enabled) {
+    setKeepAwake(enabled);
+    try { localStorage.setItem("betterme-pomodoro-keep-awake", String(enabled)); }
+    catch { /* The preference still works for this visit. */ }
+  }
   function commit(next) {
     current.current = next;
     setData(next);
@@ -113,7 +125,7 @@ export function PomodoroProvider({ children }) {
     if (!["focus", "break", "goal"].every(key => Number.isInteger(next[key]) && next[key] >= 1 && next[key] <= (key === "goal" ? 30 : 180))) return;
     commit({ ...current.current, settings: next });
   }
-  return <Context.Provider value={{ ...data, loading, error, storageError, sync, start, togglePause, end, finish, setSettings: settings }}>
+  return <Context.Provider value={{ ...data, loading, error, storageError, sync, start, togglePause, end, finish, setSettings: settings, keepAwake, setKeepAwake: changeKeepAwake, wakeLock }}>
     {children}
     {active && location.pathname !== "/pomodoro" && <Link to="/pomodoro" role="status" className="fixed bottom-5 left-4 z-40 rounded-2xl border border-teal/40 bg-surface px-5 py-3 text-sm shadow-xl lg:left-auto lg:right-6">
       <span className="text-teal">Pomodoro · </span>{active.status === "review" ? "Review your session" : `${clock(active.plannedMs - active.elapsedMs)} · ${active.status === "paused" ? "Paused" : active.kind}`}<span className="ml-3 text-muted">Open →</span>
