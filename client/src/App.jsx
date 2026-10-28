@@ -3,6 +3,9 @@ import { Navigate, Route, Routes, useParams } from "react-router-dom";
 import Layout from "./components/Layout.jsx";
 import { AUTH_LOST, readSession } from "./authSession.js";
 import LoginPage from "./pages/LoginPage.jsx";
+import { PomodoroProvider } from "./context/PomodoroContext.jsx";
+
+const PomodoroPage = lazy(() => import("./pages/PomodoroPage.jsx"));
 
 const TodayPage = lazy(() => import("./pages/TodayPage.jsx"));
 const LearningHome = lazy(() => import("./pages/LearningHome.jsx"));
@@ -100,6 +103,7 @@ function AuthGate({ children }) {
 export default function App() {
   return (
     <AuthGate>
+      <PomodoroProvider>
       <Suspense fallback={<p className="page-pad text-muted">Loading…</p>}>
       <Routes>
         <Route path="/sit25" element={<Sit25Layout />}>
@@ -110,6 +114,7 @@ export default function App() {
         <Route element={<Layout />}>
         <Route path="/" element={<Navigate to="/today" replace />} />
         <Route path="/today" element={<TodayPage />} />
+        <Route path="/pomodoro" element={<PomodoroPage />} />
         <Route path="/learning" element={<LearningHome />} />
         <Route path="/learning/plan/:slug" element={<PlanSubjectPage />} />
         <Route path="/learning/:slug" element={<SubjectHub />} />
@@ -186,6 +191,7 @@ export default function App() {
       </Route>
       </Routes>
       </Suspense>
+      </PomodoroProvider>
     </AuthGate>
   );
 }

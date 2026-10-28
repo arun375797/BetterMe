@@ -18,6 +18,7 @@ import personalityRoutes from "./routes/personality.js";
 import todoRoutes from "./routes/todos.js";
 import sleepRoutes from "./routes/sleep.js";
 import reportRoutes from "./routes/report.js";
+import pomodoroRoutes from "./routes/pomodoro.js";
 import sitBreakRoutes from "./routes/sitBreak.js";
 import musicRoutes from "./routes/music.js";
 import studyRoutes from "./routes/study.js";
@@ -160,6 +161,7 @@ app.use("/api/todos", todoRoutes);
 app.use("/api/sleep", sleepRoutes);
 app.use("/api/wearable", wearableRoutes);
 app.use("/api/report", reportRoutes);
+app.use("/api/pomodoro", pomodoroRoutes);
 app.use("/api/sit-break", sitBreakRoutes);
 app.use("/api/music", musicRoutes);
 

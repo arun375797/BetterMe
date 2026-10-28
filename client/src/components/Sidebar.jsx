@@ -588,6 +588,13 @@ export default function Sidebar({
             ) : null}
           </div>
 
+          <NavLink
+            to="/pomodoro"
+            className={({ isActive }) => `block rounded-xl px-3 py-2.5 text-sm font-medium ${isActive ? "bg-teal/12 text-ink ring-1 ring-teal/30" : "text-muted hover:bg-white/5 hover:text-ink"}`}
+          >
+            Pomodoro
+          </NavLink>
+
           {/* My Report */}
           <div>
             <div

@@ -157,6 +157,11 @@ export function logout() {
   return request("/api/auth", "/logout", { method: "POST" }).catch(() => {});
 }
 
+export const getPomodoroSessions = () => request("/api/pomodoro", "/sessions");
+export const savePomodoroSession = (session) => request("/api/pomodoro", `/sessions/${session.sessionId}`, {
+  method: "PUT", body: JSON.stringify(session),
+});
+
 function get(base, path, ttl = CACHE_TTL_MS) {
   const key = cacheKey(base, path);
   const hit = mem.get(key);
