@@ -1,6 +1,11 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 
 export const UI_THEME_KEY = "ui-theme";
+export const WALLPAPER_SETTINGS_KEY = "ui-wallpaper-settings-v1";
+const WALLPAPER_DB = "betterme-appearance";
+const WALLPAPER_STORE = "assets";
+const WALLPAPER_ID = "wallpaper";
+const DEFAULT_WALLPAPER = { opacity: 36, blur: 0, dim: 45, fit: "cover", position: "center" };
 
 export const UI_THEMES = [
   {
@@ -92,15 +97,98 @@ function applyTheme(id) {
   if (meta) meta.setAttribute("content", theme.meta);
 }
 
+function readWallpaperSettings() {
+  try {
+    return { ...DEFAULT_WALLPAPER, ...JSON.parse(localStorage.getItem(WALLPAPER_SETTINGS_KEY) || "{}") };
+  } catch {
+    return DEFAULT_WALLPAPER;
+  }
+}
+
+function wallpaperDb() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(WALLPAPER_DB, 1);
+    request.onupgradeneeded = () => request.result.createObjectStore(WALLPAPER_STORE);
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+async function readWallpaperBlob() {
+  if (typeof indexedDB === "undefined") return null;
+  const db = await wallpaperDb();
+  try {
+    return await new Promise((resolve, reject) => {
+      const request = db.transaction(WALLPAPER_STORE).objectStore(WALLPAPER_STORE).get(WALLPAPER_ID);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function writeWallpaperBlob(blob) {
+  const db = await wallpaperDb();
+  try {
+    await new Promise((resolve, reject) => {
+      const request = db.transaction(WALLPAPER_STORE, "readwrite").objectStore(WALLPAPER_STORE).put(blob, WALLPAPER_ID);
+      request.onsuccess = resolve;
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
+async function deleteWallpaperBlob() {
+  const db = await wallpaperDb();
+  try {
+    await new Promise((resolve, reject) => {
+      const request = db.transaction(WALLPAPER_STORE, "readwrite").objectStore(WALLPAPER_STORE).delete(WALLPAPER_ID);
+      request.onsuccess = resolve;
+      request.onerror = () => reject(request.error);
+    });
+  } finally {
+    db.close();
+  }
+}
+
 const ThemeContext = createContext({
   theme: "harbor",
   setTheme: () => {},
   themes: UI_THEMES,
   current: UI_THEMES[0],
+  wallpaper: DEFAULT_WALLPAPER,
+  wallpaperUrl: "",
+  setWallpaper: () => {},
+  setWallpaperFile: async () => {},
+  removeWallpaper: async () => {},
 });
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(readTheme);
+  const [wallpaper, setWallpaperState] = useState(readWallpaperSettings);
+  const [wallpaperUrl, setWallpaperUrl] = useState("");
+  const wallpaperUrlRef = useRef("");
+
+  function showWallpaper(blob) {
+    if (wallpaperUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
+    const next = blob ? URL.createObjectURL(blob) : "";
+    wallpaperUrlRef.current = next;
+    setWallpaperUrl(next);
+  }
+
+  useEffect(() => {
+    let live = true;
+    readWallpaperBlob().then((blob) => {
+      if (live && blob) showWallpaper(blob);
+    }).catch(() => {});
+    return () => {
+      live = false;
+      if (wallpaperUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
+    };
+  }, []);
 
   useEffect(() => {
     applyTheme(theme);
@@ -111,6 +199,14 @@ export function ThemeProvider({ children }) {
     }
   }, [theme]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(WALLPAPER_SETTINGS_KEY, JSON.stringify(wallpaper));
+    } catch {
+      /* ignore */
+    }
+  }, [wallpaper]);
+
   const value = useMemo(() => {
     const current = UI_THEMES.find((item) => item.id === theme) || UI_THEMES[0];
     return {
@@ -118,11 +214,39 @@ export function ThemeProvider({ children }) {
       setTheme: setThemeState,
       themes: UI_THEMES,
       current,
+      wallpaper,
+      wallpaperUrl,
+      setWallpaper: (patch) => setWallpaperState((currentSettings) => ({ ...currentSettings, ...patch })),
+      setWallpaperFile: async (file) => {
+        await writeWallpaperBlob(file);
+        showWallpaper(file);
+      },
+      removeWallpaper: async () => {
+        await deleteWallpaperBlob();
+        showWallpaper(null);
+      },
     };
-  }, [theme]);
+  }, [theme, wallpaper, wallpaperUrl]);
 
   return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={value}>
+      {wallpaperUrl ? (
+        <div className="ui-wallpaper-layer" aria-hidden="true">
+          <img
+            src={wallpaperUrl}
+            alt=""
+            style={{
+              opacity: wallpaper.opacity / 100,
+              filter: `blur(${wallpaper.blur}px)`,
+              objectFit: wallpaper.fit,
+              objectPosition: wallpaper.position,
+            }}
+          />
+          <span style={{ opacity: wallpaper.dim / 100 }} />
+        </div>
+      ) : null}
+      {children}
+    </ThemeContext.Provider>
   );
 }
 
@@ -161,5 +285,83 @@ export function ThemeStrip({ compact = false }) {
         );
       })}
     </div>
+  );
+}
+
+export function WallpaperControls() {
+  const { wallpaper, wallpaperUrl, setWallpaper, setWallpaperFile, removeWallpaper } = useUiTheme();
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+  const input = useRef(null);
+
+  async function pick(event) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return setError("Choose a JPG, PNG, WebP, GIF, or another image file.");
+    if (file.size > 20 * 1024 * 1024) return setError("Choose an image smaller than 20 MB.");
+    setBusy(true);
+    setError("");
+    try {
+      await setWallpaperFile(file);
+    } catch {
+      setError("The browser could not save this wallpaper.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function remove() {
+    setBusy(true);
+    setError("");
+    try {
+      await removeWallpaper();
+    } catch {
+      setError("The browser could not remove this wallpaper.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="ui-wallpaper-controls">
+      <input ref={input} type="file" accept="image/*" className="sr-only" onChange={pick} />
+      <div className="flex items-center gap-2">
+        <button type="button" disabled={busy} onClick={() => input.current?.click()} className="ui-wallpaper-button">
+          {wallpaperUrl ? "Change wallpaper" : "Add wallpaper"}
+        </button>
+        {wallpaperUrl ? <button type="button" disabled={busy} onClick={remove} className="ui-wallpaper-remove">Remove</button> : null}
+      </div>
+      {error ? <p role="alert" className="mt-2 text-[11px] text-coral">{error}</p> : null}
+      {wallpaperUrl ? (
+        <div className="mt-4 space-y-3">
+          <RangeControl label="Visibility" value={wallpaper.opacity} min={5} max={100} suffix="%" onChange={(opacity) => setWallpaper({ opacity })} />
+          <RangeControl label="Dark overlay" value={wallpaper.dim} min={0} max={85} suffix="%" onChange={(dim) => setWallpaper({ dim })} />
+          <RangeControl label="Blur" value={wallpaper.blur} min={0} max={24} suffix="px" onChange={(blur) => setWallpaper({ blur })} />
+          <div className="grid grid-cols-2 gap-2">
+            <label className="text-[11px] text-muted">Fit
+              <select value={wallpaper.fit} onChange={(e) => setWallpaper({ fit: e.target.value })} className="ui-wallpaper-select">
+                <option value="cover">Fill screen</option><option value="contain">Fit image</option>
+              </select>
+            </label>
+            <label className="text-[11px] text-muted">Position
+              <select value={wallpaper.position} onChange={(e) => setWallpaper({ position: e.target.value })} className="ui-wallpaper-select">
+                <option value="center">Center</option><option value="top">Top</option><option value="bottom">Bottom</option><option value="left">Left</option><option value="right">Right</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" onClick={() => setWallpaper(DEFAULT_WALLPAPER)} className="text-[11px] text-cyan hover:underline">Reset wallpaper adjustments</button>
+        </div>
+      ) : <p className="mt-2 text-[11px] leading-4 text-muted">Your image stays in this browser and is displayed behind the app.</p>}
+    </div>
+  );
+}
+
+function RangeControl({ label, value, min, max, suffix, onChange }) {
+  return (
+    <label className="block">
+      <span className="mb-1 flex justify-between text-[11px] text-muted"><span>{label}</span><span>{value}{suffix}</span></span>
+      <input type="range" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} className="ui-wallpaper-range" />
+    </label>
   );
 }

@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PERSONALITY_NAV } from "../personality.js";
-import { ThemeStrip, useUiTheme } from "../theme.jsx";
+import { ThemeStrip, useUiTheme, WallpaperControls } from "../theme.jsx";
 import { appLenis } from "./SmoothScroll.jsx";
 import { orderedTodoCategories } from "../lib/todoCategories.js";
 
@@ -832,6 +832,17 @@ export default function QuickJump({ subjects = [], todoCategories = [] }) {
           </p>
           <div className="mt-3">
             <ThemeStrip />
+          </div>
+
+          <p className="mt-5 text-[11px] tracking-[0.18em] text-teal uppercase">
+            Wallpaper
+          </p>
+          <h3 className="mt-1 text-sm font-semibold">Background image</h3>
+          <p className="mt-1 text-[12px] leading-5 text-muted">
+            Add a personal image and tune it for a readable, polished layout.
+          </p>
+          <div className="mt-3">
+            <WallpaperControls />
           </div>
 
           <p className="mt-5 text-[11px] tracking-[0.18em] text-teal uppercase">
