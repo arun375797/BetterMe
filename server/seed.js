@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import dotenv from "dotenv";
 import Subject from "./models/Subject.js";
+import StudySettings from "./models/StudySettings.js";
 import Topic from "./models/Topic.js";
 import Question from "./models/Question.js";
 import SugarReading from "./models/SugarReading.js";
@@ -63,6 +64,7 @@ export const SUBJECTS = [
 export async function ensureSubjects() {
   const existing = await Subject.countDocuments();
   if (existing > 0) return 0;
+  if (await StudySettings.exists({ subjectsInitialized: true })) return 0;
 
   await Subject.insertMany(SUBJECTS);
   return SUBJECTS.length;

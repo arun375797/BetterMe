@@ -23,6 +23,7 @@ import { accentMap } from "../theme.jsx";
 
 export default function LearningHome() {
   const { subjects } = useOutletContext();
+  const subjectIds = subjects.map((subject) => subject._id).join(",");
   const [plan, setPlan] = useState(() => peekLearningPlan() || null);
   const [error, setError] = useState("");
   const [modal, setModal] = useState(null);
@@ -49,7 +50,7 @@ export default function LearningHome() {
     return () => {
       live = false;
     };
-  }, []);
+  }, [subjectIds]);
 
   const cards = plan?.subjects?.length
     ? plan.subjects

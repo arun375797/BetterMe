@@ -90,12 +90,16 @@ export function ConfirmDialog({
   onConfirm,
 }) {
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   async function go() {
     setBusy(true);
+    setError("");
     try {
       await onConfirm();
       onClose();
+    } catch (err) {
+      setError(err.message || "Could not complete this action. Please try again.");
     } finally {
       setBusy(false);
     }
@@ -122,6 +126,7 @@ export function ConfirmDialog({
         </p>
         <h3 className="mt-1 text-lg font-semibold">{title}</h3>
         <p className="mt-2 text-sm leading-6 text-muted">{message}</p>
+        {error ? <p role="alert" className="mt-3 pb-4 text-sm text-coral">{error}</p> : null}
       </div>
       <DialogFooter>
         <button

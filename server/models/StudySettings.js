@@ -21,6 +21,7 @@ const rotationSchema = new mongoose.Schema(
 const studySettingsSchema = new mongoose.Schema(
   {
     slotsPerDay: { type: Number, min: 2, max: 3, default: 2 },
+    subjectsInitialized: { type: Boolean, default: false },
     rotation: { type: [rotationSchema], default: [] },
     focus: { type: mongoose.Schema.Types.Mixed, default: {} },
   },

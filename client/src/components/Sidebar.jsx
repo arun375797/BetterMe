@@ -5,7 +5,8 @@ import Sit25Mark from "./Sit25Mark.jsx";
 import MusicControl from "./MusicControl.jsx";
 import { MusicNowPlaying } from "./MusicProgress.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
-import { createSubject, deleteTodoCategory } from "../api.js";
+import { createSubject, deleteSubject, deleteTodoCategory } from "../api.js";
+import { ConfirmDialog } from "./Dialog.jsx";
 import SubjectFormModal from "./SubjectFormModal.jsx";
 import { orderedTodoCategories } from "../lib/todoCategories.js";
 import LogoutButton from "./LogoutButton.jsx";
@@ -66,6 +67,7 @@ export default function Sidebar({
   const reportOpen = location.pathname.startsWith("/report");
   const [learningExpanded, setLearningExpanded] = useState(false);
   const [subjectFormOpen, setSubjectFormOpen] = useState(false);
+  const [subjectToDelete, setSubjectToDelete] = useState(null);
   const [healthExpanded, setHealthExpanded] = useState(false);
   const [notebooksExpanded, setNotebooksExpanded] = useState(false);
   const [personalityExpanded, setPersonalityExpanded] = useState(false);
@@ -209,19 +211,32 @@ export default function Sidebar({
                     location.pathname.startsWith(`/learning/${subject.slug}/`);
                   return (
                     <div key={subject.slug}>
+                      <div className="flex items-center gap-1">
                       <NavLink
                         to={`/learning/${subject.slug}`}
                         end
                         className={({ isActive }) =>
-                          `flex items-center justify-between rounded-lg px-2.5 py-1.5 text-[13px] ${
+                          `flex min-w-0 flex-1 items-center justify-between rounded-lg px-2.5 py-1.5 text-[13px] ${
                             isActive || inSubject
                               ? "bg-white/8 text-ink"
                               : "text-muted hover:bg-white/5 hover:text-ink"
                           }`
                         }
                       >
-                        <span>{subject.shortName}</span>
+                        <span className="truncate">{subject.shortName}</span>
                       </NavLink>
+                      <button
+                        type="button"
+                        aria-label={`Delete ${subject.name}`}
+                        title={`Delete ${subject.name}`}
+                        onClick={() => setSubjectToDelete(subject)}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-muted hover:bg-coral/10 hover:text-coral focus-visible:text-coral"
+                      >
+                        <svg viewBox="0 0 20 20" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
+                          <path d="M3 5h14M7 5V3h6v2M5 5l1 12h8l1-12M8 8v6m4-6v6" />
+                        </svg>
+                      </button>
+                      </div>
                       {inSubject ? (
                         <div className="ml-2 space-y-0.5 border-l border-line/70 pl-2">
                           <NavLink
@@ -658,6 +673,23 @@ export default function Sidebar({
           <LogoutButton onClick={onClose} />
         </div>
       </aside>
+      {subjectToDelete ? (
+        <ConfirmDialog
+          kicker="Delete language"
+          title={`Delete ${subjectToDelete.name}?`}
+          message="This permanently deletes this subject and all its theory and practical topics, questions, study goals, plan items, and study history. This cannot be undone."
+          confirmLabel="Delete language"
+          onClose={() => setSubjectToDelete(null)}
+          onConfirm={async () => {
+            await deleteSubject(subjectToDelete.slug);
+            await refreshSubjects?.();
+            const path = `/learning/${subjectToDelete.slug}`;
+            if (location.pathname === path || location.pathname.startsWith(`${path}/`) || location.pathname === `/learning/plan/${subjectToDelete.slug}`) {
+              navigate("/learning");
+            }
+          }}
+        />
+      ) : null}
       {subjectFormOpen ? (
         <SubjectFormModal
           onClose={() => setSubjectFormOpen(false)}
