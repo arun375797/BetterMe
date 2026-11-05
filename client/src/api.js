@@ -239,6 +239,8 @@ export const peekQuestions = (topicId) =>
 export const peekBooks = () => peek(BOOKS_API, "/")?.books;
 
 export const getSubjects = () => get(API, "/subjects");
+export const createSubject = (data) =>
+  mutate(API, "/subjects", { method: "POST", body: JSON.stringify(data) }, [...LEARNING, ...PLAN]);
 export const getReviewQueue = () => get(API, "/review");
 export const getReviseQueue = () => get(API, "/revise");
 export const getSubject = (slug, section) => {

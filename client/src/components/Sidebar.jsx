@@ -5,7 +5,8 @@ import Sit25Mark from "./Sit25Mark.jsx";
 import MusicControl from "./MusicControl.jsx";
 import { MusicNowPlaying } from "./MusicProgress.jsx";
 import { PERSONALITY_NAV } from "../personality.js";
-import { deleteTodoCategory } from "../api.js";
+import { createSubject, deleteTodoCategory } from "../api.js";
+import SubjectFormModal from "./SubjectFormModal.jsx";
 import { orderedTodoCategories } from "../lib/todoCategories.js";
 import LogoutButton from "./LogoutButton.jsx";
 
@@ -46,6 +47,7 @@ function ChevronUp() {
 
 export default function Sidebar({
   subjects,
+  refreshSubjects,
   books = [],
   todoCategories = [],
   refreshTodoCategories,
@@ -63,6 +65,7 @@ export default function Sidebar({
   const todosOpen = location.pathname.startsWith("/todos");
   const reportOpen = location.pathname.startsWith("/report");
   const [learningExpanded, setLearningExpanded] = useState(false);
+  const [subjectFormOpen, setSubjectFormOpen] = useState(false);
   const [healthExpanded, setHealthExpanded] = useState(false);
   const [notebooksExpanded, setNotebooksExpanded] = useState(false);
   const [personalityExpanded, setPersonalityExpanded] = useState(false);
@@ -202,9 +205,8 @@ export default function Sidebar({
                   Plan
                 </NavLink>
                 {subjects.map((subject) => {
-                  const inSubject = location.pathname.startsWith(
-                    `/learning/${subject.slug}`
-                  );
+                  const inSubject = location.pathname === `/learning/${subject.slug}` ||
+                    location.pathname.startsWith(`/learning/${subject.slug}/`);
                   return (
                     <div key={subject.slug}>
                       <NavLink
@@ -265,6 +267,13 @@ export default function Sidebar({
                     </div>
                   );
                 })}
+                <button
+                  type="button"
+                  onClick={() => setSubjectFormOpen(true)}
+                  className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-muted hover:bg-white/5 hover:text-teal"
+                >
+                  <span aria-hidden="true">+</span> Add language
+                </button>
               </div>
             ) : null}
           </div>
@@ -649,6 +658,17 @@ export default function Sidebar({
           <LogoutButton onClick={onClose} />
         </div>
       </aside>
+      {subjectFormOpen ? (
+        <SubjectFormModal
+          onClose={() => setSubjectFormOpen(false)}
+          onSubmit={async (data) => {
+            const subject = await createSubject(data);
+            await refreshSubjects?.();
+            navigate(`/learning/${subject.slug}`);
+            onClose?.();
+          }}
+        />
+      ) : null}
     </>
   );
 }

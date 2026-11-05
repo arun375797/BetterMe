@@ -101,6 +101,7 @@ export default function Layout() {
     <div className="flex min-h-dvh min-w-0 overflow-x-clip">
       <Sidebar
         subjects={subjects}
+        refreshSubjects={refreshSubjects}
         books={books}
         todoCategories={todoCategories}
         refreshTodoCategories={refreshTodoCategories}

@@ -5,10 +5,12 @@ import Question from "../models/Question.js";
 import CourseVideo from "../models/CourseVideo.js";
 import { formatDuration, parseDuration } from "../lib/duration.js";
 import { memoClear, memoGet } from "../memo.js";
+import subjectRoutes from "./subjects.js";
 
 const NAMASTE_DEV = "namaste-dev";
 
 const router = Router();
+router.use(subjectRoutes);
 const SECTIONS = ["theory", "practical"];
 const LIST_SELECT = "-notebook";
 
