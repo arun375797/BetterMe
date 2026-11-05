@@ -36,6 +36,7 @@ const questionSchema = new mongoose.Schema(
     inReview: { type: Boolean, default: false },
     inRevise: { type: Boolean, default: false },
     reviseCompleted: { type: Boolean, default: false },
+    cleared: { type: Boolean, default: false },
     relatedSection: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Topic",

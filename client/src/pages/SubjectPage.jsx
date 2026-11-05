@@ -1,12 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, Navigate, useOutletContext, useParams } from "react-router-dom";
-import { createTopic, deleteTopic, getReviewQueue, getReviseQueue, getSubject, peekReviewQueue, peekReviseQueue, peekSubject, updateTopic } from "../api.js";
+import { createTopic, deleteTopic, getReviewQueue, getReviseQueue, getSubject, getSubjectQuestions, peekReviewQueue, peekReviseQueue, peekSubject, updateQuestion, updateTopic } from "../api.js";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import PdfExportDialog from "../components/PdfExportDialog.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { notebookPath, reviewItemHint } from "../lib/today.js";
 import { accentMap } from "../theme.jsx";
+import { DIFFICULTIES } from "../difficulty.js";
 
 const levelClass = {
   low: "text-teal bg-teal/12",
@@ -65,6 +66,17 @@ export default function SubjectPage() {
   const [showTree, setShowTree] = useState(false);
   const [openIds, setOpenIds] = useState({});
   const [pdfOpen, setPdfOpen] = useState(false);
+  const [allQuestionsOpen, setAllQuestionsOpen] = useState(false);
+  const [allQuestions, setAllQuestions] = useState(null);
+  const [allQuestionsLoading, setAllQuestionsLoading] = useState(false);
+  const [allQuestionsError, setAllQuestionsError] = useState("");
+  const [clearedSaving, setClearedSaving] = useState({});
+  const [clearedErrors, setClearedErrors] = useState({});
+  const [allQuestionSearch, setAllQuestionSearch] = useState("");
+  const [allQuestionTopic, setAllQuestionTopic] = useState("all");
+  const [allQuestionDifficulty, setAllQuestionDifficulty] = useState("all");
+  const [allQuestionAnswer, setAllQuestionAnswer] = useState("all");
+  const allQuestionsRequest = useRef(0);
 
   const isPractical = section === "practical";
   const childLabel = "subtopics";
@@ -90,6 +102,17 @@ export default function SubjectPage() {
     setShowTree(false);
     setOpenIds({});
     setPdfOpen(false);
+    setAllQuestionsOpen(false);
+    setAllQuestions(null);
+    setAllQuestionsLoading(false);
+    setAllQuestionsError("");
+    setClearedSaving({});
+    setClearedErrors({});
+    allQuestionsRequest.current += 1;
+    setAllQuestionSearch("");
+    setAllQuestionTopic("all");
+    setAllQuestionDifficulty("all");
+    setAllQuestionAnswer("all");
     let live = true;
     getSubject(slug, section)
       .then((data) => {
@@ -156,6 +179,128 @@ export default function SubjectPage() {
         (item.section || "theory") === section
     );
   }, [reviseQueue, slug, section]);
+
+  async function toggleAllQuestions() {
+    if (allQuestionsOpen) {
+      setAllQuestionsOpen(false);
+      return;
+    }
+
+    setAllQuestionsOpen(true);
+    if (allQuestions !== null || allQuestionsLoading) return;
+
+    setAllQuestionsLoading(true);
+    setAllQuestionsError("");
+    const requestId = ++allQuestionsRequest.current;
+    try {
+      const items = await getSubjectQuestions(slug, section);
+      if (requestId === allQuestionsRequest.current) {
+        setAllQuestions(items);
+      }
+    } catch (err) {
+      if (requestId === allQuestionsRequest.current) {
+        setAllQuestionsError(err.message || "Could not load section questions.");
+      }
+    } finally {
+      if (requestId === allQuestionsRequest.current) {
+        setAllQuestionsLoading(false);
+      }
+    }
+  }
+
+  async function toggleQuestionCleared(question) {
+    const next = !question.cleared;
+    setAllQuestions((current) =>
+      (current || []).map((item) =>
+        item._id === question._id ? { ...item, cleared: next } : item
+      )
+    );
+    setClearedSaving((current) => ({ ...current, [question._id]: true }));
+    setClearedErrors((current) => ({ ...current, [question._id]: "" }));
+    try {
+      const saved = await updateQuestion(question._id, { cleared: next });
+      setAllQuestions((current) =>
+        (current || []).map((item) =>
+          item._id === question._id
+            ? { ...item, cleared: Boolean(saved.cleared) }
+            : item
+        )
+      );
+    } catch (err) {
+      setAllQuestions((current) =>
+        (current || []).map((item) =>
+          item._id === question._id
+            ? { ...item, cleared: Boolean(question.cleared) }
+            : item
+        )
+      );
+      setClearedErrors((current) => ({
+        ...current,
+        [question._id]: err.message || "Could not save cleared status.",
+      }));
+    } finally {
+      setClearedSaving((current) => ({
+        ...current,
+        [question._id]: false,
+      }));
+    }
+  }
+
+  const visibleAllQuestions = useMemo(() => {
+    const terms = searchableText(allQuestionSearch).trim().split(/\s+/).filter(Boolean);
+    return (allQuestions || []).filter((item) => {
+      if (
+        allQuestionTopic !== "all" &&
+        String(item.sectionTopicId) !== allQuestionTopic
+      ) {
+        return false;
+      }
+      if (
+        allQuestionDifficulty !== "all" &&
+        (item.difficulty || "medium") !== allQuestionDifficulty
+      ) {
+        return false;
+      }
+      if (
+        allQuestionAnswer === "answered" &&
+        !item.hasAnswer
+      ) {
+        return false;
+      }
+      if (
+        allQuestionAnswer === "unanswered" &&
+        item.hasAnswer
+      ) {
+        return false;
+      }
+      const searchable = searchableText(
+        `${item.title} ${item.sectionTopicTitle} ${item.topicTitle}`
+      );
+      return terms.every((term) => searchable.includes(term));
+    });
+  }, [
+    allQuestions,
+    allQuestionSearch,
+    allQuestionTopic,
+    allQuestionDifficulty,
+    allQuestionAnswer,
+  ]);
+
+  const questionGroups = useMemo(() => {
+    const groups = new Map();
+    for (const question of visibleAllQuestions) {
+      const key = String(question.sectionTopicId);
+      if (!groups.has(key)) {
+        groups.set(key, {
+          id: key,
+          title: question.sectionTopicTitle,
+          questions: [],
+        });
+      }
+      groups.get(key).questions.push(question);
+    }
+    return [...groups.values()];
+  }, [visibleAllQuestions]);
 
   async function saveMainTopic(values) {
     await updateTopic(editTopic._id, {
@@ -246,6 +391,16 @@ export default function SubjectPage() {
             >
               Add topic
             </button>
+            {isPractical ? (
+              <button
+                type="button"
+                aria-expanded={allQuestionsOpen}
+                onClick={toggleAllQuestions}
+                className="rounded-xl border border-cyan/30 bg-cyan/10 px-4 py-2.5 text-sm font-medium text-cyan hover:bg-cyan/15"
+              >
+                {allQuestionsOpen ? "Hide questions" : "See all questions"}
+              </button>
+            ) : null}
             <Link
               to={`/learning/${slug}/${section}/revise`}
               className="inline-flex items-center justify-center rounded-xl border border-violet/35 bg-violet/10 px-4 py-2.5 text-sm font-medium text-violet hover:bg-violet/15"
@@ -265,6 +420,183 @@ export default function SubjectPage() {
             </button>
           </div>
         </div>
+
+        {isPractical && allQuestionsOpen ? (
+          <section
+            aria-label="All practical questions"
+            className="mt-6 rounded-2xl border border-cyan/30 bg-raised/70 p-4 ring-1 ring-cyan/10"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-[11px] tracking-[0.18em] text-cyan uppercase">
+                  Section questions
+                </p>
+                <h3 className="mt-1 text-lg font-semibold">
+                  All {subject.shortName || subject.name} practical questions
+                </h3>
+              </div>
+              {allQuestions !== null ? (
+                <span className="rounded-full bg-cyan/10 px-2.5 py-1 text-xs text-cyan">
+                  {visibleAllQuestions.length} of {allQuestions.length}
+                </span>
+              ) : null}
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <input
+                value={allQuestionSearch}
+                onChange={(event) => setAllQuestionSearch(event.target.value)}
+                placeholder="Search questions or topics…"
+                aria-label="Search all practical questions"
+                className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm outline-none placeholder:text-muted/70 focus:border-cyan/50"
+              />
+              <select
+                value={allQuestionTopic}
+                onChange={(event) => setAllQuestionTopic(event.target.value)}
+                aria-label="Filter by topic"
+                className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50"
+              >
+                <option value="all">All topics</option>
+                {(subject.topics || []).map((topic) => (
+                  <option key={topic._id} value={String(topic._id)}>
+                    {topic.title}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={allQuestionDifficulty}
+                onChange={(event) => setAllQuestionDifficulty(event.target.value)}
+                aria-label="Filter by difficulty"
+                className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50"
+              >
+                <option value="all">All difficulties</option>
+                {DIFFICULTIES.map((difficulty) => (
+                  <option key={difficulty.id} value={difficulty.id}>
+                    {difficulty.label}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={allQuestionAnswer}
+                onChange={(event) => setAllQuestionAnswer(event.target.value)}
+                aria-label="Filter by answer status"
+                className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50"
+              >
+                <option value="all">All answer statuses</option>
+                <option value="answered">Answered</option>
+                <option value="unanswered">Needs an answer</option>
+              </select>
+            </div>
+
+            {allQuestionsLoading ? (
+              <p className="mt-4 text-sm text-muted">Loading questions…</p>
+            ) : allQuestionsError ? (
+              <p role="alert" className="mt-4 text-sm text-coral">
+                {allQuestionsError}
+              </p>
+            ) : allQuestions !== null && !allQuestions.length ? (
+              <p className="mt-4 rounded-xl border border-dashed border-line px-3 py-5 text-center text-sm text-muted">
+                No questions in this section yet.
+              </p>
+            ) : allQuestions !== null && !questionGroups.length ? (
+              <p className="mt-4 rounded-xl border border-dashed border-line px-3 py-5 text-center text-sm text-muted">
+                No questions match these filters.
+              </p>
+            ) : allQuestions !== null ? (
+              <ul className="mt-4 space-y-4">
+                {questionGroups.map((group) => (
+                  <li key={group.id}>
+                    <h4 className="mb-2 text-sm font-semibold text-cyan">
+                      {group.title}
+                      <span className="ml-2 text-xs font-normal text-muted">
+                        {group.questions.length}{" "}
+                        {group.questions.length === 1 ? "question" : "questions"}
+                      </span>
+                    </h4>
+                    <ul className="space-y-2">
+                      {group.questions.map((question) => {
+                        const questionPath = question.subtopic
+                          ? `/learning/${slug}/${section}/${question.sectionTopicId}/${question.topicId}/${question._id}`
+                          : `/learning/${slug}/${section}/${question.topicId}/answer/${question._id}`;
+                        const difficulty = DIFFICULTIES.find(
+                          (item) => item.id === question.difficulty
+                        );
+                        return (
+                          <li
+                            key={question._id}
+                            className="rounded-xl border border-line/80 bg-surface px-3 py-2.5 hover:border-cyan/30"
+                          >
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Link
+                                to={questionPath}
+                                className="flex min-w-0 flex-1 flex-wrap items-center gap-2"
+                              >
+                                <span
+                                  className={`min-w-0 flex-1 break-words text-sm font-medium ${
+                                    question.cleared
+                                      ? "text-muted line-through"
+                                      : ""
+                                  }`}
+                                >
+                                  {question.title}
+                                  {question.subtopic ? (
+                                    <span className="ml-2 text-xs font-normal text-muted no-underline">
+                                      {question.topicTitle}
+                                    </span>
+                                  ) : null}
+                                </span>
+                                <span
+                                  className={`rounded-full px-2 py-0.5 text-[10px] ${
+                                    difficulty?.className ||
+                                    "text-gold bg-gold/12"
+                                  }`}
+                                >
+                                  {difficulty?.label || "Medium"}
+                                </span>
+                                <span
+                                  className={`text-[10px] ${
+                                    question.hasAnswer
+                                      ? "text-teal"
+                                      : "text-coral"
+                                  }`}
+                                >
+                                  {question.hasAnswer
+                                    ? "Answered"
+                                    : "Needs answer"}
+                                </span>
+                                <span className="shrink-0 text-xs text-cyan">
+                                  Open →
+                                </span>
+                              </Link>
+                              <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
+                                <input
+                                  type="checkbox"
+                                  checked={Boolean(question.cleared)}
+                                  disabled={Boolean(clearedSaving[question._id])}
+                                  onChange={() =>
+                                    toggleQuestionCleared(question)
+                                  }
+                                  className="h-4 w-4 accent-teal"
+                                  aria-label={`Mark ${question.title} as cleared`}
+                                />
+                                Cleared
+                              </label>
+                            </div>
+                            {clearedErrors[question._id] ? (
+                              <p role="alert" className="mt-1 text-xs text-coral">
+                                {clearedErrors[question._id]}
+                              </p>
+                            ) : null}
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+          </section>
+        ) : null}
 
         <div className="mt-6 rounded-2xl border border-teal/35 bg-teal/8 p-4 ring-1 ring-teal/20">
           <div className="flex items-center justify-between gap-3">

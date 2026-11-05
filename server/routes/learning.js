@@ -492,6 +492,70 @@ router.get("/subjects", async (_req, res) => {
   }
 });
 
+router.get("/subjects/:slug/questions", async (req, res) => {
+  try {
+    const section = req.query.section;
+    if (!SECTIONS.includes(section)) {
+      return res.status(400).json({ message: "A valid section is required." });
+    }
+
+    const subject = await Subject.findOne({ slug: req.params.slug })
+      .select("_id")
+      .lean();
+    if (!subject) {
+      return res.status(404).json({ message: "Subject not found" });
+    }
+
+    const topics = await Topic.find({
+      subject: subject._id,
+      section,
+    })
+      .select("_id title parent slNo order")
+      .sort({ slNo: 1, order: 1, createdAt: 1 })
+      .lean();
+    const topicById = new Map(topics.map((topic) => [idKey(topic._id), topic]));
+    const questions = topics.length
+      ? await Question.find({ topic: { $in: topics.map((topic) => topic._id) } })
+          .select(
+            "title difficulty order topic code notes solutions notebook inReview inRevise reviseCompleted cleared createdAt"
+          )
+          .sort({ order: 1, createdAt: 1 })
+          .lean()
+      : [];
+    const topicOrder = new Map(
+      topics.map((topic, index) => [idKey(topic._id), index])
+    );
+
+    questions.sort((left, right) => {
+      const byTopic =
+        (topicOrder.get(idKey(left.topic)) ?? 0) -
+        (topicOrder.get(idKey(right.topic)) ?? 0);
+      return byTopic || (left.order || 0) - (right.order || 0);
+    });
+
+    res.json(
+      questions.map((question) => {
+        const { solutions, code, notes, notebook, ...rest } = question;
+        const topic = topicById.get(idKey(question.topic));
+        const parent = topic?.parent
+          ? topicById.get(idKey(topic.parent))
+          : null;
+        return {
+          ...rest,
+          hasAnswer: questionHasAnswer(question),
+          topicId: topic?._id,
+          sectionTopicId: parent?._id || topic?._id,
+          sectionTopicTitle: parent?.title || topic?.title || "Topic",
+          topicTitle: topic?.title || "Topic",
+          subtopic: Boolean(parent),
+        };
+      })
+    );
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/subjects/:slug", async (req, res) => {
   try {
     const slug = req.params.slug;
@@ -979,6 +1043,9 @@ router.patch("/questions/:id", async (req, res) => {
     }
     if (req.body.reviseCompleted !== undefined) {
       question.reviseCompleted = Boolean(req.body.reviseCompleted);
+    }
+    if (req.body.cleared !== undefined) {
+      question.cleared = Boolean(req.body.cleared);
     }
     if (req.body.notebook !== undefined) {
       question.notebook = req.body.notebook;

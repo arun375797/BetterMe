@@ -245,6 +245,11 @@ export const getSubject = (slug, section) => {
   const query = section ? `?section=${section}` : "";
   return get(API, `/subjects/${slug}${query}`);
 };
+export const getSubjectQuestions = (slug, section) =>
+  get(
+    API,
+    `/subjects/${encodeURIComponent(slug)}/questions?section=${encodeURIComponent(section)}`
+  );
 export const peekNamasteDev = () => peek(API, "/courses/namaste-dev");
 export const getNamasteDev = () => get(API, "/courses/namaste-dev");
 export const createNamasteDevVideo = (data) =>
