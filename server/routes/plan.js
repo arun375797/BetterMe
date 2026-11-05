@@ -1,6 +1,9 @@
 import { Router } from "express";
 import PlanItem, { PLAN_PRIORITIES } from "../models/PlanItem.js";
 import Subject from "../models/Subject.js";
+import Topic from "../models/Topic.js";
+import Question from "../models/Question.js";
+import { subjectCurriculum } from "../lib/curriculum.js";
 
 const router = Router();
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
@@ -132,15 +135,19 @@ async function setLearnedCascade(item, learned) {
 }
 
 async function loadOverview() {
-  const [subjects, items] = await Promise.all([
+  const [subjects, items, topics, questionCounts] = await Promise.all([
     Subject.find().sort({ order: 1, name: 1 }).lean(),
     PlanItem.find().populate("subject", "name slug shortName accent").lean(),
+    Topic.find().select("subject parent title section slNo order fromNote").lean(),
+    Question.aggregate([{ $group: { _id: "$topic", n: { $sum: 1 } } }]),
   ]);
   const sorted = items.slice().sort(sortItems);
   const today = todayKey();
   return {
     todayKey: today,
-    subjects: subjectCards(subjects, sorted),
+    subjects: subjectCards(subjects, sorted).map((subject) => ({
+      ...subject, curriculum: subjectCurriculum(subject._id, topics, questionCounts),
+    })),
     items: sorted.map(slimItem),
     today: (() => {
       const kids = childrenMap(sorted);

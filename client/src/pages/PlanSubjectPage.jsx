@@ -19,6 +19,7 @@ import {
   topicLearned,
 } from "../lib/planItems.js";
 import { accentMap } from "../theme.jsx";
+import SubjectCurriculum, { curriculumSummary } from "../components/SubjectCurriculum.jsx";
 
 export default function PlanSubjectPage() {
   const { slug } = useParams();
@@ -106,8 +107,8 @@ export default function PlanSubjectPage() {
             {subject.name}
           </h2>
           <p className="mt-2 max-w-xl text-sm text-muted">
-            Tick a topic when it is learned. Subtopics are optional — if they
-            exist, the parent fills when every child is done.
+            Browse your learning topics below. Tick scheduled items when learned;
+            a scheduled parent completes when all its subtopics are done.
           </p>
         </div>
         <button
@@ -115,19 +116,25 @@ export default function PlanSubjectPage() {
           onClick={() => setModal({ type: "topic" })}
           className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
         >
-          Add topic
+          Schedule topic
         </button>
       </div>
 
       {error ? <p className="mt-4 text-sm text-coral">{error}</p> : null}
 
+      <section className="mt-6 rounded-2xl border border-line bg-raised/80 p-5">
+        <h3 className="text-lg font-semibold">Learning topics</h3>
+        <p className="mt-1 mb-4 text-xs text-muted">{curriculumSummary(card?.curriculum)}</p>
+        <SubjectCurriculum slug={slug} curriculum={card?.curriculum} />
+      </section>
+
       <div className="mt-6 rounded-2xl border border-line bg-raised/80 p-5">
         <div className="flex items-center justify-between gap-3">
-          <p className={`text-xs font-medium ${accent.text}`}>Studied</p>
+          <p className={`text-xs font-medium ${accent.text}`}>Scheduled topics studied</p>
           <p className="text-xs text-muted">
             {card?.total
               ? `${card.learned} / ${card.total}`
-              : "No topics yet"}
+              : "No scheduled topics"}
           </p>
         </div>
         <div className="mt-3">
@@ -153,7 +160,7 @@ export default function PlanSubjectPage() {
           ))
         ) : (
           <li className="rounded-2xl border border-dashed border-line px-4 py-8 text-center text-sm text-muted">
-            No topics on this language yet. Add one with a date and priority.
+            No scheduled topics yet. Schedule a topic with a date and priority.
           </li>
         )}
       </ul>

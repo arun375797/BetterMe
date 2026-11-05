@@ -20,6 +20,7 @@ import {
   topicLearned,
 } from "../lib/planItems.js";
 import { accentMap } from "../theme.jsx";
+import SubjectCurriculum, { curriculumSummary } from "../components/SubjectCurriculum.jsx";
 
 export default function LearningHome() {
   const { subjects } = useOutletContext();
@@ -65,10 +66,6 @@ export default function LearningHome() {
   const due = plan?.today || [];
   const studied = cards.reduce((sum, card) => sum + (card.learned || 0), 0);
   const planned = cards.reduce((sum, card) => sum + (card.total || 0), 0);
-  const planGroups = groupPlanByLanguage(plan?.items || [], cards);
-  const topicsBySlug = new Map(
-    planGroups.map((group) => [group.subject.slug, group.topics])
-  );
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -82,8 +79,8 @@ export default function LearningHome() {
               Topics you mean to study
             </h2>
             <p className="mt-2 max-w-xl text-sm text-muted">
-              Add a subject, topic, date, and priority. Open a language to tick
-              what you have learned — the line on each card fills as you go.
+              Browse each language’s theory and practical topics below. Schedule
+              study items with a date and priority, then track what you have learned.
             </p>
           </div>
           <button
@@ -91,7 +88,7 @@ export default function LearningHome() {
             onClick={() => setModal({ type: "create" })}
             className="rounded-xl bg-teal px-4 py-2 text-sm font-semibold text-[#10201e]"
           >
-            Add topic
+            Schedule topic
           </button>
         </div>
 
@@ -123,7 +120,6 @@ export default function LearningHome() {
           <div className="mt-4 grid gap-4 md:grid-cols-2">
             {cards.map((subject) => {
               const accent = accentMap[subject.accent] || accentMap.teal;
-              const topics = topicsBySlug.get(subject.slug) || [];
               const expanded = Boolean(openCards[subject.slug]);
               return (
                 <div
@@ -133,7 +129,7 @@ export default function LearningHome() {
                   <div className="p-5">
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <Link
-                        to={`/learning/plan/${subject.slug}`}
+                        to={`/learning/${subject.slug}`}
                         className="min-w-0 hover:opacity-90"
                       >
                         <p className={`text-xs font-medium ${accent.text}`}>
@@ -144,14 +140,13 @@ export default function LearningHome() {
                         </h3>
                       </Link>
                       <span className="shrink-0 rounded-lg bg-white/6 px-2 py-1 text-xs">
-                        {subject.total
-                          ? `${subject.learned} / ${subject.total}`
-                          : "Empty"}
+                        {subject.curriculum ? `${subject.curriculum.reduce((sum, track) => sum + track.mainTopics, 0)} topics` : "Loading topics…"}
                       </span>
                     </div>
                     <p className="mt-3 text-sm leading-6 text-muted">
                       {subject.description || "Add topics for this language."}
                     </p>
+                    <p className="mt-2 text-xs text-muted">{curriculumSummary(subject.curriculum)}</p>
                     <div className="mt-4">
                       <PlanProgressLine
                         segments={subject.segments}
@@ -160,14 +155,15 @@ export default function LearningHome() {
                       <p className="mt-2 text-xs text-muted">
                       {subject.total
                           ? subject.remaining
-                            ? `${subject.remaining} left to study`
-                            : "All planned topics studied"
-                          : "No topics yet"}
+                            ? `${subject.learned} / ${subject.total} scheduled topics studied`
+                            : "All scheduled topics studied"
+                          : "No scheduled study items"}
                       </p>
+                      <Link to={`/learning/plan/${subject.slug}`} className="mt-2 inline-block text-xs text-cyan hover:underline">Open study plan →</Link>
                     </div>
                     <div className="mt-4 flex flex-wrap items-center justify-between gap-2 border-t border-line/60 pt-3">
                       <Link
-                        to={`/learning/plan/${subject.slug}`}
+                        to={`/learning/${subject.slug}`}
                         className={`text-xs font-medium ${accent.text} hover:underline`}
                       >
                         Open subject →
@@ -200,11 +196,9 @@ export default function LearningHome() {
                     </div>
                   </div>
                   {expanded ? (
-                    <SubjectTopicDropdown
-                      slug={subject.slug}
-                      topics={topics}
-                      accentClass={accent.text}
-                    />
+                    <div className="border-t border-line bg-surface/35 px-5 py-4">
+                      <SubjectCurriculum slug={subject.slug} curriculum={subject.curriculum} />
+                    </div>
                   ) : null}
                 </div>
               );
@@ -217,7 +211,7 @@ export default function LearningHome() {
         <p className="text-[12px] tracking-[0.18em] text-muted uppercase">
           By language
         </p>
-        <h3 className="mt-2 text-lg font-semibold">Plan topics</h3>
+        <h3 className="mt-2 text-lg font-semibold">Scheduled topics</h3>
         <p className="mt-1 text-xs leading-5 text-muted">
           Soonest dates first. Finished topics drop to the bottom.
         </p>
@@ -442,96 +436,6 @@ function LanguagePlanList({ subjects, items, onEdit, onDelete }) {
         );
       })}
     </div>
-  );
-}
-
-function SubjectTopicDropdown({ slug, topics, accentClass }) {
-  if (!topics.length) {
-    return (
-      <p className="border-t border-line bg-surface/40 px-5 py-4 text-sm text-muted">
-        No topics in this subject yet.
-      </p>
-    );
-  }
-
-  return (
-    <ul className="space-y-2 border-t border-line bg-surface/35 px-5 py-4">
-      {topics.map((topic) => {
-        const done = topicLearned(topic);
-        const priority =
-          PLAN_PRIORITY_META[topic.priority] || PLAN_PRIORITY_META.medium;
-        return (
-          <li
-            key={topic._id}
-            className="rounded-xl border border-line/70 bg-raised/70 px-3 py-3"
-          >
-            <Link
-              to={`/learning/plan/${slug}`}
-              className="flex min-w-0 items-start gap-2 hover:opacity-90"
-            >
-              <span
-                className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${
-                  done ? "bg-teal" : "bg-white/20"
-                }`}
-              />
-              <span className="min-w-0 flex-1">
-                <span
-                  className={`block break-words text-sm font-medium ${
-                    done ? "text-muted line-through" : accentClass
-                  }`}
-                >
-                  {topic.title}
-                </span>
-                <span className="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-muted">
-                  <span>{formatPlanDate(topic.date)}</span>
-                  <span className={`rounded-full px-1.5 py-px ${priority.className}`}>
-                    {priority.label}
-                  </span>
-                  {topic.children?.length ? (
-                    <span>
-                      {topic.children.length} {topic.children.length === 1 ? "subtopic" : "subtopics"}
-                    </span>
-                  ) : null}
-                </span>
-              </span>
-              <span className="shrink-0 text-xs text-cyan">Open →</span>
-            </Link>
-
-            {topic.children?.length ? (
-              <ul className="mt-3 space-y-1.5 border-l border-line pl-4">
-                {topic.children.map((child) => {
-                  const childDone = topicLearned(child);
-                  return (
-                    <li key={child._id}>
-                      <Link
-                        to={`/learning/plan/${slug}`}
-                        className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-xs hover:bg-white/5"
-                      >
-                        <span
-                          className={`h-1.5 w-1.5 shrink-0 rounded-full ${
-                            childDone ? "bg-teal" : "bg-white/20"
-                          }`}
-                        />
-                        <span
-                          className={`min-w-0 flex-1 break-words ${
-                            childDone ? "text-muted line-through" : "text-ink"
-                          }`}
-                        >
-                          {child.title}
-                        </span>
-                        <span className="shrink-0 text-[10px] text-muted">
-                          {formatPlanDate(child.date)}
-                        </span>
-                      </Link>
-                    </li>
-                  );
-                })}
-              </ul>
-            ) : null}
-          </li>
-        );
-      })}
-    </ul>
   );
 }
 

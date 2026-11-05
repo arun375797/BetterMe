@@ -208,7 +208,7 @@ const MUSIC_API = "/api/music";
 const STUDY_API = "/api/study";
 const PLAN_API = "/api/plan";
 
-const LEARNING = [API];
+const LEARNING = [API, PLAN_API];
 const SUGAR = [SUGAR_API];
 const INSULIN = [INSULIN_API];
 const HEALTH_DASHBOARD = [HEALTH_DASHBOARD_API];
