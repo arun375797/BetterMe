@@ -17,6 +17,7 @@ import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
+import FavoriteButton from "../components/FavoriteButton.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import {
   clearLocalNotebook,
@@ -51,6 +52,7 @@ export default function TopicDetail() {
   );
   const [addQuestionOpen, setAddQuestionOpen] = useState(false);
   const [editQuestion, setEditQuestion] = useState(null);
+  const [starredOnly, setStarredOnly] = useState(false);
   const skipNotebookRestore = useRef(false);
 
   async function load() {
@@ -105,6 +107,7 @@ export default function TopicDetail() {
     if (cached) setTopic(cached);
     else setTopic(null);
     setQuestions(peekQuestions(topicId) || []);
+    setStarredOnly(false);
     load();
   }, [topicId, section]);
 
@@ -183,6 +186,27 @@ export default function TopicDetail() {
     await afterChange();
   }
 
+  async function toggleQuestionFavorite(item) {
+    const next = !item.favorite;
+    setQuestions((current) =>
+      current.map((question) =>
+        question._id === item._id ? { ...question, favorite: next } : question
+      )
+    );
+    try {
+      await updateQuestion(item._id, { favorite: next });
+    } catch (err) {
+      setQuestions((current) =>
+        current.map((question) =>
+          question._id === item._id
+            ? { ...question, favorite: !next }
+            : question
+        )
+      );
+      setError(err.message || "Could not update favourite");
+    }
+  }
+
   async function toggleTopicRevise(item) {
     const next = !item.inRevise;
     try {
@@ -245,6 +269,9 @@ export default function TopicDetail() {
     ...questionReview,
   ];
   const fromAnswer = topic.fromAnswer || [];
+  const visibleQuestions = starredOnly
+    ? questions.filter((item) => item.favorite)
+    : questions;
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -413,10 +440,19 @@ export default function TopicDetail() {
               >
                 Add question
               </button>
+              <label className="flex items-center gap-2 rounded-lg border border-gold/25 bg-gold/5 px-3 py-1.5 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={starredOnly}
+                  onChange={(event) => setStarredOnly(event.target.checked)}
+                  className="accent-gold"
+                />
+                Starred only
+              </label>
             </div>
             <ul className="mt-4 space-y-2">
-              {questions.length ? (
-                questions.map((item, index) => (
+              {visibleQuestions.length ? (
+                visibleQuestions.map((item, index) => (
                   <li
                     key={item._id}
                     className="topic-row rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5"
@@ -437,6 +473,12 @@ export default function TopicDetail() {
                       ) : null}
                       <span className="min-w-0 break-words">{item.title}</span>
                     </Link>
+                    <FavoriteButton
+                      on={Boolean(item.favorite)}
+                      compact
+                      onClick={() => toggleQuestionFavorite(item)}
+                      className="topic-row-meta"
+                    />
                     <div className="topic-row-actions">
                       <Link
                         to={`${answerPath}/${item._id}`}
@@ -463,8 +505,9 @@ export default function TopicDetail() {
                 ))
               ) : (
                 <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
-                  No questions yet. Add question opens a new notebook. After you
-                  go back, add another from this same button.
+                  {starredOnly
+                    ? "No starred questions yet."
+                    : "No questions yet. Add question opens a new notebook. After you go back, add another from this same button."}
                 </li>
               )}
             </ul>
@@ -485,10 +528,19 @@ export default function TopicDetail() {
               >
                 Add question
               </button>
+              <label className="flex items-center gap-2 rounded-lg border border-gold/25 bg-gold/5 px-3 py-1.5 text-xs text-muted">
+                <input
+                  type="checkbox"
+                  checked={starredOnly}
+                  onChange={(event) => setStarredOnly(event.target.checked)}
+                  className="accent-gold"
+                />
+                Starred only
+              </label>
             </div>
             <ul className="mt-4 space-y-2">
-              {questions.length ? (
-                questions.map((item, index) => (
+              {visibleQuestions.length ? (
+                visibleQuestions.map((item, index) => (
                   <li
                     key={item._id}
                     className="topic-row rounded-xl border border-teal/20 bg-surface/80 px-3 py-2.5"
@@ -509,6 +561,12 @@ export default function TopicDetail() {
                       ) : null}
                       <span className="min-w-0 break-words">{item.title}</span>
                     </Link>
+                    <FavoriteButton
+                      on={Boolean(item.favorite)}
+                      compact
+                      onClick={() => toggleQuestionFavorite(item)}
+                      className="topic-row-meta"
+                    />
                     {item.collectionName ? (
                       <span
                         className="topic-row-meta rounded-full border border-cyan/25 bg-cyan/10 px-2 py-0.5 font-mono text-[10px] text-cyan"
@@ -563,8 +621,9 @@ export default function TopicDetail() {
                 ))
               ) : (
                 <li className="rounded-xl border border-dashed border-teal/25 px-3 py-4 text-sm text-muted">
-                  No questions on this topic yet. Add one here — you do not need
-                  a subtopic first.
+                  {starredOnly
+                    ? "No starred questions yet."
+                    : "No questions on this topic yet. Add one here — you do not need a subtopic first."}
                 </li>
               )}
             </ul>

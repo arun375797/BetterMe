@@ -517,7 +517,7 @@ router.get("/subjects/:slug/questions", async (req, res) => {
     const questions = topics.length
       ? await Question.find({ topic: { $in: topics.map((topic) => topic._id) } })
           .select(
-            "title difficulty order topic code notes solutions notebook inReview inRevise reviseCompleted cleared createdAt"
+            "title difficulty order topic code notes solutions notebook inReview inRevise favorite reviseCompleted cleared createdAt"
           )
           .sort({ order: 1, createdAt: 1 })
           .lean()
@@ -889,7 +889,7 @@ router.get("/topics/:id/questions", async (req, res) => {
     }
     const questions = await Question.find({ topic: topic._id })
       .select(
-        "title collectionName difficulty order relatedSection createdAt code notes solutions notebook inReview inRevise reviseCompleted"
+        "title collectionName difficulty order relatedSection createdAt code notes solutions notebook inReview inRevise favorite reviseCompleted"
       )
       .populate("relatedSection", "title")
       .sort({ order: 1, createdAt: 1 })
@@ -1040,6 +1040,9 @@ router.patch("/questions/:id", async (req, res) => {
     if (req.body.inRevise !== undefined) {
       question.inRevise = Boolean(req.body.inRevise);
       if (!question.inRevise) question.reviseCompleted = false;
+    }
+    if (req.body.favorite !== undefined) {
+      question.favorite = Boolean(req.body.favorite);
     }
     if (req.body.reviseCompleted !== undefined) {
       question.reviseCompleted = Boolean(req.body.reviseCompleted);

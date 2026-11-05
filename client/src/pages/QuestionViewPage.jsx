@@ -9,6 +9,7 @@ import {
   updateTopic,
 } from "../api.js";
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
+import FavoriteButton from "../components/FavoriteButton.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import IdeEditor from "../components/IdeEditor.jsx";
@@ -136,6 +137,22 @@ export default function QuestionViewPage() {
     }
   }
 
+  async function toggleFavorite() {
+    if (!question) return;
+    const next = !question.favorite;
+    setQuestion((prev) => (prev ? { ...prev, favorite: next } : prev));
+    try {
+      await updateQuestion(question._id, { favorite: next });
+      setStatus(next ? "Question starred" : "Star removed");
+      setTimeout(() => setStatus(""), 1800);
+    } catch (err) {
+      setQuestion((prev) =>
+        prev ? { ...prev, favorite: !next } : prev
+      );
+      setStatus(err.message || "Could not update favourite");
+    }
+  }
+
   if (error) {
     return <p className="p-8 text-coral">{error}</p>;
   }
@@ -202,6 +219,12 @@ export default function QuestionViewPage() {
               />
             ) : null}
             <span className="min-w-0 break-words">{question.title}</span>
+            <FavoriteButton
+              on={Boolean(question.favorite)}
+              compact
+              onClick={toggleFavorite}
+              className="mt-0.5 shrink-0"
+            />
           </h2>
           {question.collectionName ? (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-xs text-muted">

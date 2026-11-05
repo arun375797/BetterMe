@@ -14,6 +14,7 @@ import {
 import QuestionFormModal from "../components/QuestionFormModal.jsx";
 import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
+import FavoriteButton from "../components/FavoriteButton.jsx";
 import { difficultyMeta } from "../difficulty.js";
 import { questionHasAnswer } from "../questions.js";
 import { accentMap } from "../theme.jsx";
@@ -35,6 +36,7 @@ export default function QuestionsPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editItem, setEditItem] = useState(null);
   const [confirm, setConfirm] = useState(null);
+  const [starredOnly, setStarredOnly] = useState(false);
 
   async function load() {
     try {
@@ -68,6 +70,7 @@ export default function QuestionsPage() {
       setSub(null);
     }
     if (cachedQs) setQuestions(cachedQs);
+    setStarredOnly(false);
     load();
   }, [hostId]);
 
@@ -104,6 +107,27 @@ export default function QuestionsPage() {
   async function removeQuestion(item) {
     await deleteQuestion(item._id);
     await afterChange();
+  }
+
+  async function toggleQuestionFavorite(item) {
+    const next = !item.favorite;
+    setQuestions((current) =>
+      current.map((question) =>
+        question._id === item._id ? { ...question, favorite: next } : question
+      )
+    );
+    try {
+      await updateQuestion(item._id, { favorite: next });
+    } catch (err) {
+      setQuestions((current) =>
+        current.map((question) =>
+          question._id === item._id
+            ? { ...question, favorite: !next }
+            : question
+        )
+      );
+      setStatus(err.message || "Could not update favourite");
+    }
   }
 
   async function toggleReview() {
@@ -160,6 +184,9 @@ export default function QuestionsPage() {
     onMainTopic
       ? `/learning/${slug}/${section}/${topicId}/answer/${id}`
       : `/learning/${slug}/${section}/${topicId}/${subId}/${id}`;
+  const visibleQuestions = starredOnly
+    ? questions.filter((item) => item.favorite)
+    : questions;
 
   return (
     <div className="grid min-h-screen min-w-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_280px]">
@@ -205,6 +232,15 @@ export default function QuestionsPage() {
             ) : null}
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <label className="flex items-center gap-2 rounded-lg border border-gold/25 bg-gold/5 px-3 py-1.5 text-xs text-muted">
+              <input
+                type="checkbox"
+                checked={starredOnly}
+                onChange={(event) => setStarredOnly(event.target.checked)}
+                className="accent-gold"
+              />
+              Starred only
+            </label>
             <button
               type="button"
               onClick={toggleRevise}
@@ -260,8 +296,8 @@ export default function QuestionsPage() {
         </div>
 
         <ul className="mt-6 space-y-3">
-          {questions.length ? (
-            questions.map((item, index) => (
+          {visibleQuestions.length ? (
+            visibleQuestions.map((item, index) => (
               <li
                 key={item._id}
                 className="topic-row rounded-2xl border border-line bg-raised/80 px-4 py-3"
@@ -292,6 +328,12 @@ export default function QuestionsPage() {
                     </span>
                   ) : null}
                 </Link>
+                <FavoriteButton
+                  on={Boolean(item.favorite)}
+                  compact
+                  onClick={() => toggleQuestionFavorite(item)}
+                  className="topic-row-meta"
+                />
                 <span
                   className={`topic-row-meta rounded-full border px-2 py-0.5 text-[10px] ${
                     difficultyMeta(item.difficulty).className
@@ -338,7 +380,9 @@ export default function QuestionsPage() {
             ))
           ) : (
             <li className="rounded-2xl border border-dashed border-line px-4 py-8 text-sm text-muted">
-              No questions yet. Use Add question.
+              {starredOnly
+                ? "No starred questions yet."
+                : "No questions yet. Use Add question."}
             </li>
           )}
         </ul>

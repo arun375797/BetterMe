@@ -5,6 +5,7 @@ import StudyGoalsPanel from "../components/StudyGoalsPanel.jsx";
 import PdfExportDialog from "../components/PdfExportDialog.jsx";
 import TopicFormModal, { StarIcon } from "../components/TopicFormModal.jsx";
 import { ConfirmDialog } from "../components/Dialog.jsx";
+import FavoriteButton from "../components/FavoriteButton.jsx";
 import { notebookPath, reviewItemHint } from "../lib/today.js";
 import { accentMap } from "../theme.jsx";
 import { DIFFICULTIES } from "../difficulty.js";
@@ -72,10 +73,12 @@ export default function SubjectPage() {
   const [allQuestionsError, setAllQuestionsError] = useState("");
   const [clearedSaving, setClearedSaving] = useState({});
   const [clearedErrors, setClearedErrors] = useState({});
+  const [favoriteErrors, setFavoriteErrors] = useState({});
   const [allQuestionSearch, setAllQuestionSearch] = useState("");
   const [allQuestionTopic, setAllQuestionTopic] = useState("all");
   const [allQuestionDifficulty, setAllQuestionDifficulty] = useState("all");
   const [allQuestionAnswer, setAllQuestionAnswer] = useState("all");
+  const [allQuestionStarred, setAllQuestionStarred] = useState("all");
   const allQuestionsRequest = useRef(0);
 
   const isPractical = section === "practical";
@@ -108,11 +111,13 @@ export default function SubjectPage() {
     setAllQuestionsError("");
     setClearedSaving({});
     setClearedErrors({});
+    setFavoriteErrors({});
     allQuestionsRequest.current += 1;
     setAllQuestionSearch("");
     setAllQuestionTopic("all");
     setAllQuestionDifficulty("all");
     setAllQuestionAnswer("all");
+    setAllQuestionStarred("all");
     let live = true;
     getSubject(slug, section)
       .then((data) => {
@@ -216,7 +221,7 @@ export default function SubjectPage() {
       )
     );
     setClearedSaving((current) => ({ ...current, [question._id]: true }));
-    setClearedErrors((current) => ({ ...current, [question._id]: "" }));
+    setFavoriteErrors((current) => ({ ...current, [question._id]: "" }));
     try {
       const saved = await updateQuestion(question._id, { cleared: next });
       setAllQuestions((current) =>
@@ -242,6 +247,38 @@ export default function SubjectPage() {
       setClearedSaving((current) => ({
         ...current,
         [question._id]: false,
+      }));
+    }
+  }
+
+  async function toggleQuestionFavorite(question) {
+    const next = !question.favorite;
+    setAllQuestions((current) =>
+      (current || []).map((item) =>
+        item._id === question._id ? { ...item, favorite: next } : item
+      )
+    );
+    setClearedErrors((current) => ({ ...current, [question._id]: "" }));
+    try {
+      const saved = await updateQuestion(question._id, { favorite: next });
+      setAllQuestions((current) =>
+        (current || []).map((item) =>
+          item._id === question._id
+            ? { ...item, favorite: Boolean(saved.favorite) }
+            : item
+        )
+      );
+    } catch (err) {
+      setAllQuestions((current) =>
+        (current || []).map((item) =>
+          item._id === question._id
+            ? { ...item, favorite: Boolean(question.favorite) }
+            : item
+        )
+      );
+      setFavoriteErrors((current) => ({
+        ...current,
+        [question._id]: err.message || "Could not update favourite.",
       }));
     }
   }
@@ -273,6 +310,9 @@ export default function SubjectPage() {
       ) {
         return false;
       }
+      if (allQuestionStarred === "starred" && !item.favorite) {
+        return false;
+      }
       const searchable = searchableText(
         `${item.title} ${item.sectionTopicTitle} ${item.topicTitle}`
       );
@@ -284,6 +324,7 @@ export default function SubjectPage() {
     allQuestionTopic,
     allQuestionDifficulty,
     allQuestionAnswer,
+    allQuestionStarred,
   ]);
 
   const questionGroups = useMemo(() => {
@@ -442,7 +483,7 @@ export default function SubjectPage() {
               ) : null}
             </div>
 
-            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
               <input
                 value={allQuestionSearch}
                 onChange={(event) => setAllQuestionSearch(event.target.value)}
@@ -485,6 +526,15 @@ export default function SubjectPage() {
                 <option value="all">All answer statuses</option>
                 <option value="answered">Answered</option>
                 <option value="unanswered">Needs an answer</option>
+              </select>
+              <select
+                value={allQuestionStarred}
+                onChange={(event) => setAllQuestionStarred(event.target.value)}
+                aria-label="Filter by starred status"
+                className="min-w-0 rounded-xl border border-line bg-surface px-3 py-2 text-sm text-ink outline-none focus:border-cyan/50"
+              >
+                <option value="all">All questions</option>
+                <option value="starred">Starred only</option>
               </select>
             </div>
 
@@ -568,6 +618,13 @@ export default function SubjectPage() {
                                   Open →
                                 </span>
                               </Link>
+                              <FavoriteButton
+                                on={Boolean(question.favorite)}
+                                compact
+                                onClick={() =>
+                                  toggleQuestionFavorite(question)
+                                }
+                              />
                               <label className="flex shrink-0 items-center gap-1.5 text-xs text-muted">
                                 <input
                                   type="checkbox"
@@ -585,6 +642,11 @@ export default function SubjectPage() {
                             {clearedErrors[question._id] ? (
                               <p role="alert" className="mt-1 text-xs text-coral">
                                 {clearedErrors[question._id]}
+                              </p>
+                            ) : null}
+                            {favoriteErrors[question._id] ? (
+                              <p role="alert" className="mt-1 text-xs text-coral">
+                                {favoriteErrors[question._id]}
                               </p>
                             ) : null}
                           </li>

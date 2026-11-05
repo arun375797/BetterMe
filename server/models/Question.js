@@ -35,6 +35,7 @@ const questionSchema = new mongoose.Schema(
     },
     inReview: { type: Boolean, default: false },
     inRevise: { type: Boolean, default: false },
+    favorite: { type: Boolean, default: false },
     reviseCompleted: { type: Boolean, default: false },
     cleared: { type: Boolean, default: false },
     relatedSection: {
