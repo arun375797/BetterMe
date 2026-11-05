@@ -1377,6 +1377,39 @@ body {
   outline: none;
 }
 
+.ui-wallpaper-url {
+  width: 100%;
+  border: 1px solid var(--ui-line);
+  border-radius: 9px;
+  background: var(--ui-surface);
+  padding: 8px 9px;
+  color: var(--ui-ink);
+  font-size: 11px;
+  outline: none;
+}
+
+.ui-wallpaper-url:focus {
+  border-color: color-mix(in oklab, var(--ui-teal) 58%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in oklab, var(--ui-teal) 12%, transparent);
+}
+
+.ui-wallpaper-url-button {
+  width: 100%;
+  border: 1px solid color-mix(in oklab, var(--ui-teal) 42%, transparent);
+  border-radius: 9px;
+  padding: 7px 10px;
+  color: var(--ui-teal);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.ui-wallpaper-url-button:disabled,
+.ui-wallpaper-button:disabled,
+.ui-wallpaper-remove:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
 html[data-ui-theme="jellyfish"] .quick-jump-rail {
   background:
     linear-gradient(180deg, color-mix(in oklab, var(--ui-coral) 14%, transparent), transparent 32%),

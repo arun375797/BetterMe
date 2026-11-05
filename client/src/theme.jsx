@@ -163,30 +163,35 @@ const ThemeContext = createContext({
   wallpaperUrl: "",
   setWallpaper: () => {},
   setWallpaperFile: async () => {},
+  setWallpaperFromUrl: async () => {},
   removeWallpaper: async () => {},
 });
 
 export function ThemeProvider({ children }) {
   const [theme, setThemeState] = useState(readTheme);
   const [wallpaper, setWallpaperState] = useState(readWallpaperSettings);
-  const [wallpaperUrl, setWallpaperUrl] = useState("");
+  const [wallpaperUrl, setWallpaperUrl] = useState(() => readWallpaperSettings().remoteUrl || "");
   const wallpaperUrlRef = useRef("");
+  const wallpaperObjectUrlRef = useRef(false);
 
-  function showWallpaper(blob) {
-    if (wallpaperUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
-    const next = blob ? URL.createObjectURL(blob) : "";
+  function showWallpaper(source, isBlob = false) {
+    if (wallpaperUrlRef.current && wallpaperObjectUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
+    const next = isBlob && source ? URL.createObjectURL(source) : source || "";
     wallpaperUrlRef.current = next;
+    wallpaperObjectUrlRef.current = Boolean(isBlob && source);
     setWallpaperUrl(next);
   }
 
   useEffect(() => {
     let live = true;
-    readWallpaperBlob().then((blob) => {
-      if (live && blob) showWallpaper(blob);
-    }).catch(() => {});
+    if (!wallpaper.remoteUrl) {
+      readWallpaperBlob().then((blob) => {
+        if (live && blob) showWallpaper(blob, true);
+      }).catch(() => {});
+    }
     return () => {
       live = false;
-      if (wallpaperUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
+      if (wallpaperUrlRef.current && wallpaperObjectUrlRef.current) URL.revokeObjectURL(wallpaperUrlRef.current);
     };
   }, []);
 
@@ -219,11 +224,18 @@ export function ThemeProvider({ children }) {
       setWallpaper: (patch) => setWallpaperState((currentSettings) => ({ ...currentSettings, ...patch })),
       setWallpaperFile: async (file) => {
         await writeWallpaperBlob(file);
-        showWallpaper(file);
+        setWallpaperState((currentSettings) => ({ ...currentSettings, remoteUrl: "" }));
+        showWallpaper(file, true);
+      },
+      setWallpaperFromUrl: async (remoteUrl) => {
+        await deleteWallpaperBlob();
+        setWallpaperState((currentSettings) => ({ ...currentSettings, remoteUrl }));
+        showWallpaper(remoteUrl);
       },
       removeWallpaper: async () => {
         await deleteWallpaperBlob();
-        showWallpaper(null);
+        setWallpaperState((currentSettings) => ({ ...currentSettings, remoteUrl: "" }));
+        showWallpaper("");
       },
     };
   }, [theme, wallpaper, wallpaperUrl]);
@@ -289,9 +301,10 @@ export function ThemeStrip({ compact = false }) {
 }
 
 export function WallpaperControls() {
-  const { wallpaper, wallpaperUrl, setWallpaper, setWallpaperFile, removeWallpaper } = useUiTheme();
+  const { wallpaper, wallpaperUrl, setWallpaper, setWallpaperFile, setWallpaperFromUrl, removeWallpaper } = useUiTheme();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [imageUrl, setImageUrl] = useState(wallpaper.remoteUrl || "");
   const input = useRef(null);
 
   async function pick(event) {
@@ -323,6 +336,30 @@ export function WallpaperControls() {
     }
   }
 
+  async function useImageUrl(event) {
+    event.preventDefault();
+    const value = imageUrl.trim();
+    let parsed;
+    try {
+      parsed = new URL(value);
+      if (!/^https?:$/.test(parsed.protocol)) throw new Error();
+    } catch {
+      setError("Enter a complete http:// or https:// image URL.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await validateImageUrl(parsed.href);
+      await setWallpaperFromUrl(parsed.href);
+      setImageUrl(parsed.href);
+    } catch {
+      setError("That URL could not be loaded as an image. Check the link or try another one.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="ui-wallpaper-controls">
       <input ref={input} type="file" accept="image/*" className="sr-only" onChange={pick} />
@@ -332,6 +369,23 @@ export function WallpaperControls() {
         </button>
         {wallpaperUrl ? <button type="button" disabled={busy} onClick={remove} className="ui-wallpaper-remove">Remove</button> : null}
       </div>
+      <div className="my-3 flex items-center gap-2 text-[10px] text-muted before:h-px before:flex-1 before:bg-line after:h-px after:flex-1 after:bg-line">OR</div>
+      <form onSubmit={useImageUrl} className="space-y-2">
+        <label className="block text-[11px] text-muted" htmlFor="wallpaper-image-url">Image URL</label>
+        <input
+          id="wallpaper-image-url"
+          type="url"
+          inputMode="url"
+          value={imageUrl}
+          disabled={busy}
+          onChange={(event) => setImageUrl(event.target.value)}
+          placeholder="https://example.com/wallpaper.jpg"
+          className="ui-wallpaper-url"
+        />
+        <button type="submit" disabled={busy || !imageUrl.trim()} className="ui-wallpaper-url-button">
+          {busy ? "Loading…" : "Use image URL"}
+        </button>
+      </form>
       {error ? <p role="alert" className="mt-2 text-[11px] text-coral">{error}</p> : null}
       {wallpaperUrl ? (
         <div className="mt-4 space-y-3">
@@ -355,6 +409,27 @@ export function WallpaperControls() {
       ) : <p className="mt-2 text-[11px] leading-4 text-muted">Your image stays in this browser and is displayed behind the app.</p>}
     </div>
   );
+}
+
+function validateImageUrl(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const timeout = window.setTimeout(() => {
+      image.src = "";
+      reject(new Error("Image timed out"));
+    }, 15_000);
+    image.onload = () => {
+      window.clearTimeout(timeout);
+      if (image.naturalWidth && image.naturalHeight) resolve();
+      else reject(new Error("Invalid image"));
+    };
+    image.onerror = () => {
+      window.clearTimeout(timeout);
+      reject(new Error("Image failed"));
+    };
+    image.referrerPolicy = "no-referrer";
+    image.src = url;
+  });
 }
 
 function RangeControl({ label, value, min, max, suffix, onChange }) {
